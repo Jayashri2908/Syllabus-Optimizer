@@ -23,7 +23,6 @@ from src.analysis.outcome_extractor import OutcomeExtractor
 from src.optimization.bloom_mapper import BloomMapper
 from src.optimization.content_optimizer import ContentOptimizer
 from src.generation.syllabus_generator import SyllabusGenerator
-from src.generation.mock_generator import MockSyllabusGenerator
 from src.utils.mock_services import MockContentOptimizer, MockBloomMapper, MockGapAnalyzer # Import Mocks
 from src.analysis.rag_analyzer import RAGAwareAnalyzer # RAG
 from src.mapping.co_po_mapper import COPOMapper
@@ -51,8 +50,8 @@ app.add_middleware(
 )
 
 print("\n" + "="*50)
-print("  SCDO BACKEND SERVER RESTARTED  ")
-print("  LOADED: Smart Mock Generator & RAG Analyzer  ")
+print("  SCDO BACKEND SERVER - AI-POWERED ONLY  ")
+print("  IBM Granite Integration Required  ")
 print("="*50 + "\n")
 
 # Initialize components
@@ -78,24 +77,27 @@ except Exception as e:
     logger.error(f"Critical component initialization failed: {e}")
     # We continue, but API will likely fail on specific endpoints
 
-# Initialize AI components (IBM Cloud)
+# Initialize AI components (IBM Cloud) - AI-ONLY MODE
 try:
+    syllabus_generator = SyllabusGenerator()
     gap_analyzer = GapAnalyzer()
     bloom_mapper = BloomMapper()
     content_optimizer = ContentOptimizer()
-    syllabus_generator = SyllabusGenerator()
-    logger.info("AI components initialized successfully")
+    logger.info("✅ AI components initialized successfully (IBM Granite active)")
 except Exception as e:
-    logger.warning(f"AI component initialization failed: {e}")
-    logger.warning("Using Mock Services for fallback.")
-    syllabus_generator = MockSyllabusGenerator()
+    logger.error(f"❌ AI component initialization failed: {e}")
+    logger.error("⚠️  IBM Granite credentials required! Run: python setup_credentials.py")
+    logger.warning("Generation endpoint will return error until credentials are configured.")
+    
+    # Try to initialize RAG analyzer as fallback for analysis
     try:
         gap_analyzer = RAGAwareAnalyzer()
-        logger.info("Initialized RAGAwareAnalyzer")
+        logger.info("Initialized RAGAwareAnalyzer for analysis")
     except Exception as rag_err:
         logger.warning(f"RAG init failed: {rag_err}, using basic mock")
         gap_analyzer = MockGapAnalyzer()
         
+    # Use mock services for non-critical features
     bloom_mapper = MockBloomMapper()
     content_optimizer = MockContentOptimizer()
 
@@ -263,10 +265,17 @@ async def optimize_syllabus(request: OptimizeRequest):
 @app.post("/api/generate")
 async def generate_syllabus(request: GenerateRequest):
     """
-    Generate new syllabus from minimal inputs
+    Generate new syllabus from minimal inputs using AI
     
-    Returns: Complete generated syllabus
+    Requires: IBM Granite credentials configured
+    Returns: Complete generated syllabus with quality scoring
     """
+    if not syllabus_generator:
+        raise HTTPException(
+            status_code=503,
+            detail="AI Syllabus Generator unavailable. IBM Granite credentials required. Run: python setup_credentials.py"
+        )
+    
     try:
         syllabus = syllabus_generator.generate(
             course_title=request.course_title,

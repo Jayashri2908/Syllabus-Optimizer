@@ -93,16 +93,20 @@ class GraniteClient:
         api_key = os.getenv('IBM_CLOUD_API_KEY', granite_config.get('api_key'))
         project_id = os.getenv('IBM_PROJECT_ID', granite_config.get('project_id'))
         
+        # Validate required credentials
+        if not api_key or not project_id:
+            raise ValueError("IBM Cloud API key and project ID are required")
+        
         return GraniteConfig(
-            model=granite_config['model'],
-            max_tokens=granite_config['max_tokens'],
-            temperature=granite_config['temperature'],
-            top_p=granite_config['top_p'],
-            top_k=granite_config['top_k'],
-            repetition_penalty=granite_config['repetition_penalty'],
+            model=granite_config.get('model', 'ibm/granite-13b-chat-v2'),
+            max_tokens=granite_config.get('max_tokens', 4096),
+            temperature=granite_config.get('temperature', 0.7),
+            top_p=granite_config.get('top_p', 1.0),
+            top_k=granite_config.get('top_k', 50),
+            repetition_penalty=granite_config.get('repetition_penalty', 1.0),
             api_key=api_key,
             project_id=project_id,
-            url=granite_config['url'],
+            url=granite_config.get('url', 'https://us-south.ml.cloud.ibm.com'),
             max_retries=granite_config.get('max_retries', 3),
             retry_delay=granite_config.get('retry_delay', 2),
             timeout=granite_config.get('timeout', 60)
