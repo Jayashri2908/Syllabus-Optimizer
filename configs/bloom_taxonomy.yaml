@@ -1,0 +1,248 @@
+# Bloom's Taxonomy Reference for SCDO
+# Based on Revised Bloom's Taxonomy (Anderson & Krathwohl, 2001)
+
+taxonomy:
+  remember:
+    level: 1
+    description: "Retrieve relevant knowledge from long-term memory"
+    verbs:
+      - define
+      - describe
+      - identify
+      - label
+      - list
+      - match
+      - name
+      - outline
+      - recall
+      - recognize
+      - reproduce
+      - select
+      - state
+    assessment_types:
+      - "Multiple Choice Questions (MCQs)"
+      - "Fill in the blanks"
+      - "True/False questions"
+      - "Matching exercises"
+      - "Short answer quizzes"
+    keywords:
+      - "what"
+      - "when"
+      - "where"
+      - "who"
+      - "which"
+
+  understand:
+    level: 2
+    description: "Construct meaning from instructional messages"
+    verbs:
+      - classify
+      - compare
+      - contrast
+      - demonstrate
+      - explain
+      - extend
+      - illustrate
+      - infer
+      - interpret
+      - outline
+      - paraphrase
+      - predict
+      - summarize
+      - translate
+    assessment_types:
+      - "Short answer questions"
+      - "Explanatory essays"
+      - "Concept mapping"
+      - "Summarization tasks"
+      - "Interpretation exercises"
+    keywords:
+      - "explain"
+      - "describe"
+      - "interpret"
+      - "summarize"
+      - "compare"
+
+  apply:
+    level: 3
+    description: "Carry out or use a procedure in a given situation"
+    verbs:
+      - apply
+      - calculate
+      - change
+      - choose
+      - compute
+      - construct
+      - demonstrate
+      - develop
+      - discover
+      - execute
+      - implement
+      - modify
+      - operate
+      - perform
+      - predict
+      - prepare
+      - produce
+      - show
+      - solve
+      - use
+    assessment_types:
+      - "Laboratory exercises"
+      - "Problem-solving tasks"
+      - "Case studies"
+      - "Simulations"
+      - "Practical demonstrations"
+      - "Implementation projects"
+    keywords:
+      - "apply"
+      - "solve"
+      - "use"
+      - "demonstrate"
+      - "implement"
+
+  analyze:
+    level: 4
+    description: "Break material into constituent parts and determine relationships"
+    verbs:
+      - analyze
+      - break down
+      - categorize
+      - compare
+      - contrast
+      - deconstruct
+      - differentiate
+      - discriminate
+      - distinguish
+      - examine
+      - experiment
+      - identify
+      - illustrate
+      - infer
+      - investigate
+      - organize
+      - outline
+      - relate
+      - select
+      - separate
+    assessment_types:
+      - "Case study analysis"
+      - "Critical reviews"
+      - "Comparative analysis"
+      - "Research papers"
+      - "Diagnostic tests"
+      - "Debate preparation"
+    keywords:
+      - "analyze"
+      - "examine"
+      - "investigate"
+      - "compare"
+      - "contrast"
+
+  evaluate:
+    level: 5
+    description: "Make judgments based on criteria and standards"
+    verbs:
+      - appraise
+      - argue
+      - assess
+      - choose
+      - compare
+      - conclude
+      - contrast
+      - criticize
+      - critique
+      - decide
+      - defend
+      - estimate
+      - evaluate
+      - judge
+      - justify
+      - predict
+      - prioritize
+      - prove
+      - rank
+      - rate
+      - recommend
+      - select
+      - support
+      - validate
+      - verify
+    assessment_types:
+      - "Critical essays"
+      - "Peer reviews"
+      - "Position papers"
+      - "Evaluation reports"
+      - "Recommendation documents"
+      - "Debate participation"
+    keywords:
+      - "evaluate"
+      - "assess"
+      - "judge"
+      - "critique"
+      - "justify"
+
+  create:
+    level: 6
+    description: "Put elements together to form a coherent whole; reorganize into new pattern"
+    verbs:
+      - assemble
+      - build
+      - compose
+      - construct
+      - create
+      - design
+      - develop
+      - devise
+      - formulate
+      - generate
+      - hypothesize
+      - integrate
+      - invent
+      - make
+      - originate
+      - plan
+      - produce
+      - propose
+      - synthesize
+    assessment_types:
+      - "Design projects"
+      - "Research proposals"
+      - "Creative portfolios"
+      - "Capstone projects"
+      - "Business plans"
+      - "Prototypes"
+      - "Original research"
+    keywords:
+      - "create"
+      - "design"
+      - "develop"
+      - "formulate"
+      - "propose"
+
+# Recommended distribution for comprehensive curriculum
+recommended_distribution:
+  remember: 10-15%
+  understand: 20-25%
+  apply: 25-30%
+  analyze: 20-25%
+  evaluate: 10-15%
+  create: 10-15%
+
+# Mapping to assessment weightage
+assessment_weightage:
+  formative:
+    remember: 5-10%
+    understand: 10-15%
+    apply: 15-20%
+    analyze: 10-15%
+    evaluate: 5-10%
+    create: 5-10%
+  
+  summative:
+    remember: 5-10%
+    understand: 10-15%
+    apply: 15-20%
+    analyze: 15-20%
+    evaluate: 10-15%
+    create: 10-15%

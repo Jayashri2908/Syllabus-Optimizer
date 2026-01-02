@@ -1,0 +1,213 @@
+# Accreditation Standards Configuration for SCDO
+# NBA, NAAC, NEP 2020, and ABET standards
+
+nba:
+  # National Board of Accreditation (India)
+  name: "National Board of Accreditation"
+  country: "India"
+  
+  program_outcomes:
+    engineering:
+      PO1:
+        code: "PO1"
+        description: "Engineering knowledge: Apply knowledge of mathematics, science, engineering fundamentals, and an engineering specialization to the solution of complex engineering problems."
+        
+      PO2:
+        code: "PO2"
+        description: "Problem analysis: Identify, formulate, review research literature, and analyze complex engineering problems reaching substantiated conclusions using first principles of mathematics, natural sciences, and engineering sciences."
+        
+      PO3:
+        code: "PO3"
+        description: "Design/development of solutions: Design solutions for complex engineering problems and design system components or processes that meet the specified needs with appropriate consideration for the public health and safety, and the cultural, societal, and environmental considerations."
+        
+      PO4:
+        code: "PO4"
+        description: "Conduct investigations of complex problems: Use research-based knowledge and research methods including design of experiments, analysis and interpretation of data, and synthesis of the information to provide valid conclusions."
+        
+      PO5:
+        code: "PO5"
+        description: "Modern tool usage: Create, select, and apply appropriate techniques, resources, and modern engineering and IT tools including prediction and modeling to complex engineering activities with an understanding of the limitations."
+        
+      PO6:
+        code: "PO6"
+        description: "The engineer and society: Apply reasoning informed by the contextual knowledge to assess societal, health, safety, legal and cultural issues and the consequent responsibilities relevant to the professional engineering practice."
+        
+      PO7:
+        code: "PO7"
+        description: "Environment and sustainability: Understand the impact of the professional engineering solutions in societal and environmental contexts, and demonstrate the knowledge of, and need for sustainable development."
+        
+      PO8:
+        code: "PO8"
+        description: "Ethics: Apply ethical principles and commit to professional ethics and responsibilities and norms of the engineering practice."
+        
+      PO9:
+        code: "PO9"
+        description: "Individual and team work: Function effectively as an individual, and as a member or leader in diverse teams, and in multidisciplinary settings."
+        
+      PO10:
+        code: "PO10"
+        description: "Communication: Communicate effectively on complex engineering activities with the engineering community and with society at large, such as, being able to comprehend and write effective reports and design documentation, make effective presentations, and give and receive clear instructions."
+        
+      PO11:
+        code: "PO11"
+        description: "Project management and finance: Demonstrate knowledge and understanding of the engineering and management principles and apply these to one's own work, as a member and leader in a team, to manage projects and in multidisciplinary environments."
+        
+      PO12:
+        code: "PO12"
+        description: "Life-long learning: Recognize the need for, and have the preparation and ability to engage in independent and life-long learning in the broadest context of technological change."
+  
+  mapping_levels:
+    0: "No correlation"
+    1: "Low correlation"
+    2: "Medium correlation"
+    3: "High correlation"
+
+naac:
+  # National Assessment and Accreditation Council (India)
+  name: "National Assessment and Accreditation Council"
+  country: "India"
+  
+  criteria:
+    - name: "Curricular Aspects"
+      code: "C1"
+      focus:
+        - "Curriculum design and development"
+        - "Academic flexibility"
+        - "Feedback mechanisms"
+        
+    - name: "Teaching-Learning and Evaluation"
+      code: "C2"
+      focus:
+        - "Student enrollment and profile"
+        - "Teaching-learning process"
+        - "Evaluation process and reforms"
+        
+    - name: "Research, Innovations and Extension"
+      code: "C3"
+      focus:
+        - "Resource mobilization for research"
+        - "Innovation ecosystem"
+        - "Extension activities"
+        
+    - name: "Infrastructure and Learning Resources"
+      code: "C4"
+      focus:
+        - "Physical facilities"
+        - "Library as a learning resource"
+        - "IT infrastructure"
+        
+    - name: "Student Support and Progression"
+      code: "C5"
+      focus:
+        - "Student support"
+        - "Student progression"
+        - "Student participation and activities"
+        
+    - name: "Governance, Leadership and Management"
+      code: "C6"
+      focus:
+        - "Institutional vision and leadership"
+        - "Strategy development and deployment"
+        - "Faculty empowerment strategies"
+        
+    - name: "Institutional Values and Best Practices"
+      code: "C7"
+      focus:
+        - "Institutional values"
+        - "Best practices"
+        - "Institutional distinctiveness"
+
+nep_2020:
+  # National Education Policy 2020 (India)
+  name: "National Education Policy 2020"
+  country: "India"
+  
+  key_principles:
+    - name: "Multidisciplinary and Holistic Education"
+      description: "Integration of arts, sciences, humanities, and vocational subjects"
+      
+    - name: "Flexibility and Choice"
+      description: "Multiple entry and exit points with appropriate certification"
+      
+    - name: "Outcome-Based Education"
+      description: "Focus on learning outcomes rather than inputs"
+      
+    - name: "Research and Innovation"
+      description: "Emphasis on research culture and innovation ecosystem"
+      
+    - name: "Skill Development"
+      description: "Integration of vocational education and skill development"
+      
+    - name: "Technology Integration"
+      description: "Use of technology to enhance learning experiences"
+      
+    - name: "Continuous Assessment"
+      description: "Regular formative assessment for learning improvement"
+      
+    - name: "Equity and Inclusion"
+      description: "Ensuring access to quality education for all"
+  
+  credit_framework:
+    undergraduate: 160  # Total credits for 4-year program
+    postgraduate: 80   # Total credits for 2-year program
+    
+  exit_options:
+    - duration: 1
+      credits: 40
+      certification: "Certificate"
+      
+    - duration: 2
+      credits: 80
+      certification: "Diploma"
+      
+    - duration: 3
+      credits: 120
+      certification: "Bachelor's Degree"
+      
+    - duration: 4
+      credits: 160
+      certification: "Bachelor's Degree with Research"
+
+abet:
+  # Accreditation Board for Engineering and Technology (International)
+  name: "Accreditation Board for Engineering and Technology"
+  country: "USA"
+  
+  student_outcomes:
+    SO1: "An ability to identify, formulate, and solve complex engineering problems by applying principles of engineering, science, and mathematics"
+    SO2: "An ability to apply engineering design to produce solutions that meet specified needs with consideration of public health, safety, and welfare, as well as global, cultural, social, environmental, and economic factors"
+    SO3: "An ability to communicate effectively with a range of audiences"
+    SO4: "An ability to recognize ethical and professional responsibilities in engineering situations and make informed judgments, which must consider the impact of engineering solutions in global, economic, environmental, and societal contexts"
+    SO5: "An ability to function effectively on a team whose members together provide leadership, create a collaborative and inclusive environment, establish goals, plan tasks, and meet objectives"
+    SO6: "An ability to develop and conduct appropriate experimentation, analyze and interpret data, and use engineering judgment to draw conclusions"
+    SO7: "An ability to acquire and apply new knowledge as needed, using appropriate learning strategies"
+
+# Syllabus quality checklist
+quality_checklist:
+  essential_components:
+    - "Course title and code"
+    - "Credit hours (L-T-P format)"
+    - "Prerequisites"
+    - "Course objectives"
+    - "Course outcomes (4-6 COs)"
+    - "Unit-wise syllabus with hours"
+    - "Teaching-learning methodology"
+    - "Assessment pattern"
+    - "CO-PO mapping matrix"
+    - "Reference books and resources"
+    
+  optional_components:
+    - "Program Specific Outcomes (PSOs)"
+    - "Assessment rubrics"
+    - "Lesson plan"
+    - "Laboratory experiments"
+    - "Case studies"
+    - "Project guidelines"
+    
+  alignment_requirements:
+    - "COs aligned with POs"
+    - "Assessment aligned with COs"
+    - "Bloom's taxonomy coverage"
+    - "Appropriate credit distribution"
+    - "Industry relevance"
+    - "Research integration"
