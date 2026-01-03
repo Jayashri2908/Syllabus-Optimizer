@@ -22,11 +22,14 @@ from src.analysis.gap_analyzer import GapAnalyzer
 from src.analysis.outcome_extractor import OutcomeExtractor
 from src.optimization.bloom_mapper import BloomMapper
 from src.optimization.content_optimizer import ContentOptimizer
+from src.optimization.objectives_optimizer import ObjectivesOptimizer
+from src.optimization.reference_suggester import ReferenceSuggester
 from src.generation.syllabus_generator import SyllabusGenerator
 from src.utils.mock_services import MockContentOptimizer, MockBloomMapper, MockGapAnalyzer # Import Mocks
 from src.analysis.rag_analyzer import RAGAwareAnalyzer # RAG
 from src.mapping.co_po_mapper import COPOMapper
 from src.export.pdf_exporter import PDFExporter
+from src.export.excel_exporter import ExcelExporter
 from src.ibm.local_storage import LocalStorage
 from src.utils.logging_utils import setup_logger
 
@@ -64,6 +67,8 @@ syllabus_generator = None
 co_po_mapper = None
 pdf_exporter = None
 local_storage = None
+objectives_optimizer = None # NEW
+reference_suggester = None # NEW
 
 # Initialize critical components (Local)
 try:
@@ -78,11 +83,11 @@ except Exception as e:
     # We continue, but API will likely fail on specific endpoints
 
 # Initialize AI components (IBM Cloud) - AI-ONLY MODE
+content_optimizer_component = None # Placeholder for ContentOptimizer instance
 try:
     syllabus_generator = SyllabusGenerator()
     gap_analyzer = GapAnalyzer()
-    bloom_mapper = BloomMapper()
-    content_optimizer = ContentOptimizer()
+    content_optimizer_component = ContentOptimizer() # Initialize here if successful
     logger.info("✅ AI components initialized successfully (IBM Granite active)")
 except Exception as e:
     logger.error(f"❌ AI component initialization failed: {e}")
@@ -249,12 +254,126 @@ async def optimize_syllabus(request: OptimizeRequest):
             course_title, current_topics
         )
         
+        # Generate CO-PO-PSO mapping matrix
+        co_po_mapping = None
+        co_po_matrix = None
+        
+        if co_po_mapper and outcomes:
+            try:
+                # Extract course outcomes with Bloom's levels
+                course_outcomes = []
+                for i, outcome in enumerate(outcomes):
+                    if isinstance(outcome, dict):
+                        course_outcomes.append({
+                            'code': outcome.get('code', f'CO{i+1}'),
+                            'description': outcome.get('description', ''),
+                            'bloom_level': outcome.get('bloom_level', 'Apply')
+                        })
+                    elif isinstance(outcome, str):
+                        course_outcomes.append({
+                            'code': f'CO{i+1}',
+                            'description': outcome,
+                            'bloom_level': 'Apply'
+                        })
+                
+                # Get program outcomes from request or use defaults
+                program_outcomes = request.syllabus_data.get('program_outcomes', [
+                    'PO1', 'PO2', 'PO3', 'PO4', 'PO5', 'PO6', 'PO7', 'PO8', 'PO9'
+                ])
+                
+                # Map course outcomes to program outcomes
+                co_po_mapping = co_po_mapper.map_co_to_po(
+                    course_outcomes=course_outcomes,
+                    program_outcomes=program_outcomes,
+                    domain=syllabus_data.get('domain', 'engineering')
+                )
+                
+                # Generate matrix string representation
+                co_po_matrix = co_po_mapper.generate_mapping_matrix(co_po_mapping)
+                
+            except Exception as e:
+                logger.error(f"CO-PO mapping failed: {e}")
+        
+        # NEW: Optimize course objectives
+        objectives_optimization = None
+        if objectives_optimizer:
+            try:
+                objectives = syllabus_data.get('objectives', [])
+                if objectives:
+                    course_info = {
+                        'course_title': course_title,
+                        'course_level': syllabus_data.get('level', 'undergraduate'),
+                        'domain': syllabus_data.get('domain', 'engineering'),
+                        'credits': syllabus_data.get('credits', 3)
+                    }
+                    objectives_optimization = objectives_optimizer.optimize_objectives(objectives, course_info)
+            except Exception as e:
+                logger.error(f"Objectives optimization failed: {e}")
+        
+        # NEW: Suggest references
+        reference_suggestions = None
+        if reference_suggester:
+            try:
+                current_refs = syllabus_data.get('references', [])
+                reference_suggestions = reference_suggester.suggest_references(
+                    course_title=course_title,
+                    topics=current_topics,
+                    domain=syllabus_data.get('domain', 'engineering'),
+                    current_references=current_refs
+                )
+            except Exception as e:
+                logger.error(f"Reference suggestion failed: {e}")
+        
+        # NEW: Validate NEP 2020 compliance
+        nep_2020_compliance = None
+        try:
+            from src.validation.nep_2020_validator import NEP2020Validator
+            nep_validator = NEP2020Validator()
+            nep_2020_compliance = nep_validator.validate(syllabus_data)
+        except Exception as e:
+            logger.error(f"NEP 2020 validation failed: {e}")
+        
+        # NEW: Check accreditation compliance
+        accreditation_compliance = None
+        try:
+            from src.validation.accreditation_checker import AccreditationChecker
+            accred_checker = AccreditationChecker()
+            accreditation_compliance = {
+                'nba': accred_checker.check_nba_compliance(syllabus_data),
+                'naac': accred_checker.check_naac_compliance(syllabus_data)
+            }
+        except Exception as e:
+            logger.error(f"Accreditation check failed: {e}")
+        
+        # Get lesson plan analysis and redundancies from gap_analyzer
+        lesson_plan_analysis = None
+        redundancies = None
+        try:
+            # The gap analyzer should have these methods
+            if hasattr(gap_analyzer, '_analyze_lesson_plans'):
+                lesson_plan_analysis = gap_analyzer._analyze_lesson_plans(syllabus_data)
+            if hasattr(gap_analyzer, '_analyze_redundancies'):
+                redundancies = gap_analyzer._analyze_redundancies(syllabus_data)
+        except Exception as e:
+            logger.error(f"Additional analysis failed: {e}")
+        
         return {
-            "success": True,
-            "bloom_analysis": bloom_analysis,
-            "rebalancing_suggestions": rebalancing,
-            "sequence_optimization": sequence_opt,
-            "modern_topics": modern_topics
+            'success': True,
+            'optimization': {
+                'bloom_analysis': bloom_analysis,
+                'rebalancing_suggestions': rebalancing,
+                'sequence_optimization': sequence_opt,
+                'modern_topics': modern_topics,
+                'co_po_mapping': co_po_mapping,
+                'co_po_matrix': co_po_matrix,
+                'lesson_plan_analysis': lesson_plan_analysis,  # Added
+                'redundancies': redundancies,  # Added
+                'objectives_optimization': objectives_optimization,  # NEW
+                'reference_suggestions': reference_suggestions,  # NEW
+                'nep_2020_compliance': nep_2020_compliance,  # NEW
+                'accreditation_compliance': accreditation_compliance  # NEW
+            },
+            'syllabus': syllabus_data
         }
         
     except Exception as e:
@@ -405,6 +524,59 @@ async def validate_outcome(outcome: str):
         
     except Exception as e:
         logger.error(f"Validation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Export Endpoints
+@app.post("/api/export/pdf")
+async def export_pdf(request: OptimizeRequest):
+    """Export syllabus to PDF"""
+    try:
+        syllabus_data = request.syllabus_data
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+            output_path = tmp.name
+            
+        pdf_exporter = PDFExporter()
+        success = pdf_exporter.export(syllabus_data, output_path, include_mapping=True)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="PDF export failed")
+            
+        return FileResponse(
+            output_path,
+            media_type='application/pdf',
+            filename=f"{syllabus_data.get('course_code', 'syllabus')}.pdf"
+        )
+    except Exception as e:
+        logger.error(f"PDF export failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/export/excel")
+async def export_excel(request: OptimizeRequest):
+    """Export syllabus to Excel"""
+    try:
+        syllabus_data = request.syllabus_data
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            output_path = tmp.name
+            
+        excel_exporter = ExcelExporter()
+        success = excel_exporter.export_complete_syllabus(
+            syllabus_data, output_path, include_mapping=True, include_rubrics=True
+        )
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Excel export failed")
+            
+        return FileResponse(
+            output_path,
+            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            filename=f"{syllabus_data.get('course_code', 'syllabus')}.xlsx"
+        )
+    except Exception as e:
+        logger.error(f"Excel export failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

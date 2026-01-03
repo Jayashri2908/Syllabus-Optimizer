@@ -17,6 +17,7 @@ from .domain_templates import (
 from .bloom_distribution import get_bloom_distribution, format_distribution_for_prompt, get_bloom_verb_list
 from .iterative_refiner import IterativeRefiner
 from .industry_data import format_industry_context, get_industry_skills
+from .rubric_generator import RubricGenerator
 
 
 class SyllabusGenerator:
@@ -28,6 +29,7 @@ class SyllabusGenerator:
         self.bloom_mapper = BloomMapper()
         self.validator = SyllabusValidator()
         self.refiner = IterativeRefiner(self.granite)
+        self.rubric_gen = RubricGenerator()
     
     def _detect_and_cache_domain(self, course_title: str, keywords: List[str]) -> str:
         """Detect domain and cache for current generation"""
@@ -149,6 +151,9 @@ class SyllabusGenerator:
         # Generate references
         references = self._generate_references(course_title, keywords)
         
+        # Generate assessment rubrics
+        rubrics = self.rubric_gen.generate_rubrics(assessment, domain)
+        
         # Get industry context
         industry_context = self._get_industry_context(keywords, course_title)
         
@@ -164,6 +169,7 @@ class SyllabusGenerator:
             'teaching_methodology': methodology,
             'assessment_pattern': assessment,
             'references': references,
+            'rubrics': rubrics,
             'generated': True,
             'metadata': {
                 'domain_detected': self._detect_and_cache_domain(course_title, keywords),

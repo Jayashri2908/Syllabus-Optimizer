@@ -1,6 +1,8 @@
-# IBM Watson AI (FREE TIER AVAILABLE)
-ibm-watson>=7.0.0
-ibm-cloud-sdk-core>=3.18.0
+# IBM Watson AI (FREE TIER AVAILAB# NLP & AI
+ibm-watsonx-ai>=1.0.0
+sentence-transformers>=2.2.0  # For semantic redundancy detection
+langchain>=0.0.200
+chromadb>=0.4.0
 ibm-watsonx-ai>=0.2.0
 
 # Document Processing

@@ -9,6 +9,8 @@ from pathlib import Path
 import logging
 
 from ..utils.text_processing import TextProcessor
+from .lesson_plan_extractor import LessonPlanExtractor
+from .redundancy_detector import RedundancyDetector
 
 
 class GapAnalyzer:
@@ -19,6 +21,8 @@ class GapAnalyzer:
         self.text_processor = TextProcessor()
         self.bloom_taxonomy = self._load_bloom_taxonomy()
         self.accreditation_standards = self._load_accreditation_standards()
+        self.lesson_plan_extractor = LessonPlanExtractor()
+        self.redundancy_detector = RedundancyDetector()
         
     def _load_bloom_taxonomy(self) -> dict:
         """Load Bloom's taxonomy configuration"""
@@ -48,6 +52,8 @@ class GapAnalyzer:
             'assessment_gaps': self._analyze_assessment(syllabus_data),
             'content_gaps': self._analyze_content(syllabus_data),
             'structural_issues': self._analyze_structure(syllabus_data),
+            'lesson_plan_analysis': self._analyze_lesson_plans(syllabus_data),
+            'redundancies': self._analyze_redundancies(syllabus_data),
             'recommendations': []
         }
         
@@ -323,3 +329,78 @@ class GapAnalyzer:
                 )
                 
         return recommendations
+        
+    def _analyze_lesson_plans(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze lesson plan completeness and structure
+        
+        Args:
+            syllabus_data: Parsed syllabus structure
+            
+        Returns:
+            Lesson plan analysis
+        """
+        units = syllabus_data.get('units', [])
+        
+        if not units:
+            return {
+                'status': 'no_units',
+                'message': 'No units found in syllabus'
+            }
+            
+        # Extract lesson plans
+        lesson_analysis = self.lesson_plan_extractor.extract_lesson_plans(units)
+        
+        # Identify gaps
+        gaps = []
+        
+        # Check for units without hours
+        if lesson_analysis['units_without_hours']:
+            gaps.append({
+                'type': 'missing_hours',
+                'severity': 'high',
+                'units': lesson_analysis['units_without_hours'],
+                'description': f"{len(lesson_analysis['units_without_hours'])} units missing hour allocation"
+            })
+            
+        # Check for units without teaching methods
+        if lesson_analysis['units_without_methods']:
+            gaps.append({
+                'type': 'missing_methods',
+                'severity': 'medium',
+                'units': lesson_analysis['units_without_methods'],
+                'description': f"{len(lesson_analysis['units_without_methods'])} units without specified teaching methods"
+            })
+            
+        # Check for unbalanced lesson distribution
+        distribution = lesson_analysis.get('lesson_distribution', {})
+        lessons_per_unit = distribution.get('lessons_per_unit', {})
+        if lessons_per_unit:
+            lesson_counts = list(lessons_per_unit.values())
+            avg_lessons = sum(lesson_counts) / len(lesson_counts)
+            
+            for unit_num, count in lessons_per_unit.items():
+                if count < avg_lessons * 0.5:  # Less than 50% of average
+                    gaps.append({
+                        'type': 'sparse_unit',
+                        'severity': 'medium',
+                        'unit_number': unit_num,
+                        'lesson_count': count,
+                        'average': avg_lessons,
+                        'description': f"Unit {unit_num} has significantly fewer lessons ({count}) than average ({avg_lessons:.1f})"
+                    })
+                    
+        lesson_analysis['gaps'] = gaps
+        return lesson_analysis
+        
+    def _analyze_redundancies(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Detect content redundancies using semantic similarity
+        
+        Args:
+            syllabus_data: Parsed syllabus structure
+            
+        Returns:
+            Redundancy analysis
+        """
+        return self.redundancy_detector.detect_redundancies(syllabus_data)
