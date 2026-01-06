@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import logging
 from functools import wraps
+from dotenv import load_dotenv
 
 try:
     from ibm_watsonx_ai import APIClient
@@ -31,7 +32,8 @@ class GraniteConfig:
     top_k: int
     repetition_penalty: float
     api_key: str
-    project_id: str
+    project_id: Optional[str]
+    instance_crn: Optional[str]
     url: str
     max_retries: int = 3
     retry_delay: int = 2
@@ -80,25 +82,40 @@ class GraniteClient:
         
     def _load_config(self, config_path: Optional[str] = None) -> GraniteConfig:
         """Load configuration from YAML file"""
+        # Load .env.ibm if it exists
+        env_path = Path(__file__).parent.parent.parent / ".env.ibm"
+        if env_path.exists():
+            load_dotenv(env_path)
+            self.logger.info(f"Loaded credentials from {env_path}")
+        
         if config_path is None:
             # Default to configs/ibm_config.yaml
             config_path = Path(__file__).parent.parent.parent / "configs" / "ibm_config.yaml"
-            
-        with open(config_path, 'r') as f:
-            config_data = yaml.safe_load(f)
-            
-        granite_config = config_data['ibm_granite']
+        
+        # Try to load YAML config if it exists
+        granite_config = {}
+        if Path(config_path).exists():
+            with open(config_path, 'r') as f:
+                config_data = yaml.safe_load(f)
+                granite_config = config_data.get('ibm_granite', {})
         
         # Check for environment variables (override YAML)
         api_key = os.getenv('IBM_CLOUD_API_KEY', granite_config.get('api_key'))
         project_id = os.getenv('IBM_PROJECT_ID', granite_config.get('project_id'))
+        instance_crn = os.getenv('IBM_WML_CRN', granite_config.get('instance_crn'))
         
-        # Validate required credentials
-        if not api_key or not project_id:
-            raise ValueError("IBM Cloud API key and project ID are required")
+        # Validate required credentials - only API key is required now
+        if not api_key:
+            raise ValueError("IBM Cloud API key is required (set IBM_CLOUD_API_KEY environment variable)")
+        
+        # Warn if neither project ID nor instance CRN is available
+        if not project_id and not instance_crn:
+            self.logger.warning("Neither IBM_PROJECT_ID nor IBM_WML_CRN is set. API calls may fail.")
+        elif not project_id:
+            self.logger.info("Using WML instance CRN instead of project ID")
         
         return GraniteConfig(
-            model=granite_config.get('model', 'ibm/granite-13b-chat-v2'),
+            model=granite_config.get('model', 'ibm/granite-3-8b-instruct'),
             max_tokens=granite_config.get('max_tokens', 4096),
             temperature=granite_config.get('temperature', 0.7),
             top_p=granite_config.get('top_p', 1.0),
@@ -106,6 +123,7 @@ class GraniteClient:
             repetition_penalty=granite_config.get('repetition_penalty', 1.0),
             api_key=api_key,
             project_id=project_id,
+            instance_crn=instance_crn,
             url=granite_config.get('url', 'https://us-south.ml.cloud.ibm.com'),
             max_retries=granite_config.get('max_retries', 3),
             retry_delay=granite_config.get('retry_delay', 2),
@@ -121,7 +139,16 @@ class GraniteClient:
             )
             
             self.client = APIClient(credentials)
-            self.client.set.default_project(self.config.project_id)
+            
+            # Set project or use instance CRN
+            if self.config.project_id:
+                self.client.set.default_project(self.config.project_id)
+                self.logger.info(f"Using project ID: {self.config.project_id}")
+            elif self.config.instance_crn:
+                # Instance CRN will be used in generate() calls
+                self.logger.info(f"Using WML instance CRN for requests")
+            else:
+                self.logger.warning("No project ID or instance CRN set. API calls may fail.")
             
             # Initialize model inference
             self.model = ModelInference(
@@ -178,10 +205,16 @@ class GraniteClient:
         # Retry logic
         for attempt in range(self.config.max_retries):
             try:
-                response = self.model.generate(
-                    prompt=full_prompt,
-                    params=params if params else None
-                )
+                # Prepare generate call parameters
+                generate_kwargs = {
+                    'prompt': full_prompt,
+                }
+                
+                # Add custom params if provided
+                if params:
+                    generate_kwargs['params'] = params
+                
+                response = self.model.generate(**generate_kwargs)
                 
                 # Extract generated text
                 if isinstance(response, dict):

@@ -83,11 +83,15 @@ except Exception as e:
     # We continue, but API will likely fail on specific endpoints
 
 # Initialize AI components (IBM Cloud) - AI-ONLY MODE
-content_optimizer_component = None # Placeholder for ContentOptimizer instance
+bloom_mapper_initialized = False
+content_optimizer_initialized = False
 try:
     syllabus_generator = SyllabusGenerator()
     gap_analyzer = GapAnalyzer()
-    content_optimizer_component = ContentOptimizer() # Initialize here if successful
+    bloom_mapper = BloomMapper()  # Initialize real BloomMapper
+    content_optimizer = ContentOptimizer()  # Initialize real ContentOptimizer
+    bloom_mapper_initialized = True
+    content_optimizer_initialized = True
     logger.info("✅ AI components initialized successfully (IBM Granite active)")
 except Exception as e:
     logger.error(f"❌ AI component initialization failed: {e}")
@@ -101,9 +105,11 @@ except Exception as e:
     except Exception as rag_err:
         logger.warning(f"RAG init failed: {rag_err}, using basic mock")
         gap_analyzer = MockGapAnalyzer()
-        
-    # Use mock services for non-critical features
+
+# Ensure bloom_mapper and content_optimizer are always initialized
+if not bloom_mapper_initialized:
     bloom_mapper = MockBloomMapper()
+if not content_optimizer_initialized:
     content_optimizer = MockContentOptimizer()
 
 
@@ -451,28 +457,37 @@ async def map_outcomes(request: MapRequest):
 
 
 @app.post("/api/export/pdf")
-async def export_pdf(
-    syllabus_data: Dict[str, Any],
-    background_tasks: BackgroundTasks
-):
+async def export_pdf(request: OptimizeRequest):
     """
     Export syllabus to PDF
     
     Returns: PDF file
     """
     try:
+        # Extract syllabus data from request
+        syllabus_data = request.syllabus_data
+        
+        # Handle nested structure - if data is wrapped, unwrap it
+        if 'data' in syllabus_data and isinstance(syllabus_data.get('data'), dict):
+            # Frontend sent upload response structure
+            syllabus_data = syllabus_data['data']
+        elif 'syllabus' in syllabus_data and isinstance(syllabus_data.get('syllabus'), dict):
+            # Frontend sent optimize response structure
+            syllabus_data = syllabus_data['syllabus']
+        
+        # Log what we received for debugging
+        logger.info(f"Exporting PDF for course: {syllabus_data.get('course_title', 'N/A')}")
+        logger.info(f"Data keys: {list(syllabus_data.keys())}")
+        
         # Create temp PDF file
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
             pdf_path = tmp_file.name
         
-        # Export to PDF
-        success = pdf_exporter.export(syllabus_data, pdf_path)
+        # Export to PDF with mapping
+        success = pdf_exporter.export(syllabus_data, pdf_path, include_mapping=True)
         
         if not success:
             raise HTTPException(status_code=500, detail="PDF export failed")
-        
-        # Schedule cleanup
-        background_tasks.add_task(os.unlink, pdf_path)
         
         # Return PDF file
         filename = f"{syllabus_data.get('course_code', 'syllabus')}.pdf"
@@ -484,6 +499,8 @@ async def export_pdf(
         
     except Exception as e:
         logger.error(f"PDF export failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -527,37 +544,22 @@ async def validate_outcome(outcome: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Export Endpoints
-@app.post("/api/export/pdf")
-async def export_pdf(request: OptimizeRequest):
-    """Export syllabus to PDF"""
-    try:
-        syllabus_data = request.syllabus_data
-        
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
-            output_path = tmp.name
-            
-        pdf_exporter = PDFExporter()
-        success = pdf_exporter.export(syllabus_data, output_path, include_mapping=True)
-        
-        if not success:
-            raise HTTPException(status_code=500, detail="PDF export failed")
-            
-        return FileResponse(
-            output_path,
-            media_type='application/pdf',
-            filename=f"{syllabus_data.get('course_code', 'syllabus')}.pdf"
-        )
-    except Exception as e:
-        logger.error(f"PDF export failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/api/export/excel")
 async def export_excel(request: OptimizeRequest):
     """Export syllabus to Excel"""
     try:
         syllabus_data = request.syllabus_data
+        
+        # Handle nested structure - if data is wrapped, unwrap it
+        if 'data' in syllabus_data and isinstance(syllabus_data.get('data'), dict):
+            # Frontend sent upload response structure
+            syllabus_data = syllabus_data['data']
+        elif 'syllabus' in syllabus_data and isinstance(syllabus_data.get('syllabus'), dict):
+            # Frontend sent optimize response structure
+            syllabus_data = syllabus_data['syllabus']
+        
+        # Log what we received
+        logger.info(f"Exporting Excel for course: {syllabus_data.get('course_title', 'N/A')}")
         
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
             output_path = tmp.name
@@ -577,6 +579,8 @@ async def export_excel(request: OptimizeRequest):
         )
     except Exception as e:
         logger.error(f"Excel export failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 

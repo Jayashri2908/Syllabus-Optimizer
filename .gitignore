@@ -54,6 +54,7 @@ temp/
 # Configuration (contains sensitive data)
 configs/ibm_config.yaml
 .env
+.env.ibm
 
 # Keep example configs
 !configs/ibm_config.yaml.example
