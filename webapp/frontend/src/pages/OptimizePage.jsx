@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { apiService } from '../services/api';
 import { useSyllabus } from '../context/SyllabusContext';
+import { BloomDistributionChart, BloomBalanceChart, COPOHeatmap } from '../components/Charts';
+import '../components/Charts.css';
 
 function OptimizePage() {
   // Global State
@@ -125,79 +127,93 @@ function OptimizePage() {
 
             {/* Bloom's Analysis */}
             {optimizationResults.optimization?.bloom_analysis && (
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">📊 Bloom's Taxonomy Distribution</h3>
-                </div>
-                <div className="bloom-distribution">
-                  {Object.entries(optimizationResults.optimization.bloom_analysis.comparison).map(([level, data]) => (
-                    <div key={level} className="distribution-item">
-                      <div className="level-header">
-                        <span className="level-name">{level.charAt(0).toUpperCase() + level.slice(1)}</span>
-                        <span className={`status-badge ${data.status}`}>{data.status}</span>
+              <>
+                <div className="card">
+                  <div className="card-header">
+                    <h3 className="card-title">📊 Bloom's Taxonomy Distribution</h3>
+                  </div>
+                  <div className="bloom-distribution">
+                    {Object.entries(optimizationResults.optimization.bloom_analysis.comparison).map(([level, data]) => (
+                      <div key={level} className="distribution-item">
+                        <div className="level-header">
+                          <span className="level-name">{level.charAt(0).toUpperCase() + level.slice(1)}</span>
+                          <span className={`status-badge ${data.status}`}>{data.status}</span>
+                        </div>
+                        <div className="level-stats">
+                          <span>Current: {data.current.toFixed(1)}%</span>
+                          <span>Recommended: {data.recommended_min}-{data.recommended_max}%</span>
+                        </div>
                       </div>
-                      <div className="level-stats">
-                        <span>Current: {data.current.toFixed(1)}%</span>
-                        <span>Recommended: {data.recommended_min}-{data.recommended_max}%</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+
+                {/* Visual Charts for Bloom's */}
+                <div className="charts-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-lg)' }}>
+                  <BloomDistributionChart bloomAnalysis={optimizationResults.optimization.bloom_analysis} />
+                  <BloomBalanceChart bloomAnalysis={optimizationResults.optimization.bloom_analysis} />
+                </div>
+              </>
             )}
 
             {/* CO-PO-PSO Mapping Matrix */}
             {optimizationResults.optimization?.co_po_mapping && (
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">🎯 CO-PO-PSO Mapping Matrix</h3>
-                  <p className="card-subtitle">Affinity Level: 1-Slight, 2-Moderate, 3-Substantial</p>
-                </div>
-                <div className="mapping-container">
-                  <div className="table-wrapper">
-                    <table className="mapping-table">
-                      <thead>
-                        <tr>
-                          <th rowSpan="2">CO No</th>
-                          <th colSpan="9">Program Outcomes (POs)</th>
-                          <th colSpan="4">PSOs</th>
-                          <th rowSpan="2">BTL</th>
-                        </tr>
-                        <tr>
-                          {['PO1', 'PO2', 'PO3', 'PO4', 'PO5', 'PO6', 'PO7', 'PO8', 'PO9',
-                            'PSO1', 'PSO2', 'PSO3', 'PSO4'].map(po => (
-                              <th key={po}>{po}</th>
-                            ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(optimizationResults.optimization.co_po_mapping).map(([co, poData]) => {
-                          // Get Bloom's level from syllabus data
-                          const coIndex = parseInt(co.replace('CO', '')) - 1;
-                          const bloomLevel = optimizationResults.syllabus?.learning_outcomes?.[coIndex]?.bloom_level || 'AP';
-                          const btl = bloomLevel.substring(0, 2).toUpperCase();
+              <>
+                {/* Visual Heatmap Chart */}
+                <COPOHeatmap mapping={optimizationResults.optimization.co_po_mapping} />
 
-                          return (
-                            <tr key={co}>
-                              <td className="co-cell">{co}</td>
-                              {['PO1', 'PO2', 'PO3', 'PO4', 'PO5', 'PO6', 'PO7', 'PO8', 'PO9',
-                                'PSO1', 'PSO2', 'PSO3', 'PSO4'].map(po => {
-                                  const value = poData[po] || 0;
-                                  return (
-                                    <td key={po} className={`affinity-${value}`}>
-                                      {value > 0 ? value : '-'}
-                                    </td>
-                                  );
-                                })}
-                              <td className="btl-cell">{btl}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                {/* Original detailed table */}
+                <div className="card">
+                  <div className="card-header">
+                    <h3 className="card-title">🎯 CO-PO-PSO Mapping Matrix (Detailed)</h3>
+                    <p className="card-subtitle">Affinity Level: 1-Slight, 2-Moderate, 3-Substantial</p>
+                  </div>
+                  <div className="mapping-container">
+                    <div className="table-wrapper">
+                      <table className="mapping-table">
+                        <thead>
+                          <tr>
+                            <th rowSpan="2">CO No</th>
+                            <th colSpan="9">Program Outcomes (POs)</th>
+                            <th colSpan="4">PSOs</th>
+                            <th rowSpan="2">BTL</th>
+                          </tr>
+                          <tr>
+                            {['PO1', 'PO2', 'PO3', 'PO4', 'PO5', 'PO6', 'PO7', 'PO8', 'PO9',
+                              'PSO1', 'PSO2', 'PSO3', 'PSO4'].map(po => (
+                                <th key={po}>{po}</th>
+                              ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(optimizationResults.optimization.co_po_mapping).map(([co, poData]) => {
+                            // Get Bloom's level from syllabus data
+                            const coIndex = parseInt(co.replace('CO', '')) - 1;
+                            const bloomLevel = optimizationResults.syllabus?.learning_outcomes?.[coIndex]?.bloom_level || 'AP';
+                            const btl = bloomLevel.substring(0, 2).toUpperCase();
+
+                            return (
+                              <tr key={co}>
+                                <td className="co-cell">{co}</td>
+                                {['PO1', 'PO2', 'PO3', 'PO4', 'PO5', 'PO6', 'PO7', 'PO8', 'PO9',
+                                  'PSO1', 'PSO2', 'PSO3', 'PSO4'].map(po => {
+                                    const value = poData[po] || 0;
+                                    return (
+                                      <td key={po} className={`affinity-${value}`}>
+                                        {value > 0 ? value : '-'}
+                                      </td>
+                                    );
+                                  })}
+                                <td className="btl-cell">{btl}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
 
             {/* Rebalancing Suggestions */}

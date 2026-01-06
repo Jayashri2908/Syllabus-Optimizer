@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
+import { FileEdit, FileText } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useSyllabus } from '../context/SyllabusContext';
 
@@ -30,6 +32,8 @@ function GeneratePage() {
         setError(null);
         setGeneratedSyllabus(null);
 
+        const loadingToast = toast.loading('🎨 Generating syllabus with AI...');
+
         try {
             // Parse keywords
             const keywords = formData.keywords.split(',').map(k => k.trim()).filter(k => k);
@@ -40,20 +44,40 @@ function GeneratePage() {
             });
 
             setGeneratedSyllabus(response.syllabus);
+            toast.success('✅ Syllabus generated successfully!', { id: loadingToast });
         } catch (err) {
-            setError(err.response?.data?.detail || 'Failed to generate syllabus');
+            const errorMsg = err.response?.data?.detail || 'Failed to generate syllabus';
+            setError(errorMsg);
+            toast.error(`❌ ${errorMsg}`, { id: loadingToast });
         } finally {
             setLoading(false);
         }
     };
 
-    const handleExport = async () => {
+    const handleExportPDF = async () => {
         if (!generatedSyllabus) return;
 
+        const loadingToast = toast.loading('📄 Exporting PDF...');
         try {
             await apiService.exportPDF(generatedSyllabus);
+            toast.success('✅ PDF downloaded successfully!', { id: loadingToast });
         } catch (err) {
+            toast.error('❌ Failed to export PDF', { id: loadingToast });
             setError('Failed to export PDF');
+        }
+    };
+
+    const handleExportWord = async () => {
+        if (!generatedSyllabus) return;
+
+        const loadingToast = toast.loading('📝 Exporting Word document...');
+        try {
+            await apiService.exportWord(generatedSyllabus);
+            toast.success('✅ Word document downloaded successfully!', { id: loadingToast });
+        } catch (err) {
+            const errorMsg = err.response?.data?.detail || 'Failed to export Word document';
+            toast.error(`❌ ${errorMsg}`, { id: loadingToast });
+            setError(errorMsg);
         }
     };
 
@@ -197,9 +221,16 @@ function GeneratePage() {
                             <div className="card result-card fade-in">
                                 <div className="card-header">
                                     <h2 className="card-title">Generated Syllabus</h2>
-                                    <button onClick={handleExport} className="btn btn-secondary">
-                                        📄 Export PDF
-                                    </button>
+                                    <div className="export-actions">
+                                        <button onClick={handleExportPDF} className="btn btn-secondary">
+                                            <FileText size={18} />
+                                            Export PDF
+                                        </button>
+                                        <button onClick={handleExportWord} className="btn btn-secondary">
+                                            <FileEdit size={18} />
+                                            Export Word
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="syllabus-content">
@@ -294,6 +325,11 @@ function GeneratePage() {
           background: hsl(0, 84%, 95%);
           color: var(--error);
           border: 1px solid var(--error);
+        }
+
+        .export-actions {
+          display: flex;
+          gap: var(--spacing-sm);
         }
 
         .result-card {

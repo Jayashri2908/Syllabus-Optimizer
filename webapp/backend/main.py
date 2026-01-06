@@ -13,6 +13,13 @@ from pathlib import Path
 import tempfile
 import os
 
+try:
+    from docx import Document
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
+    logging.warning("python-docx not installed. Word export will not be available.")
+
 # Import SCDO modules
 import sys
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -579,6 +586,86 @@ async def export_excel(request: OptimizeRequest):
         )
     except Exception as e:
         logger.error(f"Excel export failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/export/word")
+async def export_word(request: OptimizeRequest):
+    """Export syllabus to Word document"""
+    if not DOCX_AVAILABLE:
+        raise HTTPException(
+            status_code=501,
+            detail="Word export not available. python-docx package is not installed."
+        )
+    
+    try:
+        syllabus_data = request.syllabus_data
+        
+        # Handle nested structure - if data is wrapped, unwrap it
+        if 'data' in syllabus_data and isinstance(syllabus_data.get('data'), dict):
+            syllabus_data = syllabus_data['data']
+        elif 'syllabus' in syllabus_data and isinstance(syllabus_data.get('syllabus'), dict):
+            syllabus_data = syllabus_data['syllabus']
+        
+        logger.info(f"Exporting Word for course: {syllabus_data.get('course_title', 'N/A')}")
+        
+        # Create Word document
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp:
+            output_path = tmp.name
+        
+        doc = Document()
+        
+        # Add title
+        doc.add_heading(syllabus_data.get('course_title', 'Syllabus'), 0)
+        
+        # Add course info
+        doc.add_paragraph(f"Course Code: {syllabus_data.get('course_code', 'N/A')}")
+        doc.add_paragraph(f"Credits: {syllabus_data.get('credits', 'N/A')}")
+        doc.add_paragraph("")  # Blank line
+        
+        # Add overview
+        if syllabus_data.get('overview'):
+            doc.add_heading('Course Overview', 1)
+            doc.add_paragraph(syllabus_data['overview'])
+        
+        # Add learning outcomes
+        if syllabus_data.get('learning_outcomes'):
+            doc.add_heading('Learning Outcomes', 1)
+            for outcome in syllabus_data['learning_outcomes']:
+                if isinstance(outcome, dict):
+                    text = f"{outcome.get('code', '')}: {outcome.get('description', '')}"
+                    if outcome.get('bloom_level'):
+                        text += f" ({outcome['bloom_level']})"
+                    doc.add_paragraph(text, style='List Bullet')
+                else:
+                    doc.add_paragraph(str(outcome), style='List Bullet')
+        
+        # Add units
+        if syllabus_data.get('units'):
+            doc.add_heading('Course Units', 1)
+            for unit in syllabus_data['units']:
+                unit_title = f"Unit {unit.get('unit_number', '')}: {unit.get('title', '')}"
+                if unit.get('hours'):
+                    unit_title += f" ({unit['hours']} hours)"
+                doc.add_heading(unit_title, 2)
+                
+                for topic in unit.get('topics', []):
+                    doc.add_paragraph(topic, style='List Bullet')
+        
+        # Save document
+        doc.save(output_path)
+        logger.info(f"Word document saved to {output_path}")
+        
+        return FileResponse(
+            output_path,
+            media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            filename=f"{syllabus_data.get('course_code', 'syllabus')}.docx"
+        )
+        
+    except Exception as e:
+        logger.error(f"Word export failed: {e}")
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))

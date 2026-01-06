@@ -1,0 +1,133 @@
+/* Chart Components Styles */
+
+.chart-container {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.chart-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+/* Heatmap Styles */
+.heatmap-container {
+    overflow-x: auto;
+    margin-bottom: var(--spacing-md);
+}
+
+.heatmap-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.heatmap-table th,
+.heatmap-table td {
+    padding: var(--spacing-sm);
+    text-align: center;
+    border: 1px solid var(--border);
+}
+
+.heatmap-table th {
+    background: var(--bg-secondary);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.heatmap-label {
+    font-weight: 700;
+    background: var(--bg-secondary);
+    color: var(--primary);
+}
+
+.heatmap-cell {
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.heatmap-cell:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+.heatmap-cell.level-3 {
+    background: hsl(142, 71%, 85%);
+    color: hsl(142, 71%, 25%);
+}
+
+.heatmap-cell.level-2 {
+    background: hsl(45, 100%, 85%);
+    color: hsl(45, 100%, 25%);
+}
+
+.heatmap-cell.level-1 {
+    background: hsl(28, 100%, 85%);
+    color: hsl(28, 100%, 25%);
+}
+
+.heatmap-cell.level-0 {
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .heatmap-cell.level-3 {
+    background: hsl(142, 71%, 25%);
+    color: hsl(142, 71%, 85%);
+}
+
+[data-theme="dark"] .heatmap-cell.level-2 {
+    background: hsl(45, 100%, 25%);
+    color: hsl(45, 100%, 85%);
+}
+
+[data-theme="dark"] .heatmap-cell.level-1 {
+    background: hsl(28, 100%, 25%);
+    color: hsl(28, 100%, 85%);
+}
+
+.heatmap-legend {
+    display: flex;
+    gap: var(--spacing-lg);
+    justify-content: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.legend-box {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-sm);
+    margin-right: var(--spacing-xs);
+    border: 1px solid var(--border);
+}
+
+.legend-box.level-3 {
+    background: hsl(142, 71%, 85%);
+}
+
+.legend-box.level-2 {
+    background: hsl(45, 100%, 85%);
+}
+
+.legend-box.level-1 {
+    background: hsl(28, 100%, 85%);
+}
+
+[data-theme="dark"] .legend-box.level-3 {
+    background: hsl(142, 71%, 25%);
+}
+
+[data-theme="dark"] .legend-box.level-2 {
+    background: hsl(45, 100%, 25%);
+}
+
+[data-theme="dark"] .legend-box.level-1 {
+    background: hsl(28, 100%, 25%);
+}

@@ -57,7 +57,9 @@ export const apiService = {
 
     // Export to PDF
     exportPDF: async (syllabusData) => {
-        const response = await api.post('/api/export/pdf', syllabusData, {
+        const response = await api.post('/api/export/pdf', {
+            syllabus_data: syllabusData
+        }, {
             responseType: 'blob',
         });
 
@@ -66,6 +68,26 @@ export const apiService = {
         const link = document.createElement('a');
         link.href = url;
         link.setAttribute('download', `${syllabusData.course_code || 'syllabus'}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        return true;
+    },
+
+    // Export to Word
+    exportWord: async (syllabusData) => {
+        const response = await api.post('/api/export/word', {
+            syllabus_data: syllabusData
+        }, {
+            responseType: 'blob',
+        });
+
+        // Create download link
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `${syllabusData.course_code || 'syllabus'}.docx`);
         document.body.appendChild(link);
         link.click();
         link.remove();

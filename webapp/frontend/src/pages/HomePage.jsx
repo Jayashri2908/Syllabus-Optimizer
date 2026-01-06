@@ -1,7 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { Sparkles } from 'lucide-react';
 
 function HomePage() {
+  const showToastDemo = () => {
+    toast.success('✅ This is a success notification!', {
+      icon: '🎉',
+    });
+
+    setTimeout(() => {
+      toast('💡 Try the buttons below to test features!', {
+        icon: '👋',
+      });
+    }, 1000);
+  };
+
   return (
     <div className="home-page">
       {/* Hero Section */}
@@ -18,6 +32,7 @@ function HomePage() {
             </p>
             <div className="hero-actions">
               <Link to="/generate" className="btn btn-primary btn-lg">
+                <Sparkles size={20} />
                 Generate Syllabus
               </Link>
               <Link to="/analyze" className="btn btn-secondary btn-lg">
@@ -27,6 +42,13 @@ function HomePage() {
             <div className="hero-badge">
               <span className="badge badge-success">✅ 100% Free Tier</span>
               <span className="badge badge-primary">🚀 AI-Powered</span>
+              <button
+                onClick={showToastDemo}
+                className="badge badge-warning"
+                style={{ cursor: 'pointer', border: 'none' }}
+              >
+                🎨 Try New UI Features
+              </button>
             </div>
           </div>
         </div>
