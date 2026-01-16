@@ -1,13 +1,15 @@
 """
 Syllabus Generator for SCDO
-Generates complete syllabi using IBM Granite and templates
+Generates complete syllabi using AI (Gemini/Granite) with enhanced prompts
 """
 
 from typing import Dict, List, Any, Optional
 import logging
 from pathlib import Path
+import yaml
 
-from ..ibm.granite_client import GraniteClient
+from ..ai.model_manager import ModelManager
+from ..ai.prompt_library import PromptLibrary
 from ..optimization.bloom_mapper import BloomMapper
 from ..validation.syllabus_validator import SyllabusValidator
 from .domain_templates import (
@@ -21,15 +23,49 @@ from .rubric_generator import RubricGenerator
 
 
 class SyllabusGenerator:
-    """Generate complete syllabi from minimal inputs"""
+    """Generate complete syllabi from minimal inputs with AI"""
     
-    def __init__(self, granite_client: Optional[GraniteClient] = None):
+    def __init__(self, model_manager: Optional[ModelManager] = None):
         self.logger = logging.getLogger(__name__)
-        self.granite = granite_client or GraniteClient()
+        
+        # Use ModelManager instead of direct Granite client
+        self.ai = model_manager or self._initialize_model_manager()
+        
+        # Initialize prompt library
+        self.prompts = PromptLibrary()
+        
         self.bloom_mapper = BloomMapper()
         self.validator = SyllabusValidator()
-        self.refiner = IterativeRefiner(self.granite)
+        self.refiner = IterativeRefiner(self.ai)
         self.rubric_gen = RubricGenerator()
+        
+        self.logger.info(f"Initialized Syllabus Generator with AI models")
+    
+    def _initialize_model_manager(self) -> ModelManager:
+        """Initialize AI model manager with configuration"""
+        try:
+            # Load AI models config
+            config_path = Path(__file__).parent.parent.parent / "configs" / "ai_models.yaml"
+            if config_path.exists():
+                with open(config_path, 'r') as f:
+                    config = yaml.safe_load(f)
+            else:
+                config = {}
+            
+            manager = ModelManager(config)
+            
+            # Check if any models available
+            if not manager.models:
+                self.logger.warning("No AI models available! Please configure Gemini or Granite.")
+            else:
+                available = [name for name in manager.models.keys()]
+                self.logger.info(f"Available AI models: {', '.join(available)}")
+            
+            return manager
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize ModelManager: {e}")
+            raise
     
     def _detect_and_cache_domain(self, course_title: str, keywords: List[str]) -> str:
         """Detect domain and cache for current generation"""
@@ -87,11 +123,19 @@ class SyllabusGenerator:
         course_code: str,
         credits: str,
         program_outcomes: List[str],
-        keywords: List[str],
+        keywords: List[str] = None,
+        unit_topics: List[Dict[str, Any]] = None,
+        textbooks: List[str] = None,
+        references: List[str] = None,
+        online_resources: List[str] = None,
         domain: str = "engineering",
         num_units: int = 5,
         num_outcomes: int = 5,
-        enable_refinement: bool = False
+        enable_refinement: bool = False,
+        program: str = "",
+        year: str = "",
+        course_level: str = "",
+        use_chained_generation: bool = False
     ) -> Dict[str, Any]:
         """
         Generate complete syllabus
@@ -101,23 +145,69 @@ class SyllabusGenerator:
             course_code: Course code
             credits: Credit hours (L-T-P format)
             program_outcomes: Relevant program outcomes
-            keywords: Key topics/skills
+            keywords: Key topics/skills (backward compatibility)
+            unit_topics: Unit-wise topics list [{"unit_number": 1, "topics": [...]}, ...]
+            textbooks: User-provided textbooks
+            references: User-provided reference books
+            online_resources: User-provided online resources
             domain: Academic domain
             num_units: Number of units to generate
             num_outcomes: Number of course outcomes
             enable_refinement: Enable iterative refinement (slower but higher quality)
+            program: Program name (e.g., "B.Tech Computer Science")
+            year: Year/Semester (e.g., "3rd Year")
+            course_level: Explicit course level (introductory/intermediate/advanced)
+            use_chained_generation: Use staggered LLM chaining for structured JSON output
             
         Returns:
             Complete syllabus structure with quality score
         """
+        
+        # Use staggered LLM chaining if requested
+        if use_chained_generation:
+            self.logger.info(f"Using staggered LLM chaining for {course_title}")
+            from .chained_generator import ChainedSyllabusGenerator
+            
+            chained = ChainedSyllabusGenerator(self.ai)
+            return chained.generate_staggered(
+                course_info={
+                    "course_title": course_title,
+                    "course_code": course_code,
+                    "credits": credits,
+                    "program_outcomes": program_outcomes,
+                    "keywords": keywords or [],
+                    "unit_topics": unit_topics,
+                    "domain": domain,
+                    "program": program,
+                    "year": year,
+                    "course_level": course_level
+                },
+                num_units=num_units,
+                num_outcomes=num_outcomes,
+                verbose=False
+            )
+        
         self.logger.info(f"Generating syllabus for {course_title} (refinement: {enable_refinement})")
         
         # Clear cached domain for new generation
         if hasattr(self, '_cached_domain'):
             delattr(self, '_cached_domain')
         
-        # Generate course overview
-        overview = self._generate_overview(course_title, keywords, domain)
+        # Handle keywords: use unit_topics or fallback to keywords
+        keywords = keywords or []
+        if unit_topics:
+            # Extract all topics from unit_topics for general use
+            all_topics = []
+            for unit in unit_topics:
+                all_topics.extend(unit.get('topics', []))
+            if all_topics:
+                keywords = all_topics
+        
+        # Determine course level: use explicit or auto-detect
+        effective_level = course_level if course_level else self._estimate_course_level(course_title)
+        
+        # Generate course overview (4-5 lines)
+        overview = self._generate_overview(course_title, keywords, domain, program, year)
         
         # Generate course objectives
         objectives = self._generate_objectives(course_title, keywords, domain)
@@ -139,8 +229,8 @@ class SyllabusGenerator:
                 outcomes, course_title, keywords, program_outcomes, num_outcomes
             )
         
-        # Generate unit-wise syllabus
-        units = self._generate_units(course_title, keywords, num_units, credits)
+        # Generate unit-wise syllabus (use unit_topics if available)
+        units = self._generate_units(course_title, keywords, num_units, credits, unit_topics)
         
         # Generate teaching methodology
         methodology = self._generate_methodology(domain)
@@ -148,8 +238,25 @@ class SyllabusGenerator:
         # Generate assessment pattern
         assessment = self._generate_assessment_pattern(outcomes, domain)
         
-        # Generate references
-        references = self._generate_references(course_title, keywords)
+        # Handle references: use user-provided or generate
+        # Check if any user-provided references exist (not None and not empty)
+        has_user_refs = (
+            (textbooks and len(textbooks) > 0) or 
+            (references and len(references) > 0) or 
+            (online_resources and len(online_resources) > 0)
+        )
+        
+        if has_user_refs:
+            # Use user-provided references
+            refs = {
+                'textbooks': textbooks if textbooks else [],
+                'references': references if references else [],
+                'online_resources': online_resources if online_resources else [],
+                'raw_suggestions': ''
+            }
+        else:
+            # Generate references using AI
+            refs = self._generate_references(course_title, keywords)
         
         # Generate assessment rubrics
         rubrics = self.rubric_gen.generate_rubrics(assessment, domain)
@@ -157,25 +264,34 @@ class SyllabusGenerator:
         # Get industry context
         industry_context = self._get_industry_context(keywords, course_title)
         
+        # Generate CO-PO summary (1 line)
+        copo_summary = self._generate_copo_summary(outcomes, program_outcomes)
+        
         # Create syllabus structure
         syllabus = {
             'course_title': course_title,
             'course_code': course_code,
             'credits': credits,
+            'program': program,
+            'year': year,
+            'course_level': effective_level,
             'overview': overview,
             'objectives': objectives,
             'learning_outcomes': outcomes,
             'units': units,
             'teaching_methodology': methodology,
             'assessment_pattern': assessment,
-            'references': references,
+            'references': refs,
             'rubrics': rubrics,
+            'copo_summary': copo_summary,
             'generated': True,
             'metadata': {
                 'domain_detected': self._detect_and_cache_domain(course_title, keywords),
-                'course_level': self._estimate_course_level(course_title),
+                'course_level': effective_level,
                 'industry_context': industry_context,
-                'refinement_enabled': enable_refinement
+                'refinement_enabled': enable_refinement,
+                'program': program,
+                'year': year
             }
         }
         
@@ -201,29 +317,35 @@ class SyllabusGenerator:
         self,
         course_title: str,
         keywords: List[str],
-        domain: str
+        domain: str,
+        program: str = "",
+        year: str = ""
     ) -> str:
-        """Generate course overview"""
-        system_prompt = f"""You are a {domain} curriculum expert with 15+ years of experience.
-Write an engaging course overview (2-3 paragraphs) that:
-- Explains the course's relevance to modern {domain}
-- Describes real-world applications and industry importance
-- Highlights what makes this course valuable for students
-- Mentions key skills and competencies students will develop"""
-
-        prompt = f"""Course: {course_title}
-Key Topics: {', '.join(keywords)}
-Domain: {domain}
-Target Audience: Undergraduate/Graduate students
-
-Context:
-- This course is essential for careers in {domain}
-- Industry applications include: {self._suggest_applications(keywords, course_title)}
-- Students will gain practical skills in: {', '.join(keywords[:3])}
-
-Write a comprehensive, engaging course overview that makes students excited to take this course."""
-
-        return self.granite.generate(prompt, system_prompt=system_prompt, temperature=0.6, max_tokens=500)
+        """Generate course overview using enhanced prompts (4-5 lines)"""
+        
+        # Get domain-specific context
+        applications = get_domain_applications(detect_domain(course_title, keywords))
+        careers = get_domain_careers(detect_domain(course_title, keywords))
+        
+        # Get enhanced prompts from library
+        prompts = self.prompts.get_course_overview_prompt(
+            course_title=course_title,
+            keywords=keywords,
+            domain=domain,
+            applications=applications,
+            careers=careers,
+            program=program,
+            year=year
+        )
+        
+        # Generate using AI with optimized temperature (reduced tokens for 4-5 lines)
+        return self.ai.generate(
+            prompt=prompts['user'],
+            system_prompt=prompts['system'],
+            task_type='generation',
+            temperature=0.65,
+            max_tokens=350  # Reduced for 4-5 lines
+        )
         
     def _generate_objectives(
         self,
@@ -231,40 +353,32 @@ Write a comprehensive, engaging course overview that makes students excited to t
         keywords: List[str],
         domain: str
     ) -> List[str]:
-        """Generate course objectives"""
-        system_prompt = f"""You are a {domain} curriculum expert with expertise in outcome-based education.
-Generate 4-6 SMART (Specific, Measurable, Achievable, Relevant, Time-bound) course objectives.
-
-GOOD EXAMPLES:
-✓ "Develop proficiency in designing and implementing scalable web applications using modern frameworks"
-✓ "Master advanced data structures and their applications in solving complex computational problems"
-
-BAD EXAMPLES:
-✗ "Learn programming" (too vague)
-✗ "Understand computers" (not specific or measurable)
-
-Requirements:
-- Focus on skills students will gain, not just topics covered
-- Use action verbs: develop, master, acquire, build, design
-- Be specific about the level of proficiency expected
-- Consider industry relevance and career preparation"""
-
-        prompt = f"""Course: {course_title}
-Key Topics: {', '.join(keywords)}
-Domain: {domain}
-Target Level: {self._estimate_course_level(course_title)}
-
-Industry Context:
-- Relevant tools/technologies: {self._suggest_tools(keywords, course_title)}
-- Career paths: {self._suggest_careers(domain, course_title, keywords)}
-- Practical applications: {self._suggest_applications(keywords, course_title)}
-- Prerequisites: {self._suggest_prerequisites(keywords, course_title)}
-- Job Market: {self._get_industry_context(keywords, course_title)}
-
-Generate 4-6 SMART course objectives that prepare students for industry and further study.
-Emphasize skills that are valuable in the current job market."""
-
-        response = self.granite.generate(prompt, system_prompt=system_prompt, temperature=0.5, max_tokens=400)
+        """Generate course objectives using enhanced prompts"""
+        
+        # Get domain context
+        domain_detected = detect_domain(course_title, keywords)
+        tools = get_domain_tools(domain_detected)
+        applications = get_domain_applications(domain_detected)
+        course_level = self._estimate_course_level(course_title)
+        
+        # Get enhanced prompts
+        prompts = self.prompts.get_objectives_prompt(
+            course_title=course_title,
+            keywords=keywords,
+            domain=domain,
+            course_level=course_level,
+            tools=tools,
+            applications=applications
+        )
+        
+        # Generate with AI
+        response = self.ai.generate(
+            prompt=prompts['user'],
+            system_prompt=prompts['system'],
+            task_type='generation',
+            temperature=0.5,
+            max_tokens=200  # Reduced for shorter objectives
+        )
         
         # Parse objectives
         objectives = []
@@ -273,7 +387,7 @@ Emphasize skills that are valuable in the current job market."""
             if line and (line[0].isdigit() or line.startswith('-') or line.startswith('•')):
                 # Remove numbering/bullets
                 obj = line.lstrip('0123456789.-•) ').strip()
-                if obj:
+                if obj and len(obj) > 10:  # Reduced min length for shorter objectives
                     objectives.append(obj)
                     
         return objectives[:6]
@@ -285,118 +399,74 @@ Emphasize skills that are valuable in the current job market."""
         program_outcomes: List[str],
         num_outcomes: int
     ) -> List[Dict[str, str]]:
-        """Generate course learning outcomes with strict Bloom's distribution"""
+        """Generate course learning outcomes using enhanced prompts"""
         
         # Get level-appropriate Bloom's distribution
         course_level = self._estimate_course_level(course_title)
         bloom_dist = get_bloom_distribution(course_level, num_outcomes)
-        dist_str = format_distribution_for_prompt(bloom_dist)
         
-        # Build verb requirements per level
-        verb_requirements = []
-        for level, count in bloom_dist.items():
-            if count > 0:
-                verbs = get_bloom_verb_list(level)
-                verb_requirements.append(f"  {level.capitalize()} ({count}): {', '.join(verbs[:5])}")
+        # Get domain context
+        domain_detected = detect_domain(course_title, keywords)
         
-        verb_list = "\n".join(verb_requirements)
-        
-        system_prompt = f"""You are an expert in writing measurable learning outcomes using Bloom's Taxonomy.
-Course Level: {course_level}
-
-CRITICAL REQUIREMENT - Bloom's Distribution:
-You MUST generate EXACTLY this distribution:
-{dist_str}
-
-Use ONLY these verbs for each level:
-{verb_list}
-
-EXCELLENT EXAMPLES (Specific, Measurable, Action-oriented):
-✓ "Design and implement a relational database system that meets third normal form requirements" [Create]
-✓ "Analyze the time and space complexity of sorting algorithms using Big-O notation" [Analyze]
-✓ "Apply object-oriented design patterns to solve real-world software engineering problems" [Apply]
-✓ "Evaluate the trade-offs between different machine learning algorithms for classification tasks" [Evaluate]
-
-POOR EXAMPLES (Vague, Not measurable):
-✗ "Understand databases" - too vague, no action verb
-✗ "Know about algorithms" - not measurable
-✗ "Learn programming concepts" - no Bloom's verb, unclear
-
-Requirements:
-- MUST start with a Bloom's taxonomy verb from the specified level
-- Be specific about what students will do
-- Include measurable criteria when possible
-- Follow the EXACT distribution specified above"""
-
-        prompt = f"""Course: {course_title}
-Key Topics: {', '.join(keywords)}
-Program Outcomes: {', '.join(program_outcomes[:3])}
-Course Level: {course_level}
-
-REQUIRED DISTRIBUTION: {dist_str}
-
-Generate EXACTLY {num_outcomes} measurable course learning outcomes following the EXACT Bloom's distribution above.
-Each outcome must start with the appropriate Bloom's verb for its level.
-Ensure specific, measurable language."""
-
-        response = self.granite.generate(prompt, system_prompt=system_prompt, temperature=0.4, max_tokens=600)
-        
-        # Parse outcomes
+        # Generate one outcome per Bloom's level according to distribution
         outcomes = []
-        for i, line in enumerate(response.split('\n'), 1):
-            line = line.strip()
-            if line and (line[0].isdigit() or line.startswith('-') or line.startswith('•')):
-                # Remove numbering/bullets
-                outcome_text = line.lstrip('0123456789.-•) ').strip()
-                if outcome_text:
-                    # Classify Bloom's level
-                    bloom_data = self.bloom_mapper.map_outcome(outcome_text)
-                    
-                    outcomes.append({
-                        'code': f'CO{i}',
-                        'description': outcome_text,
-                        'bloom_level': bloom_data['bloom_level']
-                    })
-                    
-                if len(outcomes) >= num_outcomes:
+        outcome_num = 1
+        
+        for bloom_level, count in bloom_dist.items():
+            for _ in range(count):
+                if outcome_num > num_outcomes:
                     break
-                    
-        return outcomes
+                
+                # Get enhanced prompt for this Bloom's level
+                prompts = self.prompts.get_learning_outcome_prompt(
+                    course_title=course_title,
+                    course_level=course_level,
+                    bloom_level=bloom_level,
+                    domain_context=domain_detected,
+                    keywords=keywords
+                )
+                
+                # Generate one outcome
+                outcome_text = self.ai.generate(
+                    prompt=prompts['user'],
+                    system_prompt=prompts['system'],
+                    task_type='generation',
+                    temperature=0.4,  # Lower for more focused outcomes
+                    max_tokens=80  # Reduced for 1-2 line output
+                )
+                
+                # Clean up the outcome text
+                outcome_text = outcome_text.strip().strip('"').strip("'").strip()
+                
+                # Only add if it's a valid outcome (min 15 chars for short outcomes)
+                if outcome_text and len(outcome_text) > 15:
+                    outcomes.append({
+                        'code': f'CO{outcome_num}',
+                        'description': outcome_text,
+                        'bloom_level': bloom_level
+                    })
+                    outcome_num += 1
+        
+        # If we didn't get enough outcomes, pad with the AI model
+        while len(outcomes) < num_outcomes:
+            outcomes.append({
+                'code': f'CO{len(outcomes) + 1}',
+                'description': f"Apply {keywords[len(outcomes) % len(keywords)]} concepts to solve real-world problems effectively",
+                'bloom_level': 'apply'
+            })
+        
+        return outcomes[:num_outcomes]
         
     def _generate_units(
         self,
         course_title: str,
         keywords: List[str],
         num_units: int,
-        credits: str
+        credits: str,
+        unit_topics: List[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
-        """Generate unit-wise syllabus"""
-        system_prompt = """You are a curriculum design expert specializing in structured learning paths.
-Generate a detailed unit-wise syllabus with logical progression from fundamentals to advanced topics.
-
-REQUIREMENTS:
-- Each unit should have a clear, descriptive title
-- 4-6 specific topics per unit
-- Topics should progress logically within each unit
-- Earlier units should cover prerequisites for later units
-- Include both theoretical concepts and practical applications
-- Topics should be specific, not generic
-
-GOOD UNIT EXAMPLE:
-Unit 1: Introduction to Machine Learning
-- Supervised vs Unsupervised learning paradigms
-- Training, validation, and test dataset splits
-- Bias-variance tradeoff and overfitting prevention
-- Performance metrics: accuracy, precision, recall, F1-score
-- Python libraries for ML: scikit-learn, NumPy, Pandas
-
-BAD UNIT EXAMPLE:
-Unit 1: Basics
-- Introduction
-- Concepts
-- Theory
-- Practice"""
-
+        """Generate unit-wise syllabus using enhanced prompts"""
+        
         # Calculate hours per unit
         try:
             l, t, p = map(int, credits.split('-'))
@@ -404,64 +474,115 @@ Unit 1: Basics
             hours_per_unit = total_hours // num_units
         except:
             hours_per_unit = 10
-            
-        prompt = f"""Course: {course_title}
-Key Topics: {', '.join(keywords)}
-Number of Units: {num_units}
-Hours per Unit: {hours_per_unit}
-
-Context:
-- Target Level: {self._estimate_course_level(course_title)}
-- Industry Tools: {self._suggest_tools(keywords, course_title)}
-- Applications: {self._suggest_applications(keywords, course_title)}
-- Prerequisites: {self._suggest_prerequisites(keywords, course_title)}
-
-Generate exactly {num_units} units with:
-- Descriptive unit titles
-- 4-6 specific topics per unit  
-- Logical progression from introductory to advanced concepts
-- Mix of theory and practical applications
-
-Format:
-Unit 1: [Title]
-- Topic 1
-- Topic 2
-..."""
-
-        response = self.granite.generate(prompt, system_prompt=system_prompt, temperature=0.7, max_tokens=2000)
         
-        # Parse units (simplified parsing)
+        # Get domain context
+        domain_detected = detect_domain(course_title, keywords)
+        domain_tools = get_domain_tools(domain_detected)
+        applications = get_domain_applications(domain_detected)
+        
+        # Build unit_topics lookup for quick access
+        unit_topics_map = {}
+        if unit_topics:
+            for ut in unit_topics:
+                unit_num = ut.get('unit_number', 0)
+                if unit_num:
+                    unit_topics_map[unit_num] = ut.get('topics', [])
+        
+        # Generate units one by one
         units = []
-        current_unit = None
+        for unit_num in range(1, num_units + 1):
+            # Use unit-specific topics if available, otherwise use general keywords
+            unit_keywords = unit_topics_map.get(unit_num, keywords)
+            
+            # Get enhanced prompt for this unit
+            prompts = self.prompts.get_unit_generation_prompt(
+                course_title=course_title,
+                unit_number=unit_num,
+                total_units=num_units,
+                previous_units=units,
+                keywords=unit_keywords,  # Use unit-specific topics
+                domain_tools=domain_tools,
+                applications=applications,
+                hours_per_unit=hours_per_unit
+            )
+            
+            # Generate unit content
+            response = self.ai.generate(
+                prompt=prompts['user'],
+                system_prompt=prompts['system'],
+                task_type='generation',
+                temperature=0.6,
+                max_tokens=250  # Reduced for shorter topic descriptions
+            )
+            
+            # Parse unit
+            unit = self._parse_unit_response(response, unit_num, hours_per_unit)
+            if unit:
+                units.append(unit)
         
-        for line in response.split('\n'):
+        return units[:num_units]
+    
+    def _parse_unit_response(self, response: str, unit_number: int, hours: int) -> Dict[str, Any]:
+        """Parse AI-generated unit response into structured format"""
+        lines = response.split('\n')
+        unit = None
+        current_topics = []
+        
+        for line in lines:
             line = line.strip()
             
-            # Check for unit header
-            if 'unit' in line.lower() and ':' in line:
-                if current_unit:
-                    units.append(current_unit)
-                    
-                # Extract unit number and title
-                parts = line.split(':', 1)
-                title = parts[1].strip() if len(parts) > 1 else "Untitled"
+            # Look for unit title
+            if ('unit' in line.lower() and ':' in line) or (line and unit is None and len(line) > 10 and not line[0].isdigit()):
+                # Extract title
+                if ':' in line:
+                    title = line.split(':', 1)[1].strip()
+                else:
+                    title = line
                 
-                current_unit = {
-                    'unit_number': len(units) + 1,
+                unit = {
+                    'unit_number': unit_number,
                     'title': title,
                     'topics': [],
-                    'hours': hours_per_unit
+                    'hours': hours
                 }
-            elif current_unit and line and (line.startswith('-') or line.startswith('•') or line[0].isdigit()):
-                # Add topic
+            # Look for topics
+            elif line and (line[0].isdigit() or line.startswith('-') or line.startswith('•')):
                 topic = line.lstrip('0123456789.-•) ').strip()
-                if topic:
-                    current_unit['topics'].append(topic)
-                    
-        if current_unit:
-            units.append(current_unit)
-            
-        return units[:num_units]
+                if topic and len(topic) > 10:  # Filter very short topics
+                    current_topics.append(topic)
+        
+        # Add topics to unit
+        if unit:
+            unit['topics'] = current_topics[:6]  # Max 6 topics
+        
+        # Fallback if parsing failed
+        if not unit:
+            unit = {
+                'unit_number': unit_number,
+                'title': f"Unit {unit_number}",
+                'topics': current_topics[:5] if current_topics else ["Topic 1", "Topic 2", "Topic 3", "Topic 4", "Topic 5"],
+                'hours': hours
+            }
+        
+        return unit
+    
+    def _generate_copo_summary(
+        self,
+        outcomes: List[Dict[str, str]],
+        program_outcomes: List[str]
+    ) -> str:
+        """Generate concise 1-line CO-PO mapping summary"""
+        if not outcomes or not program_outcomes:
+            return "CO-PO mapping: All course outcomes align with program outcomes."
+        
+        # Create a simple mapping summary
+        co_codes = [o.get('code', f'CO{i+1}') for i, o in enumerate(outcomes)]
+        po_codes = program_outcomes[:5]  # Use first 5 POs for brevity
+        
+        # Generate concise summary
+        summary = f"Course outcomes ({', '.join(co_codes)}) map to program outcomes ({', '.join(po_codes)}) with strong alignment in technical competency and problem-solving skills."
+        
+        return summary
         
     def _generate_methodology(self, domain: str) -> Dict[str, List[str]]:
         """Generate teaching-learning methodology"""
@@ -520,43 +641,76 @@ Unit 1: [Title]
         keywords: List[str]
     ) -> Dict[str, List[str]]:
         """Generate reference materials"""
-        system_prompt = """You are an academic librarian and subject matter expert.
-Suggest REAL, well-known, authoritative books and resources that actually exist.
-
-REQUIREMENTS:
-- List actual textbooks with real authors  
-- Include ISBN or publisher when possible
-- Suggest relevant online courses (Coursera, edX, MIT OpenCourseWare)
-- Provide recent and classic foundational texts
-- Be specific with titles and authors, not generic suggestions
-
-GOOD EXAMPLES:
-✓ "Introduction to Algorithms by Thomas H. Cormen, Charles E. Leiserson (MIT Press)"
-✓ "Deep Learning by Ian Goodfellow, Yoshua Bengio (MIT Press)"
-✓ "Machine Learning Specialization on Coursera by Andrew Ng"
-
-BAD EXAMPLES:
-✗ "A book on programming"
-✗ "Various online resources"
-✗ "Standard textbooks"
-"""
-
-        prompt = f"""Course: {course_title}
-Topics: {', '.join(keywords)}
-Level: {self._estimate_course_level(course_title)}
-
-Suggest specific, real resources:
-1. 3-4 textbooks (include author names and publishers)
-2. 2-3 reference books or research papers
-3. 3-4 online resources (MOOCs, tutorials, documentation)
-
-Be specific with titles and authors."""
-
-        response = self.granite.generate(prompt, system_prompt=system_prompt, temperature=0.3, max_tokens=800)
+        
+        # Get enhanced prompts for references
+        prompts = self.prompts.get_references_prompt(
+            course_title=course_title,
+            keywords=keywords,
+            course_level=self._estimate_course_level(course_title),
+            domain=detect_domain(course_title, keywords)
+        )
+        
+        response = self.ai.generate(
+            prompt=prompts['user'],
+            system_prompt=prompts['system'],
+            task_type='generation',
+            temperature=0.3,
+            max_tokens=600
+        )
+        
+        # Parse the response into categories
+        textbooks = []
+        references = []
+        online_resources = []
+        
+        current_section = None
+        for line in response.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Detect section headers
+            lower_line = line.lower()
+            if 'textbook' in lower_line or 'text book' in lower_line:
+                current_section = 'textbooks'
+                continue
+            elif 'reference' in lower_line or 'additional' in lower_line:
+                current_section = 'references'
+                continue
+            elif 'online' in lower_line or 'course' in lower_line or 'resource' in lower_line or 'web' in lower_line:
+                current_section = 'online'
+                continue
+            
+            # Parse line items (numbered or bulleted)
+            if line[0].isdigit() or line.startswith('-') or line.startswith('•') or line.startswith('*'):
+                item = line.lstrip('0123456789.-•*) ').strip()
+                if item and len(item) > 10:
+                    if current_section == 'textbooks':
+                        textbooks.append(item)
+                    elif current_section == 'references':
+                        references.append(item)
+                    elif current_section == 'online':
+                        online_resources.append(item)
+                    else:
+                        # Default: add to textbooks if no section detected
+                        textbooks.append(item)
+        
+        # If parsing failed, try to split by common patterns
+        if not textbooks and not references and not online_resources:
+            lines = [l.strip() for l in response.split('\n') if l.strip() and len(l.strip()) > 15]
+            # Distribute evenly
+            for i, line in enumerate(lines[:10]):
+                clean_line = line.lstrip('0123456789.-•*) ').strip()
+                if i < 4:
+                    textbooks.append(clean_line)
+                elif i < 7:
+                    references.append(clean_line)
+                else:
+                    online_resources.append(clean_line)
         
         return {
-            'textbooks': [],
-            'references': [],
-            'online_resources': [],
+            'textbooks': textbooks[:4],
+            'references': references[:3],
+            'online_resources': online_resources[:4],
             'raw_suggestions': response
         }

@@ -1,6 +1,6 @@
 # SCDO - Syllabus and Curriculum Design Optimizer
 
-An AI-powered system for analyzing, optimizing, and generating academic syllabi using IBM Granite and watsonx.ai.
+An AI-powered system for analyzing, optimizing, and generating academic syllabi using **MiMo** (Xiaomi), **Gemini** (Google), and **Granite** (IBM watsonx.ai).
 
 ## Features
 
@@ -65,7 +65,37 @@ python -m spacy download en_core_web_sm
 
 ## Configuration
 
-### IBM Cloud Setup (FREE TIER)
+### AI Models Setup (Choose One)
+
+The system supports multiple **FREE** AI models with automatic fallback:
+
+#### 🎯 Option 1: OpenRouter + MiMo (RECOMMENDED - FREE)
+
+**Why MiMo?**
+- ✅ **100% FREE** during beta (until ~Jan 2026)
+- ✅ **No credit card** required
+- ✅ **256K context window** - handles large syllabi
+- ✅ **Fast & accurate** for educational content
+- ✅ **One API key** for 300+ models
+
+**Quick Setup:**
+1. Get free API key: [https://openrouter.ai](https://openrouter.ai)
+2. Set environment variable:
+   ```powershell
+   $env:OPENROUTER_API_KEY='your_key_here'
+   ```
+3. Done! See [OPENROUTER_SETUP.md](OPENROUTER_SETUP.md) for details
+
+#### Option 2: Google Gemini (FREE)
+
+1. Get free API key: [https://makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey)
+2. Set environment variable:
+   ```powershell
+   $env:GEMINI_API_KEY='your_key_here'
+   ```
+3. See [GEMINI_SETUP_STEPS.md](GEMINI_SETUP_STEPS.md) for details
+
+#### Option 3: IBM Granite (FREE TIER)
 
 > **Note:** This project uses **only FREE services**. IBM watsonx.ai offers a free tier for IBM Granite models. No paid services required!
 

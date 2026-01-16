@@ -38,6 +38,9 @@ export const BloomDistributionChart = ({ bloomAnalysis }) => {
         }));
     }
 
+    // Filter out zero values to prevent cluttered chart
+    data = data.filter(item => item.value > 0 || item.percentage > 0);
+
     if (data.length === 0) {
         console.log('No valid data to display');
         return null;
@@ -45,27 +48,56 @@ export const BloomDistributionChart = ({ bloomAnalysis }) => {
 
     console.log('Chart data:', data);
 
+    // Custom label renderer that only shows for significant slices
+    const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage, name }) => {
+        // Only show label if percentage is significant (> 5%)
+        if (percentage < 5) return null;
+
+        const RADIAN = Math.PI / 180;
+        const radius = outerRadius + 30;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        return (
+            <text
+                x={x}
+                y={y}
+                fill="#333"
+                textAnchor={x > cx ? 'start' : 'end'}
+                dominantBaseline="central"
+                fontSize={12}
+            >
+                {`${name}: ${percentage.toFixed(0)}%`}
+            </text>
+        );
+    };
+
     return (
         <div className="chart-container">
             <h3 className="chart-title">Bloom's Taxonomy Distribution</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={350}>
                 <PieChart>
                     <Pie
                         data={data}
                         cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percentage }) => `${name}: ${percentage.toFixed(1)}%`}
-                        outerRadius={80}
+                        cy="45%"
+                        labelLine={true}
+                        label={renderCustomLabel}
+                        outerRadius={90}
                         fill="#8884d8"
-                        dataKey="value"
+                        dataKey="percentage"
                     >
                         {data.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={BLOOM_COLORS[entry.name.toLowerCase()] || '#999'} />
                         ))}
                     </Pie>
-                    <Tooltip formatter={(value, name, props) => [`${value}%`, name]} />
-                    <Legend />
+                    <Tooltip formatter={(value) => [`${value.toFixed(1)}%`]} />
+                    <Legend
+                        layout="horizontal"
+                        align="center"
+                        verticalAlign="bottom"
+                        wrapperStyle={{ paddingTop: '20px' }}
+                    />
                 </PieChart>
             </ResponsiveContainer>
         </div>

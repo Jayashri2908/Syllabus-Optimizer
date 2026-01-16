@@ -4,6 +4,35 @@ import { useSyllabus } from '../context/SyllabusContext';
 import { BloomDistributionChart, BloomBalanceChart, COPOHeatmap } from '../components/Charts';
 import '../components/Charts.css';
 
+// Simple markdown to HTML converter for AI-generated content
+const simpleMarkdown = (text) => {
+  if (!text) return '';
+  return text
+    // Headers
+    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Italic
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Bullet points
+    .replace(/^\* (.+)$/gm, '<li>$1</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    // Numbered lists  
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    // Line breaks
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br/>')
+    // Wrap in paragraph
+    .replace(/^/, '<p>')
+    .replace(/$/, '</p>')
+    // Fix list items (wrap consecutive li in ul)
+    .replace(/(<li>.*<\/li>(<br\/>)?)+/g, '<ul>$&</ul>')
+    .replace(/<br\/><\/ul>/g, '</ul>')
+    .replace(/<ul><br\/>/g, '<ul>');
+};
+
 function OptimizePage() {
   // Global State
   const {
@@ -24,14 +53,15 @@ function OptimizePage() {
     setError(null);
 
     try {
-      // Upload returns the parsed syllabus data directly
-      const syllabusData = await apiService.uploadSyllabus(file);
+      // Upload returns { success, filename, data } - extract the data
+      const uploadResponse = await apiService.uploadSyllabus(file);
+      const syllabusData = uploadResponse.data || uploadResponse;
 
       // Get optimization suggestions - returns full response with optimization object
       const optResponse = await apiService.optimizeSyllabus(syllabusData);
 
       setOptimizationResults({
-        syllabus: syllabusData,
+        syllabus: optResponse.syllabus || syllabusData,  // Use backend's syllabus or fallback
         optimization: optResponse.optimization  // Extract optimization from response
       });
     } catch (err) {
@@ -63,7 +93,13 @@ function OptimizePage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${exportData.course_code || 'syllabus'}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+
+      // Determine file extension based on format
+      let ext = 'pdf';
+      if (format === 'word') ext = 'docx';
+      else if (format === 'latex-pdf') ext = 'pdf';
+
+      a.download = `${exportData.course_code || 'syllabus'}.${ext}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -117,11 +153,18 @@ function OptimizePage() {
                 📄 Export PDF
               </button>
               <button
-                onClick={() => handleExport('excel')}
+                onClick={() => handleExport('latex-pdf')}
                 className="btn btn-secondary"
                 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                📊 Export Excel
+                📐 Export LaTeX PDF
+              </button>
+              <button
+                onClick={() => handleExport('word')}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                📝 Export Word
               </button>
             </div>
 
@@ -255,9 +298,12 @@ function OptimizePage() {
                 <div className="card-header">
                   <h3 className="card-title">📚 Unit Sequencing</h3>
                 </div>
-                <div className="sequence-content">
-                  <p>{optimizationResults.optimization.sequence_optimization.optimization_suggestions}</p>
-                </div>
+                <div
+                  className="sequence-content markdown-content"
+                  dangerouslySetInnerHTML={{
+                    __html: simpleMarkdown(optimizationResults.optimization.sequence_optimization.optimization_suggestions)
+                  }}
+                />
               </div>
             )}
 
@@ -505,18 +551,33 @@ function OptimizePage() {
         }
 
         .status-badge.optimal {
-          background: hsl(142, 71%, 95%);
+          background: hsla(142, 71%, 45%, 0.15);
           color: var(--success);
         }
 
         .status-badge.below {
-          background: hsl(45, 100%, 95%);
+          background: hsla(45, 100%, 50%, 0.15);
           color: hsl(45, 100%, 35%);
         }
 
         .status-badge.above {
-          background: hsl(0, 84%, 95%);
+          background: hsla(0, 84%, 60%, 0.15);
           color: var(--error);
+        }
+
+        [data-theme="dark"] .status-badge.optimal {
+          background: hsla(142, 71%, 45%, 0.25);
+          color: hsl(142, 71%, 65%);
+        }
+
+        [data-theme="dark"] .status-badge.below {
+          background: hsla(45, 100%, 50%, 0.25);
+          color: hsl(45, 100%, 65%);
+        }
+
+        [data-theme="dark"] .status-badge.above {
+          background: hsla(0, 84%, 60%, 0.25);
+          color: hsl(0, 84%, 70%);
         }
 
         .level-stats {
@@ -558,7 +619,7 @@ function OptimizePage() {
         }
 
         .mapping-table thead {
-          background: linear-gradient(135deg, var(--primary-light), hsl(220, 20%, 96%));
+          background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
         }
 
         .mapping-table thead th {
@@ -593,21 +654,36 @@ function OptimizePage() {
         }
 
         .affinity-1 {
-          background: hsl(210, 100%, 98%);
+          background: hsla(210, 100%, 50%, 0.1);
           color: hsl(210, 80%, 50%);
           font-weight: 600;
         }
 
         .affinity-2 {
-          background: hsl(45, 100%, 95%);
+          background: hsla(45, 100%, 50%, 0.15);
           color: hsl(45, 100%, 40%);
           font-weight: 700;
         }
 
         .affinity-3 {
-          background: hsl(142, 71%, 95%);
+          background: hsla(142, 71%, 45%, 0.15);
           color: hsl(142, 71%, 35%);
           font-weight: 700;
+        }
+
+        [data-theme="dark"] .affinity-1 {
+            color: hsl(210, 80%, 70%);
+            background: hsla(210, 100%, 50%, 0.25);
+        }
+
+        [data-theme="dark"] .affinity-2 {
+            color: hsl(45, 100%, 65%);
+            background: hsla(45, 100%, 50%, 0.25);
+        }
+
+        [data-theme="dark"] .affinity-3 {
+            color: hsl(142, 71%, 65%);
+            background: hsla(142, 71%, 45%, 0.25);
         }
 
         .suggestions-list {
@@ -638,17 +714,38 @@ function OptimizePage() {
 
         .topic-badge {
           padding: var(--spacing-sm) var(--spacing-md);
-          background: linear-gradient(135deg, var(--primary-light), hsl(280, 70%, 96%));
+          background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
           color: var(--primary);
           border-radius: var(--radius-md);
           font-weight: 600;
           font-size: 0.875rem;
+          border: 1px solid var(--border-color);
         }
 
         .sequence-content {
           padding: var(--spacing-md);
-          white-space: pre-wrap;
           line-height: 1.8;
+        }
+
+        /* Markdown content styles for AI-generated text */
+        .markdown-content h2, .markdown-content h3, .markdown-content h4 {
+          margin-top: var(--spacing-md);
+          margin-bottom: var(--spacing-sm);
+          color: var(--text-primary);
+        }
+        .markdown-content h2 { font-size: 1.25rem; }
+        .markdown-content h3 { font-size: 1.1rem; }
+        .markdown-content h4 { font-size: 1rem; }
+        .markdown-content strong { color: var(--primary); }
+        .markdown-content ul, .markdown-content ol {
+          margin: var(--spacing-sm) 0;
+          padding-left: var(--spacing-lg);
+        }
+        .markdown-content li {
+          margin-bottom: var(--spacing-xs);
+        }
+        .markdown-content p {
+          margin-bottom: var(--spacing-sm);
         }
 
         /* Lesson Plan Analysis Styles */
@@ -786,12 +883,13 @@ function OptimizePage() {
 
         .similarity-badge {
           padding: var(--spacing-xs) var(--spacing-sm);
-          background: linear-gradient(135deg, var(--primary-light), hsl(45, 100%, 95%));
+          background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
           color: var(--primary);
           border-radius: var(--radius-full);
           font-weight: 700;
           font-size: 0.875rem;
           white-space: nowrap;
+          border: 1px solid var(--border-color);
         }
       `}</style>
     </div>

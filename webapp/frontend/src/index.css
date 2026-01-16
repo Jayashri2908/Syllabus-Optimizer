@@ -24,6 +24,12 @@
   --border: hsl(220, 20%, 90%);
   --shadow: hsla(220, 40%, 10%, 0.1);
 
+  /* Additional Colors */
+  --bg-hover: hsl(220, 20%, 96%);
+  --text-disabled: hsl(220, 10%, 70%);
+  --accent: hsl(280, 70%, 50%);
+  --border-color: hsl(220, 20%, 90%);
+
   /* Dark Mode Colors */
   --dark-bg-primary: hsl(220, 20%, 10%);
   --dark-bg-secondary: hsl(220, 20%, 14%);
@@ -70,6 +76,10 @@
   --text-primary: var(--dark-text-primary);
   --text-secondary: var(--dark-text-secondary);
   --border: var(--dark-border);
+  --bg-hover: hsl(220, 20%, 20%);
+  --text-disabled: hsl(220, 10%, 45%);
+  --border-color: var(--dark-border);
+  --shadow: hsla(0, 0%, 0%, 0.3);
 }
 
 /* Reset and Base Styles */

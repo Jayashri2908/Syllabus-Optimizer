@@ -3,28 +3,28 @@ Course Objectives Optimizer for SCDO
 Optimizes course objectives using SMART criteria
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import logging
 from pathlib import Path
 
 try:
-    from ..ibm.granite_client import GraniteClient
-    GRANITE_AVAILABLE = True
+    from ..ai.model_manager import ModelManager
+    AI_AVAILABLE = True
 except ImportError:
-    GRANITE_AVAILABLE = False
+    AI_AVAILABLE = False
 
 
 class ObjectivesOptimizer:
     """Optimize course objectives using SMART criteria"""
     
-    def __init__(self, granite_client=None):
+    def __init__(self, model_manager: Optional[ModelManager] = None):
         self.logger = logging.getLogger(__name__)
         
-        if GRANITE_AVAILABLE:
-            self.granite = granite_client or GraniteClient()
+        if AI_AVAILABLE:
+            self.ai = model_manager or ModelManager()
             self.enabled = True
         else:
-            self.logger.warning("Granite client not available. Using rule-based optimization.")
+            self.logger.warning("AI models not available. Using rule-based optimization.")
             self.enabled = False
             
         # SMART criteria
@@ -121,9 +121,10 @@ IMPROVEMENTS: [bullet list of improvements]
 SCORE: [0-100]"""
 
         try:
-            response = self.granite.generate(
+            response = self.ai.generate(
                 prompt=prompt,
                 system_prompt=system_prompt,
+                task_type='optimization',
                 temperature=0.7,
                 max_tokens=500
             )

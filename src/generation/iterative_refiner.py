@@ -10,8 +10,14 @@ import logging
 class IterativeRefiner:
     """Refine generated content through critique and regeneration"""
     
-    def __init__(self, granite_client):
-        self.granite = granite_client
+    def __init__(self, ai_model):
+        """
+        Initialize refiner
+        
+        Args:
+            ai_model: ModelManager instance for AI generation
+        """
+        self.ai = ai_model
         self.logger = logging.getLogger(__name__)
     
     def refine_learning_outcomes(
@@ -67,9 +73,10 @@ Outcome 1: [feedback]
 Outcome 2: [feedback]
 ..."""
 
-        critique = self.granite.generate(
-            critique_prompt,
+        critique = self.ai.generate(
+            prompt=critique_prompt,
             system_prompt="You are an expert curriculum reviewer specializing in learning outcome assessment.",
+            task_type='analysis',
             temperature=0.3,
             max_tokens=800
         )
@@ -93,9 +100,10 @@ Maintain Bloom's taxonomy distribution and ensure each outcome is:
 
 Format as numbered list."""
 
-        refined_response = self.granite.generate(
-            refinement_prompt,
+        refined_response = self.ai.generate(
+            prompt=refinement_prompt,
             system_prompt="You are an expert in crafting perfect learning outcomes based on feedback.",
+            task_type='generation',
             temperature=0.4,
             max_tokens=600
         )
@@ -151,9 +159,10 @@ Evaluate for:
 
 Provide brief feedback for each objective and suggest improvements."""
 
-        critique = self.granite.generate(
-            critique_prompt,
+        critique = self.ai.generate(
+            prompt=critique_prompt,
             system_prompt="You are a curriculum design expert.",
+            task_type='analysis',
             temperature=0.3,
             max_tokens=500
         )
@@ -168,8 +177,9 @@ CRITIQUE:
 
 Generate improved versions addressing the feedback. Maintain 4-6 objectives."""
 
-        refined_response = self.granite.generate(
-            refinement_prompt,
+        refined_response = self.ai.generate(
+            prompt=refinement_prompt,
+            task_type='generation',
             temperature=0.5,
             max_tokens=400
         )
@@ -229,9 +239,10 @@ Maintain format:
 Unit 1: [Title]
 Topics: topic1, topic2, ..."""
 
-        refined_response = self.granite.generate(
-            refinement_prompt,
+        refined_response = self.ai.generate(
+            prompt=refinement_prompt,
             system_prompt="You are a curriculum design expert.",
+            task_type='generation',
             temperature=0.6,
             max_tokens=1500
         )

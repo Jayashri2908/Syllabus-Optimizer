@@ -1,20 +1,20 @@
 """
 Content Optimizer for SCDO
-Uses IBM Granite to optimize syllabus content
+Uses AI (Gemini/Granite) to provide actionable optimization suggestions
 """
 
 from typing import Dict, List, Any, Optional
 import logging
 
-from ..ibm.granite_client import GraniteClient
+from ..ai.model_manager import ModelManager
 
 
 class ContentOptimizer:
-    """Optimize syllabus content using AI"""
+    """Optimize syllabus content using AI with actionable recommendations"""
     
-    def __init__(self, granite_client: Optional[GraniteClient] = None):
+    def __init__(self, model_manager: Optional[ModelManager] = None):
         self.logger = logging.getLogger(__name__)
-        self.granite = granite_client or GraniteClient()
+        self.ai = model_manager or ModelManager()
         
     def optimize_learning_outcomes(
         self,
@@ -22,37 +22,66 @@ class ContentOptimizer:
         context: str = ""
     ) -> List[Dict[str, str]]:
         """
-        Optimize learning outcomes for clarity and measurability
+        Optimize learning outcomes with specific, actionable improvements
         
         Args:
             outcomes: List of learning outcomes
             context: Course context
             
         Returns:
-            List of optimized outcomes with explanations
+            Detailed analysis with specific improvements for each outcome
         """
-        system_prompt = """You are an expert in writing measurable learning outcomes.
-Improve the given outcomes to be:
-- Clear and specific
-- Measurable and observable
-- Using appropriate Bloom's taxonomy verbs
-- Aligned with outcome-based education principles
+        system_prompt = """You are a world-class learning outcomes expert with 20+ years experience in curriculum design and accreditation.
 
-For each outcome, provide the improved version and a brief explanation of changes."""
+CRITICAL: For EACH outcome, provide:
+1. **Current Issues**: Specific problems (be direct and critical)
+2. **Improved Version**: Complete rewrite that fixes ALL issues
+3. **Bloom's Level**: Correct taxonomy level
+4. **Why Better**: 2-3 specific improvements made
+
+QUALITY STANDARDS:
+✓ Starts with precise Bloom's verb
+✓ Includes measurable criteria
+✓ Specifies WHAT students will do
+✓ Includes HOW they'll demonstrate (when possible)
+✓ Uses industry-standard terminology
+✓ Specific, not generic
+
+EXCELLENT OUTCOME EXAMPLE:
+"Design and implement a RESTful API using Node.js and Express that performs CRUD operations with proper HTTP status codes (200, 201, 400, 404, 500), error handling, and JSON responses, deployable on cloud platforms"
+
+[Bloom's: Create | Measurable: Can test API | Specific: Technologies and criteria listed]
+
+POOR OUTCOME EXAMPLE:
+"Understand web APIs"
+[Too vague | No verb | Not measurable | No context]"""
 
         outcomes_text = "\n".join([f"{i+1}. {o}" for i, o in enumerate(outcomes)])
         
-        prompt = f"""Course Context: {context}
+        prompt = f"""Course Context: {context if context else 'Not provided'}
 
-Current Learning Outcomes:
+ANALYZE THESE LEARNING OUTCOMES:
 {outcomes_text}
 
-Provide optimized versions of these outcomes."""
+For EACH outcome (1-{len(outcomes)}), provide:
 
-        response = self.granite.generate(prompt, system_prompt=system_prompt)
+**Outcome {'{N}'}:**
+**Issues:** [Specific problems - be critical]
+**Improved:** [Complete rewrite fixing all issues]
+**Bloom's:** [{'{level}'}]
+**Why Better:** [2-3 specific improvements]
+
+Be thorough and specific. Every outcome should be dramatically improved."""
+
+        response = self.ai.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            task_type='optimization',
+            temperature=0.4,
+            max_tokens=1500
+        )
         
-        # Parse response (simplified - would need better parsing)
-        return [{'original': o, 'optimized': response} for o in outcomes]
+        return [{'analysis': response, 'count': len(outcomes)}]
         
     def optimize_unit_sequence(
         self,
@@ -85,7 +114,13 @@ Analyze the unit sequence and suggest optimal ordering based on:
 
 Suggest optimal sequencing and explain the rationale."""
 
-        response = self.granite.generate(prompt, system_prompt=system_prompt)
+        response = self.ai.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            task_type='optimization',
+            temperature=0.5,
+            max_tokens=1000
+        )
         
         return {
             'current_sequence': units,
@@ -109,9 +144,19 @@ Suggest optimal sequencing and explain the rationale."""
         Returns:
             List of suggested topics
         """
-        system_prompt = f"""You are an expert in {domain} education and industry trends.
-Suggest modern, relevant topics that should be included in the course
-based on current industry needs and academic developments."""
+        system_prompt = f"""You are a {domain} industry expert and educator tracking latest trends.
+
+CRITICAL: Suggest ONLY topics that are:
+✓ Currently trending in industry (2024-2026)
+✓ Highly demanded in job markets
+✓ Practical and immediately applicable
+✓ NOT already covered in current topics
+
+For EACH suggestion, provide:
+1. **Topic**: Specific technology/concept
+2. **Why Important**: Industry demand/trend
+3. **How to Integrate**: Where in curriculum
+4. **Resources**: 1-2 learning resources"""
 
         topics_text = "\n".join([f"- {t}" for t in current_topics])
         
@@ -120,9 +165,24 @@ based on current industry needs and academic developments."""
 Current Topics:
 {topics_text}
 
-Suggest 5-10 modern topics or technologies that should be added or emphasized."""
+Suggest 5-7 HIGH-PRIORITY modern topics that are:
+- Trending in {domain} industry RIGHT NOW
+- Missing from current curriculum
+- Valued by employers
 
-        response = self.granite.generate(prompt, system_prompt=system_prompt)
+For each:
+**Topic:** [specific name]
+**Why:** [industry demand]
+**Where:** [which unit to add]
+**Learn:** [one resource]"""
+
+        response = self.ai.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            task_type='optimization',
+            temperature=0.6,
+            max_tokens=1200
+        )
         
         # Parse suggestions (simplified)
         suggestions = [line.strip('- ') for line in response.split('\n') 
@@ -166,7 +226,13 @@ Units:
 
 Suggest optimal hour distribution."""
 
-        response = self.granite.generate(prompt, system_prompt=system_prompt)
+        response = self.ai.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            task_type='optimization',
+            temperature=0.4,
+            max_tokens=800
+        )
         
         return {
             'total_hours': total_hours,
@@ -206,7 +272,13 @@ Learning Outcomes:
 
 Suggest an enhanced assessment strategy."""
 
-        response = self.granite.generate(prompt, system_prompt=system_prompt)
+        response = self.ai.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            task_type='optimization',
+            temperature=0.5,
+            max_tokens=1000
+        )
         
         return {
             'current': current_assessment,
@@ -252,6 +324,12 @@ Identify redundant or overlapping topics that could be:
 
 Identify any redundancies or overlaps."""
 
-        response = self.granite.generate(prompt, system_prompt=system_prompt)
+        response = self.ai.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            task_type='analysis',
+            temperature=0.3,
+            max_tokens=1000
+        )
         
         return [{'analysis': response}]

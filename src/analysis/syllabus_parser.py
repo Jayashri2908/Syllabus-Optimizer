@@ -125,6 +125,67 @@ class SyllabusParser:
             with open(file_path, 'r', encoding='latin-1') as f:
                 return f.read()
                 
+    def _extract_first_course_text(self, text: str) -> str:
+        """
+        Extract only the first course's text from a multi-course PDF.
+        
+        Detects course boundaries by looking for course code patterns and
+        returns only the text for the first complete course.
+        
+        Args:
+            text: Raw PDF text potentially containing multiple courses
+            
+        Returns:
+            Text for the first course only
+        """
+        # Pattern to detect course headers like "MSCCS24101: Design and Analysis"
+        # or "Course Code Course Name" table format
+        course_header_patterns = [
+            # Pattern: "COURSECODE: Course Title" followed by Course Type
+            r'([A-Z]{2,}\d{5,}):\s*[A-Za-z][^\n]+\nCourse\s*Type',
+            # Pattern: Course code in structured section
+            r'([A-Z]{2,}\d{5,})\s+[A-Za-z][A-Za-z\s]+\nCourse\s*Type',
+        ]
+        
+        # Find all course code occurrences that mark course starts
+        course_starts = []
+        for pattern in course_header_patterns:
+            for match in re.finditer(pattern, text):
+                course_starts.append(match.start())
+        
+        # Sort and remove duplicates
+        course_starts = sorted(set(course_starts))
+        
+        if len(course_starts) >= 2:
+            # Multi-course document - extract only first course
+            first_course_start = course_starts[0]
+            second_course_start = course_starts[1]
+            
+            # Include some context before the first course (headers/metadata)
+            prefix_start = max(0, first_course_start - 500)
+            
+            first_course_text = text[prefix_start:second_course_start]
+            self.logger.info(f"Multi-course PDF detected. Extracting first course only (chars {first_course_start}-{second_course_start})")
+            return first_course_text
+        
+        # Alternative detection: look for repeated "Course Content" sections
+        course_content_matches = list(re.finditer(r'Course\s*Content\nUnit\s*No', text, re.IGNORECASE))
+        
+        if len(course_content_matches) >= 2:
+            # Found multiple course content sections
+            first_end = course_content_matches[1].start()
+            
+            # Find where the first course starts (after Programme Structure)
+            prog_struct_match = re.search(r'Programme\s*Structure', text)
+            first_start = prog_struct_match.end() if prog_struct_match else 0
+            
+            first_course_text = text[first_start:first_end]
+            self.logger.info(f"Detected {len(course_content_matches)} courses. Extracting first course only.")
+            return first_course_text
+        
+        # Single course or couldn't detect boundaries - use full text
+        return text
+
     def _extract_structure(self, text: str) -> Dict[str, Any]:
         """
         Extract structured information from syllabus text
@@ -135,18 +196,21 @@ class SyllabusParser:
         Returns:
             Structured syllabus data
         """
+        # Extract only the first course's text if this is a multi-course document
+        course_text = self._extract_first_course_text(text)
+        
         structure = {
-            'course_title': self._extract_course_title(text),
-            'course_code': self._extract_course_code(text),
-            'credits': self._extract_credits(text),
-            'prerequisites': self._extract_prerequisites(text),
-            'objectives': self._extract_objectives(text),
-            'learning_outcomes': self._extract_learning_outcomes(text),
-            'units': self._extract_units(text),
-            'assessment_pattern': self._extract_assessment(text),
-            'references': self._extract_references(text),
-            'co_po_mapping': self._extract_co_po_mapping(text),
-            'raw_text': text
+            'course_title': self._extract_course_title(course_text),
+            'course_code': self._extract_course_code(course_text),
+            'credits': self._extract_credits(course_text),
+            'prerequisites': self._extract_prerequisites(course_text),
+            'objectives': self._extract_objectives(course_text),
+            'learning_outcomes': self._extract_learning_outcomes(course_text),
+            'units': self._extract_units(course_text),
+            'assessment_pattern': self._extract_assessment(course_text),
+            'references': self._extract_references(course_text),
+            'co_po_mapping': self._extract_co_po_mapping(course_text),
+            'raw_text': text  # Keep original full text for reference
         }
         
         return structure
@@ -154,14 +218,22 @@ class SyllabusParser:
     def _extract_course_title(self, text: str) -> str:
         """Extract course title"""
         patterns = [
+            # Pattern for "COURSECODE: Course Title" format
+            r'([A-Z]{2,}\d+):\s*(.+?)(?=\n)',
+            # Pattern for "Course Title:" format
             r'(?:Course Title|Course Name)[:\s]+(.+?)(?=\n|Course Code)',
-            r'^(.+?)(?=\n.*Course Code)',
+            # Pattern for title followed by Course Type
+            r'([A-Za-z][A-Za-z\s&]+?)\nCourse\s*Type',
+            # Subject pattern
             r'(?:Subject|Course)[:\s]+(.+?)(?=\n)'
         ]
         
         for pattern in patterns:
             match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
             if match:
+                # Handle patterns with multiple groups
+                if len(match.groups()) >= 2 and match.group(2):
+                    return match.group(2).strip()
                 return match.group(1).strip()
                 
         return "Unknown Course"
@@ -169,12 +241,14 @@ class SyllabusParser:
     def _extract_course_code(self, text: str) -> str:
         """Extract course code"""
         patterns = [
-            r'(?:Course Code|Code)[:\s]+([A-Z]{2,4}\d{3,4})',
+            # Pattern for course codes like MSCCS24101, CSE301, etc.
+            r'\b([A-Z]{2,}\d{4,6})\b',
+            r'(?:Course Code|Code)[:\s]+([A-Z0-9]+)',
             r'\b([A-Z]{2,4}\d{3,4})\b'
         ]
         
         for pattern in patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
+            match = re.search(pattern, text)
             if match:
                 return match.group(1).upper()
                 
@@ -227,22 +301,57 @@ class SyllabusParser:
         """Extract course outcomes with Bloom's classification"""
         outcomes = []
         
-        # Pattern for CO1, CO2, etc.
-        pattern = r'(CO\d+)[:\s]+(.+?)(?=CO\d+|Unit|Assessment|$)'
-        matches = re.finditer(pattern, text, re.IGNORECASE | re.DOTALL)
+        # First, try to find the Course Outcomes section
+        co_section_pattern = r'Course\s*Outcomes?(.+?)(?:Mapping|CO\s*PO|Unit|Course\s*Content|$)'
+        co_section_match = re.search(co_section_pattern, text, re.IGNORECASE | re.DOTALL)
         
-        for match in matches:
-            co_code = match.group(1).upper()
-            co_text = match.group(2).strip()
+        if co_section_match:
+            co_text = co_section_match.group(1)
             
-            # Classify Bloom's level
-            bloom_level = self.text_processor.classify_bloom_level(co_text)
+            # Pattern for numbered outcomes: "1 Analyze worst-case..."
+            numbered_pattern = r'^\s*(\d+)\s+([A-Z][^\n]+?)(?=\n\s*\d+\s+[A-Z]|\nMapping|$)'
+            matches = re.finditer(numbered_pattern, co_text, re.MULTILINE | re.DOTALL)
             
-            outcomes.append({
-                'code': co_code,
-                'description': co_text,
-                'bloom_level': bloom_level
-            })
+            for match in matches:
+                num = match.group(1)
+                description = match.group(2).strip()
+                
+                # Skip if it looks like a CO-PO mapping row (contains mostly numbers)
+                if re.match(r'^[\d\s,.-]+$', description):
+                    continue
+                    
+                # Skip very short descriptions
+                if len(description) < 20:
+                    continue
+                
+                bloom_level = self.text_processor.classify_bloom_level(description)
+                
+                outcomes.append({
+                    'code': f'CO{num}',
+                    'description': description,
+                    'bloom_level': bloom_level
+                })
+        
+        # Fallback: Pattern for CO1:, CO2:, etc.
+        if not outcomes:
+            pattern = r'(CO\d+)[:\s]+([A-Za-z][^\n]+?)(?=CO\d+|Mapping|$)'
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            
+            for match in matches:
+                co_code = match.group(1).upper()
+                co_text = match.group(2).strip()
+                
+                # Skip if it looks like mapping numbers
+                if re.match(r'^[\d\s,.-]+$', co_text):
+                    continue
+                
+                bloom_level = self.text_processor.classify_bloom_level(co_text)
+                
+                outcomes.append({
+                    'code': co_code,
+                    'description': co_text,
+                    'bloom_level': bloom_level
+                })
             
         return outcomes
         
@@ -250,31 +359,73 @@ class SyllabusParser:
         """Extract unit-wise syllabus"""
         units = []
         
-        # Pattern for Unit 1, Unit 2, etc.
-        pattern = r'Unit\s+(\d+|[IVX]+)[:\s]+(.+?)(?=Unit\s+\d+|Unit\s+[IVX]+|Assessment|References|$)'
-        matches = re.finditer(pattern, text, re.IGNORECASE | re.DOTALL)
+        # Multiple patterns for different unit formats
+        patterns = [
+            # Format: "Unit No I Title Hours" or "Unit No 1 Title Hours"
+            r'Unit\s*No\.?\s*([IVX]+|\d+)\s+(.+?)\s+(\d+)\s*Hours?',
+            # Format: "Unit 1: Title" or "Unit I: Title"
+            r'Unit\s+(\d+|[IVX]+)[:\s]+(.+?)(?=\n)',
+        ]
         
-        for match in matches:
-            unit_num = match.group(1)
-            unit_content = match.group(2).strip()
+        # Try first pattern (Unit No format)
+        pattern = patterns[0]
+        matches = list(re.finditer(pattern, text, re.IGNORECASE))
+        
+        if matches:
+            for i, match in enumerate(matches):
+                unit_num = match.group(1)
+                title = match.group(2).strip()
+                hours = int(match.group(3)) if match.group(3) else 0
+                
+                # Find content between this unit and next unit (or end)
+                start = match.end()
+                if i + 1 < len(matches):
+                    end = matches[i + 1].start()
+                else:
+                    # Find next section marker
+                    next_section = re.search(r'\n(Textbooks?|References?|Assessment)', text[start:], re.IGNORECASE)
+                    end = start + next_section.start() if next_section else len(text)
+                
+                unit_content = text[start:end].strip()
+                
+                # Extract topics - lines that contain actual content
+                topics = []
+                for line in unit_content.split('\n'):
+                    line = line.strip()
+                    # Skip empty lines, page headers, and CO/BTL references
+                    if line and len(line) > 10 and not re.match(r'^[\d\s,]+$', line):
+                        if not re.match(r'^(Unit|CO|BTL|M\.Sc|Vishwakarma)', line, re.IGNORECASE):
+                            topics.append(line)
+                
+                units.append({
+                    'unit_number': unit_num,
+                    'title': title,
+                    'topics': topics[:10],  # Limit topics per unit
+                    'hours': hours
+                })
+        else:
+            # Try second pattern (Unit 1: format)
+            pattern = patterns[1]
+            matches = re.finditer(pattern, text, re.IGNORECASE | re.DOTALL)
             
-            # Extract unit title (usually first line)
-            lines = unit_content.split('\n')
-            title = lines[0].strip() if lines else ""
-            
-            # Extract hours if mentioned
-            hours_match = re.search(r'(\d+)\s*(?:hours?|hrs?)', unit_content, re.IGNORECASE)
-            hours = int(hours_match.group(1)) if hours_match else 0
-            
-            # Extract topics
-            topics = [line.strip() for line in lines[1:] if line.strip()]
-            
-            units.append({
-                'unit_number': unit_num,
-                'title': title,
-                'topics': topics,
-                'hours': hours
-            })
+            for match in matches:
+                unit_num = match.group(1)
+                unit_content = match.group(2).strip()
+                
+                lines = unit_content.split('\n')
+                title = lines[0].strip() if lines else ""
+                
+                hours_match = re.search(r'(\d+)\s*(?:hours?|hrs?)', unit_content, re.IGNORECASE)
+                hours = int(hours_match.group(1)) if hours_match else 0
+                
+                topics = [line.strip() for line in lines[1:] if line.strip() and len(line.strip()) > 10]
+                
+                units.append({
+                    'unit_number': unit_num,
+                    'title': title,
+                    'topics': topics[:10],
+                    'hours': hours
+                })
             
         return units
         

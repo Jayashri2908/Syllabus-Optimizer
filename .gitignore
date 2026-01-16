@@ -42,7 +42,7 @@ logs/
 
 # Output files
 output/
-*.pdf
+# *.pdf  # Temporarily commented out
 *.xlsx
 *.docx
 

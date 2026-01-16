@@ -13,6 +13,10 @@ from pathlib import Path
 import tempfile
 import os
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent.parent / ".env")
+
 try:
     from docx import Document
     DOCX_AVAILABLE = True
@@ -37,6 +41,12 @@ from src.analysis.rag_analyzer import RAGAwareAnalyzer # RAG
 from src.mapping.co_po_mapper import COPOMapper
 from src.export.pdf_exporter import PDFExporter
 from src.export.excel_exporter import ExcelExporter
+try:
+    from src.export.latex_exporter import LaTeXExporter
+    LATEX_AVAILABLE = True
+except ImportError:
+    LATEX_AVAILABLE = False
+    logging.warning("LaTeX exporter not available")
 from src.ibm.local_storage import LocalStorage
 from src.utils.logging_utils import setup_logger
 
@@ -97,9 +107,11 @@ try:
     gap_analyzer = GapAnalyzer()
     bloom_mapper = BloomMapper()  # Initialize real BloomMapper
     content_optimizer = ContentOptimizer()  # Initialize real ContentOptimizer
+    objectives_optimizer = ObjectivesOptimizer()  # Initialize
+    reference_suggester = ReferenceSuggester()  # Initialize
     bloom_mapper_initialized = True
     content_optimizer_initialized = True
-    logger.info("✅ AI components initialized successfully (IBM Granite active)")
+    logger.info("✅ AI components initialized successfully (AI models active)")
 except Exception as e:
     logger.error(f"❌ AI component initialization failed: {e}")
     logger.error("⚠️  IBM Granite credentials required! Run: python setup_credentials.py")
@@ -123,11 +135,32 @@ if not content_optimizer_initialized:
 
 # Pydantic models
 class GenerateRequest(BaseModel):
+    # Institution Details
+    university_name: str = ""
+    faculty_name: str = ""
+    department: str = ""
+    
+    # Course Details
     course_title: str
     course_code: str
+    course_type: str = "DSC"  # DSC, DSE, GEC, SEC, etc.
     credits: str
+    semester: str = "I"
+    program: str = ""
+    year: str = ""
+    course_level: str = "intermediate"
+    
+    # Content
     program_outcomes: List[str]
-    keywords: List[str]
+    keywords: List[str] = []
+    unit_topics: List[Dict[str, Any]] = []
+    
+    # References
+    textbooks: List[str] = []
+    references: List[str] = []
+    online_resources: List[str] = []
+    
+    # Settings
     domain: str = "engineering"
     num_units: int = 5
     num_outcomes: int = 5
@@ -136,6 +169,7 @@ class GenerateRequest(BaseModel):
 class OptimizeRequest(BaseModel):
     syllabus_data: Dict[str, Any]
     optimization_goals: List[str] = []
+    analysis_data: Optional[Dict[str, Any]] = None  # Added field
 
 
 class MapRequest(BaseModel):
@@ -413,12 +447,37 @@ async def generate_syllabus(request: GenerateRequest):
             course_title=request.course_title,
             course_code=request.course_code,
             credits=request.credits,
+            program=request.program,
+            year=request.year,
+            course_level=request.course_level,
             program_outcomes=request.program_outcomes,
             keywords=request.keywords,
+            unit_topics=request.unit_topics,
+            textbooks=request.textbooks,
+            references=request.references,
+            online_resources=request.online_resources,
             domain=request.domain,
             num_units=request.num_units,
-            num_outcomes=request.num_outcomes
+            num_outcomes=request.num_outcomes,
+            use_chained_generation=True  # Enable detailed staggered LLM chaining
         )
+        
+        # Add institution details to syllabus
+        syllabus['university_name'] = request.university_name
+        syllabus['faculty_name'] = request.faculty_name
+        syllabus['department'] = request.department
+        syllabus['course_type'] = request.course_type
+        syllabus['semester'] = request.semester
+        
+        # DEBUG: Log unit/topic structure
+        if syllabus.get('units'):
+            first_unit = syllabus['units'][0]
+            logger.info(f"DEBUG: Unit type: {type(first_unit)}")
+            if isinstance(first_unit, dict) and 'topics' in first_unit:
+                logger.info(f"DEBUG: Topics type: {type(first_unit['topics'])}")
+                if first_unit['topics']:
+                    logger.info(f"DEBUG: First topic type: {type(first_unit['topics'][0])}")
+                    logger.info(f"DEBUG: First topic value: {first_unit['topics'][0]}")
         
         return {
             "success": True,
@@ -466,13 +525,14 @@ async def map_outcomes(request: MapRequest):
 @app.post("/api/export/pdf")
 async def export_pdf(request: OptimizeRequest):
     """
-    Export syllabus to PDF
+    Export syllabus and analysis to PDF
     
     Returns: PDF file
     """
     try:
-        # Extract syllabus data from request
+        # Extract syllabus and analysis data
         syllabus_data = request.syllabus_data
+        analysis_data = request.analysis_data
         
         # Handle nested structure - if data is wrapped, unwrap it
         if 'data' in syllabus_data and isinstance(syllabus_data.get('data'), dict):
@@ -484,20 +544,28 @@ async def export_pdf(request: OptimizeRequest):
         
         # Log what we received for debugging
         logger.info(f"Exporting PDF for course: {syllabus_data.get('course_title', 'N/A')}")
-        logger.info(f"Data keys: {list(syllabus_data.keys())}")
+        if analysis_data:
+            logger.info("Analysis data included via Analysis Report")
         
         # Create temp PDF file
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
             pdf_path = tmp_file.name
         
         # Export to PDF with mapping
-        success = pdf_exporter.export(syllabus_data, pdf_path, include_mapping=True)
+        # Now supporting optional analysis_data passed to export method
+        success = pdf_exporter.export(
+            syllabus_data, 
+            pdf_path, 
+            include_mapping=True,
+            analysis_data=analysis_data
+        )
         
         if not success:
             raise HTTPException(status_code=500, detail="PDF export failed")
         
         # Return PDF file
-        filename = f"{syllabus_data.get('course_code', 'syllabus')}.pdf"
+        filename = f"{syllabus_data.get('course_code', 'syllabus')}_analysis.pdf" if analysis_data else f"{syllabus_data.get('course_code', 'syllabus')}.pdf"
+        
         return FileResponse(
             pdf_path,
             media_type="application/pdf",
@@ -509,6 +577,66 @@ async def export_pdf(request: OptimizeRequest):
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/export/latex-pdf")
+async def export_latex_pdf(request: OptimizeRequest):
+    """
+    Export syllabus to PDF using LaTeX
+    
+    Features:
+    - Professional academic formatting
+    - Proper math formula rendering (O(n²), Big-O notation)
+    - CO-PO mapping tables
+    
+    Returns: PDF file (or .tex if LaTeX not installed)
+    """
+    if not LATEX_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="LaTeX exporter not available. Install with: pip install pylatex"
+        )
+    
+    try:
+        # Extract syllabus data from request
+        syllabus_data = request.syllabus_data
+        
+        # Handle nested structure - if data is wrapped, unwrap it
+        if 'data' in syllabus_data and isinstance(syllabus_data.get('data'), dict):
+            syllabus_data = syllabus_data['data']
+        elif 'syllabus' in syllabus_data and isinstance(syllabus_data.get('syllabus'), dict):
+            syllabus_data = syllabus_data['syllabus']
+        
+        logger.info(f"Exporting LaTeX PDF for course: {syllabus_data.get('course_title', 'N/A')}")
+        
+        # Create temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+            pdf_path = tmp_file.name
+        
+        # Export to PDF using LaTeX
+        latex_exporter = LaTeXExporter()
+        result_path = latex_exporter.export_pdf(syllabus_data, pdf_path)
+        
+        # Determine media type and filename based on result
+        if result_path.endswith('.tex'):
+            media_type = "text/x-tex"
+            filename = f"{syllabus_data.get('course_code', 'syllabus')}.tex"
+        else:
+            media_type = "application/pdf"
+            filename = f"{syllabus_data.get('course_code', 'syllabus')}_latex.pdf"
+        
+        return FileResponse(
+            result_path,
+            media_type=media_type,
+            filename=filename
+        )
+        
+    except Exception as e:
+        logger.error(f"LaTeX PDF export failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.post("/api/extract-outcomes")
@@ -593,7 +721,7 @@ async def export_excel(request: OptimizeRequest):
 
 @app.post("/api/export/word")
 async def export_word(request: OptimizeRequest):
-    """Export syllabus to Word document"""
+    """Export syllabus to Word document with academic formatting"""
     if not DOCX_AVAILABLE:
         raise HTTPException(
             status_code=501,
@@ -603,7 +731,7 @@ async def export_word(request: OptimizeRequest):
     try:
         syllabus_data = request.syllabus_data
         
-        # Handle nested structure - if data is wrapped, unwrap it
+        # Handle nested structure
         if 'data' in syllabus_data and isinstance(syllabus_data.get('data'), dict):
             syllabus_data = syllabus_data['data']
         elif 'syllabus' in syllabus_data and isinstance(syllabus_data.get('syllabus'), dict):
@@ -617,43 +745,186 @@ async def export_word(request: OptimizeRequest):
         
         doc = Document()
         
-        # Add title
-        doc.add_heading(syllabus_data.get('course_title', 'Syllabus'), 0)
+        # Import shared styles needed for tables/paragraphs
+        from docx.shared import Pt, RGBColor, Inches
+        from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+        from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
+
+        # --- Institution Details Header ---
+        if syllabus_data.get('university_name'):
+            uni = doc.add_paragraph(syllabus_data.get('university_name'))
+            uni.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = uni.runs[0]
+            run.font.size = Pt(16)
+            run.font.bold = True
+            
+        if syllabus_data.get('faculty_name'):
+            fac = doc.add_paragraph(syllabus_data.get('faculty_name'))
+            fac.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = fac.runs[0]
+            run.font.size = Pt(12)
+            
+        if syllabus_data.get('program') or syllabus_data.get('department'):
+            prog_text = syllabus_data.get('program') or syllabus_data.get('department', '')
+            prog = doc.add_paragraph(prog_text)
+            prog.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = prog.runs[0]
+            run.font.size = Pt(11)
+            run.font.italic = True
+            
+        doc.add_paragraph()  # Spacer
+
+        # --- Course Title ---
+        course_code = syllabus_data.get('course_code', '')
+        course_title = syllabus_data.get('course_title', 'Course Syllabus')
+        title_text = f"{course_code}: {course_title}" if course_code else course_title
         
-        # Add course info
-        doc.add_paragraph(f"Course Code: {syllabus_data.get('course_code', 'N/A')}")
-        doc.add_paragraph(f"Credits: {syllabus_data.get('credits', 'N/A')}")
-        doc.add_paragraph("")  # Blank line
+        title_para = doc.add_paragraph(title_text)
+        title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        title_run = title_para.runs[0]
+        title_run.font.size = Pt(18)
+        title_run.font.bold = True
+        title_run.font.color.rgb = RGBColor(0, 51, 102) # Dark blue
         
-        # Add overview
+        doc.add_paragraph() # Spacer
+        
+        # --- Course Info Table ---
+        # Create a 2x2 table for course metadata
+        table = doc.add_table(rows=2, cols=2)
+        table.style = 'Table Grid'
+        
+        # Row 1: Course Type | Semester
+        row0 = table.rows[0]
+        row0.cells[0].text = f"Course Type: {syllabus_data.get('course_type', 'DSC')}"
+        row0.cells[1].text = f"Semester: {syllabus_data.get('semester', 'I')}"
+        
+        # Row 2: Credits | Year
+        credits = syllabus_data.get('credits', '3-0-0')
+        year = syllabus_data.get('year', '')
+        row1 = table.rows[1]
+        row1.cells[0].text = f"Credits (L-T-P): {credits}"
+        row1.cells[1].text = f"Academic Year: {year}" if year else ""
+        
+        # Bold the keys in the table cells
+        for row in table.rows:
+            for cell in row.cells:
+                # Basic styling hook - iterate paragraphs to bold prefix if needed
+                # (Simplified here as text assignment overwrites runs)
+                p = cell.paragraphs[0]
+                run = p.runs[0]
+                run.font.size = Pt(10)
+        
+        doc.add_paragraph() # Spacer
+        
+        # --- Overview ---
         if syllabus_data.get('overview'):
-            doc.add_heading('Course Overview', 1)
+            h = doc.add_heading('Course Overview', level=1)
+            h.runs[0].font.color.rgb = RGBColor(44, 62, 80)
             doc.add_paragraph(syllabus_data['overview'])
-        
-        # Add learning outcomes
+            doc.add_paragraph()
+
+        # --- Learning Outcomes (Table Format) ---
         if syllabus_data.get('learning_outcomes'):
-            doc.add_heading('Learning Outcomes', 1)
+            h = doc.add_heading('Course Learning Outcomes (COs)', level=1)
+            h.runs[0].font.color.rgb = RGBColor(44, 62, 80)
+            
+            table = doc.add_table(rows=1, cols=3)
+            table.style = 'Grid Table 4 Accent 1' # Built-in style
+            
+            # Header
+            hdr_cells = table.rows[0].cells
+            hdr_cells[0].text = 'CO'
+            hdr_cells[1].text = 'Description'
+            hdr_cells[2].text = "Bloom's Level"
+            
+            # Rows
             for outcome in syllabus_data['learning_outcomes']:
-                if isinstance(outcome, dict):
-                    text = f"{outcome.get('code', '')}: {outcome.get('description', '')}"
-                    if outcome.get('bloom_level'):
-                        text += f" ({outcome['bloom_level']})"
-                    doc.add_paragraph(text, style='List Bullet')
-                else:
-                    doc.add_paragraph(str(outcome), style='List Bullet')
-        
-        # Add units
+                row_cells = table.add_row().cells
+                row_cells[0].text = outcome.get('code', '')
+                row_cells[1].text = outcome.get('description', '')
+                row_cells[2].text = outcome.get('bloom_level', '').capitalize()
+            
+            # Set widths
+            table.autofit = False
+            table.columns[0].width = Inches(0.8)
+            table.columns[1].width = Inches(3.8)
+            table.columns[2].width = Inches(1.4)
+            
+            doc.add_paragraph()
+
+        # --- Units (Table Format) ---
         if syllabus_data.get('units'):
-            doc.add_heading('Course Units', 1)
+            h = doc.add_heading('Course Content', level=1)
+            h.runs[0].font.color.rgb = RGBColor(44, 62, 80)
+            
             for unit in syllabus_data['units']:
-                unit_title = f"Unit {unit.get('unit_number', '')}: {unit.get('title', '')}"
-                if unit.get('hours'):
-                    unit_title += f" ({unit['hours']} hours)"
-                doc.add_heading(unit_title, 2)
+                # Create a 2-column table for Unit Header (Title | Hours)
+                # We can simulate the "gray header" look by just using bold text or a table
+                unit_num = unit.get('unit_number', '')
+                title = unit.get('title', 'Untitled')
+                hours = unit.get('hours', 0)
                 
-                for topic in unit.get('topics', []):
-                    doc.add_paragraph(topic, style='List Bullet')
-        
+                # Unit Header Table (1 row, 2 cols)
+                utable = doc.add_table(rows=1, cols=2)
+                utable.allow_autofit = False
+                utable.columns[0].width = Inches(5.0)
+                utable.columns[1].width = Inches(1.0)
+                
+                # Cell 1: Unit Title
+                c1 = utable.rows[0].cells[0]
+                p = c1.paragraphs[0]
+                run = p.add_run(f"Unit {unit_num}: {title}")
+                run.bold = True
+                run.font.size = Pt(11)
+                
+                # Cell 2: Hours
+                c2 = utable.rows[0].cells[1]
+                p = c2.paragraphs[0]
+                run = p.add_run(f"{hours} Hours")
+                run.bold = True
+                run.font.size = Pt(11)
+                p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                
+                # Shading (Background color) requires OXML/XML manipulation in python-docx
+                # Keeping it simple with text formatting for now and a bottom border if possible
+                
+                # Topics List below the header
+                topics = unit.get('topics', [])
+                if topics:
+                    topics_text = ", ".join(topics)
+                    p = doc.add_paragraph(topics_text)
+                    p.paragraph_format.left_indent = Inches(0.2)
+                    p.paragraph_format.space_after = Pt(12)
+                else:
+                    doc.add_paragraph()
+
+        # --- References ---
+        if syllabus_data.get('references'):
+             h = doc.add_heading('References', level=1)
+             h.runs[0].font.color.rgb = RGBColor(44, 62, 80)
+             
+             refs = syllabus_data.get('references', {})
+             
+             if isinstance(refs, dict):
+                 # Textbooks
+                 if refs.get('textbooks'):
+                     doc.add_heading('Textbooks:', level=2)
+                     for t in refs['textbooks']:
+                         doc.add_paragraph(t, style='List Bullet')
+                 # Reference Books
+                 if refs.get('references'):
+                     doc.add_heading('Reference Books:', level=2)
+                     for r in refs['references']:
+                         doc.add_paragraph(r, style='List Bullet')
+                 # Online Resources
+                 if refs.get('online_resources'):
+                     doc.add_heading('Online Resources:', level=2)
+                     for r in refs['online_resources']:
+                        doc.add_paragraph(r, style='List Bullet')
+             elif isinstance(refs, list):
+                 for r in refs:
+                     doc.add_paragraph(r, style='List Bullet')
+
         # Save document
         doc.save(output_path)
         logger.info(f"Word document saved to {output_path}")

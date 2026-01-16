@@ -3,28 +3,28 @@ Reference Suggester for SCDO
 Suggests relevant textbooks and resources using AI
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import logging
 from datetime import datetime
 
 try:
-    from ..ibm.granite_client import GraniteClient
-    GRANITE_AVAILABLE = True
+    from ..ai.model_manager import ModelManager
+    AI_AVAILABLE = True
 except ImportError:
-    GRANITE_AVAILABLE = False
+    AI_AVAILABLE = False
 
 
 class ReferenceSuggester:
     """Suggest relevant academic references and resources"""
     
-    def __init__(self, granite_client=None):
+    def __init__(self, model_manager: Optional[ModelManager] = None):
         self.logger = logging.getLogger(__name__)
         
-        if GRANITE_AVAILABLE:
-            self.granite = granite_client or GraniteClient()
+        if AI_AVAILABLE:
+            self.ai = model_manager or ModelManager()
             self.enabled = True
         else:
-            self.logger.warning("Granite client not available. Using fallback suggestions.")
+            self.logger.warning("AI models not available. Using fallback suggestions.")
             self.enabled = False
             
         self.current_year = datetime.now().year
@@ -114,9 +114,10 @@ RELEVANCE: [why recommended]
 ---"""
 
         try:
-            response = self.granite.generate(
+            response = self.ai.generate(
                 prompt=prompt,
                 system_prompt=system_prompt,
+                task_type='generation',
                 temperature=0.6,
                 max_tokens=2000
             )

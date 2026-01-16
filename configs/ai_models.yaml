@@ -1,0 +1,40 @@
+# AI Models Configuration - MIMO (PRIMARY) + GEMINI + GRANITE
+
+# OpenRouter - Xiaomi MiMo (PRIMARY - FREE)
+openrouter:
+  enabled: true
+  model: 'xiaomi/mimo-v2-flash:free'
+  # Set OPENROUTER_API_KEY environment variable
+  # Get free key: https://openrouter.ai
+
+# Google Gemini (FALLBACK 1 - FREE)
+gemini:
+  enabled: false  # Disabled - hit rate limit (you can re-enable)
+  model: 'gemini-2.0-flash-exp'
+  # Set GEMINI_API_KEY environment variable
+
+# IBM Granite (FALLBACK 2)
+granite:
+  enabled: true
+  # Uses existing ibm_config.yaml configuration
+
+# Task preferences - MiMo first, Gemini/Granite as fallback
+task_preferences:
+  generation: ['openrouter', 'gemini', 'granite']
+  analysis: ['openrouter', 'gemini', 'granite']
+  optimization: ['openrouter', 'gemini', 'granite']
+  validation: ['openrouter', 'gemini', 'granite']
+
+# Advanced settings
+advanced:
+  auto_fallback: true  # Auto-switch to Granite if Gemini fails
+  enable_caching: true
+  cache_duration_hours: 24
+  
+  # Temperature by task type
+  temperature_overrides:
+    learning_outcomes: 0.4    # More focused for outcomes
+    unit_generation: 0.6      # Balanced creativity
+    overview: 0.65            # Slightly creative for overviews
+    gap_analysis: 0.3         # Factual analysis
+    suggestions: 0.5          # Balanced recommendations

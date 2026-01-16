@@ -11,6 +11,7 @@ import logging
 from ..utils.text_processing import TextProcessor
 from .lesson_plan_extractor import LessonPlanExtractor
 from .redundancy_detector import RedundancyDetector
+from .content_analyzer import ContentAnalyzer
 
 
 class GapAnalyzer:
@@ -23,6 +24,7 @@ class GapAnalyzer:
         self.accreditation_standards = self._load_accreditation_standards()
         self.lesson_plan_extractor = LessonPlanExtractor()
         self.redundancy_detector = RedundancyDetector()
+        self.content_analyzer = ContentAnalyzer()
         
     def _load_bloom_taxonomy(self) -> dict:
         """Load Bloom's taxonomy configuration"""
@@ -54,6 +56,7 @@ class GapAnalyzer:
             'structural_issues': self._analyze_structure(syllabus_data),
             'lesson_plan_analysis': self._analyze_lesson_plans(syllabus_data),
             'redundancies': self._analyze_redundancies(syllabus_data),
+            'content_quality': self.content_analyzer.analyze(syllabus_data),  # NEW: Advanced content analysis
             'recommendations': []
         }
         
