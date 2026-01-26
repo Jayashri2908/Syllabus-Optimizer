@@ -1,228 +1,93 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
+import { BarChart2, FileText, Zap, ArrowRight, CheckCircle, Shield } from 'lucide-react';
+import { InfoTooltip } from '../components/Tooltip';
+import ThreeBackground from '../components/ThreeBackground';
 
-function HomePage() {
+const FeatureCard = ({ icon: Icon, title, description, link, tooltip }) => (
+  <Link to={link || '#'} className="card group hover:no-underline">
+    <div className="module-card-header">
+      <div className="icon-wrapper">
+        <Icon size={24} />
+      </div>
+      {tooltip && <InfoTooltip text={tooltip} />}
+    </div>
+    <h3 className="module-title group-hover:text-brand transition-colors">
+      {title}
+      <ArrowRight size={16} className="arrow-icon" />
+    </h3>
+    <p className="text-subtle text-sm leading-relaxed">
+      {description}
+    </p>
+  </Link>
+);
 
+
+const HomePage = () => {
   return (
-    <div className="home-page">
-      {/* Hero Section */}
-      <section className="hero">
-        <div className="container">
-          <div className="hero-content fade-in">
-            <h1 className="hero-title">
-              AI-Powered Syllabus <br />
-              <span className="gradient-text">Design & Optimization</span>
-            </h1>
-            <p className="hero-subtitle">
-              Transform your curriculum with intelligent analysis, optimization, and generation
-              powered by IBM Granite AI
-            </p>
-            <div className="hero-actions">
-              <Link to="/generate" className="btn btn-primary btn-lg">
-                <Sparkles size={20} />
-                Generate Syllabus
-              </Link>
-              <Link to="/analyze" className="btn btn-secondary btn-lg">
-                Analyze Existing
-              </Link>
-            </div>
+    <div className="container animate-fade-in">
+      {/* Professional Hero / Dashboard Header */}
+      <div className="hero-section relative overflow-hidden">
+        <ThreeBackground />
+        <div className="hero-content">
 
-          </div>
-        </div>
-      </section>
+          <h1 className="hero-title">
+            Syllabus & Curriculum <br />
+            <span style={{ color: 'var(--brand)' }}>Optimization Suite</span>
+          </h1>
+          <p className="hero-subtitle">
+            Advanced AI-driven analysis for academic curriculum design.
+            Ensure compliance, optimize learning outcomes, and generate
+            comprehensive reports standard compliant formats.
+          </p>
 
-      {/* Features Section */}
-      <section className="features">
-        <div className="container">
-          <h2 className="section-title text-center">Powerful Features</h2>
-          <div className="features-grid">
-            <FeatureCard
-              icon="📊"
-              title="Intelligent Analysis"
-              description="Parse and analyze syllabi with AI. Identify gaps in Bloom's taxonomy, CO-PO mappings, and assessment patterns."
-            />
-            <FeatureCard
-              icon="✨"
-              title="AI Generation"
-              description="Generate complete syllabi from minimal inputs using IBM Granite. Create measurable outcomes and structured content."
-            />
-            <FeatureCard
-              icon="🎯"
-              title="Smart Optimization"
-              description="Get AI-powered suggestions for improving content, balancing workload, and modernizing topics."
-            />
-            <FeatureCard
-              icon="🗺️"
-              title="CO-PO Mapping"
-              description="Automatic intelligent mapping of Course Outcomes to Program Outcomes with validation."
-            />
-            <FeatureCard
-              icon="📄"
-              title="Professional Export"
-              description="Export beautiful PDF documents with formatted sections and mapping matrices."
-            />
-            <FeatureCard
-              icon="🎓"
-              title="Accreditation Ready"
-              description="Aligned with NBA, NAAC, NEP 2020, and ABET standards for academic excellence."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="cta">
-        <div className="container">
-          <div className="cta-card glass">
-            <h2 className="cta-title">Ready to optimize your curriculum?</h2>
-            <p className="cta-text">
-              Start creating professional syllabi in minutes with AI assistance
-            </p>
-            <Link to="/generate" className="btn btn-primary btn-lg">
-              Get Started Free
+          <div className="flex gap-4">
+            <Link to="/analyze" className="btn btn-primary">
+              Start Analysis
+              <ArrowRight size={16} />
             </Link>
           </div>
         </div>
-      </section>
+      </div>
 
-      <style>{`
-        .hero {
-          padding: var(--spacing-2xl) 0;
-          background: linear-gradient(135deg, 
-            hsl(220, 90%, 98%) 0%, 
-            hsl(280, 70%, 98%) 100%
-          );
-        }
 
-        [data-theme="dark"] .hero {
-          background: linear-gradient(135deg, 
-            hsl(220, 20%, 12%) 0%, 
-            hsl(280, 20%, 15%) 100%
-          );
-        }
+      {/* Main Action Grid */}
+      <div className="modules-section">
+        <div className="section-header">
+          <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Core Modules</h2>
+        </div>
 
-        .hero-content {
-          text-align: center;
-          max-width: 800px;
-          margin: 0 auto;
-        }
+        <div className="modules-grid">
+          <FeatureCard
+            icon={BarChart2}
+            title="Deep Analysis"
+            description="Upload syllabus documents for comprehensive gap analysis and compliance checking against university standards."
+            link="/analyze"
+            tooltip="Uses RAG architecture to analyze structural integrity"
+          />
 
-        .hero-title {
-          font-size: 3.5rem;
-          margin-bottom: var(--spacing-lg);
-          line-height: 1.1;
-        }
+          <FeatureCard
+            icon={FileText}
+            title="Report Generation"
+            description="Generate detailed PDF compliance reports and curriculum summaries for accreditation purposes."
+            link="/generate"
+            tooltip="Supports PDF and DOCX export updates"
+          />
 
-        .gradient-text {
-          background: linear-gradient(135deg, var(--primary), var(--secondary));
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
+          <FeatureCard
+            icon={Zap}
+            title="AI Optimization"
+            description="Leverage LLMs to suggest content improvements, bibliography updates, and outcome mappings."
+            link="/optimize"
+            tooltip="Powered by Gemini Pro + IBM Granite"
+          />
+        </div>
+      </div>
 
-        .hero-subtitle {
-          font-size: 1.25rem;
-          color: var(--text-secondary);
-          margin-bottom: var(--spacing-xl);
-        }
+      {/* Status Bar */}
 
-        .hero-actions {
-          display: flex;
-          gap: var(--spacing-md);
-          justify-content: center;
-          margin-bottom: var(--spacing-lg);
-        }
-
-        .hero-badge {
-          display: flex;
-          gap: var(--spacing-sm);
-          justify-content: center;
-        }
-
-        .features {
-          padding: var(--spacing-2xl) 0;
-        }
-
-        .section-title {
-          font-size: 2.5rem;
-          margin-bottom: var(--spacing-2xl);
-        }
-
-        .features-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: var(--spacing-lg);
-        }
-
-        .cta {
-          padding: var(--spacing-2xl) 0;
-        }
-
-        .cta-card {
-          text-align: center;
-          padding: var(--spacing-2xl);
-          border-radius: var(--radius-xl);
-        }
-
-        .cta-title {
-          font-size: 2rem;
-          margin-bottom: var(--spacing-md);
-        }
-
-        .cta-text {
-          font-size: 1.125rem;
-          color: var(--text-secondary);
-          margin-bottom: var(--spacing-xl);
-        }
-
-        @media (max-width: 768px) {
-          .hero-title {
-            font-size: 2.5rem;
-          }
-          .hero-actions {
-            flex-direction: column;
-          }
-          .features-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
     </div>
   );
-}
-
-function FeatureCard({ icon, title, description }) {
-  return (
-    <div className="card feature-card">
-      <div className="feature-icon">{icon}</div>
-      <h3 className="feature-title">{title}</h3>
-      <p className="feature-description">{description}</p>
-
-      <style>{`
-        .feature-card {
-          text-align: center;
-          transition: all var(--transition-base);
-        }
-
-        .feature-icon {
-          font-size: 3rem;
-          margin-bottom: var(--spacing-md);
-        }
-
-        .feature-title {
-          font-size: 1.25rem;
-          margin-bottom: var(--spacing-sm);
-        }
-
-        .feature-description {
-          color: var(--text-secondary);
-          font-size: 0.9375rem;
-          line-height: 1.6;
-        }
-      `}</style>
-    </div>
-  );
-}
+};
 
 export default HomePage;

@@ -66,53 +66,82 @@ Start with a Bloom's verb, be specific but BRIEF."""
         applications: List[str],
         hours_per_unit: int
     ) -> Dict[str, str]:
-        """Enhanced prompt for unit generation (concise topics)"""
+        """Enhanced prompt for unit generation - university syllabus format with concise topics"""
         
         prev_summary = ""
         if previous_units:
-            prev_summary = "Previous units: " + ", ".join([
+            prev_summary = "Previous units covered: " + ", ".join([
                 f"Unit {u['unit_number']}: {u['title']}"
                 for u in previous_units
             ])
         else:
             prev_summary = "This is the first unit"
         
-        system_prompt = f"""You are a curriculum expert creating CONCISE unit syllabi.
+        # Determine unit type based on position
+        if unit_number == 1:
+            unit_focus = "Foundation - introduce core concepts"
+        elif unit_number == total_units:
+            unit_focus = "Advanced - applications and integration"
+        elif unit_number <= total_units // 2:
+            unit_focus = "Core - essential techniques"
+        else:
+            unit_focus = "Intermediate - building complexity"
+        
+        system_prompt = f"""You are a curriculum expert creating a CONCISE university-level syllabus.
 
-CRITICAL: Each topic must be SHORT (3-8 words only).
+CRITICAL: Generate SHORT topic names (3-8 words each) that use the subject keywords.
 
-EXCELLENT EXAMPLE (short topics):
-Unit 3: Database Design
-1. Normalization and BCNF
-2. Query optimization techniques
-3. Transaction management
-4. NoSQL vs SQL databases
-5. Database security basics
+FORMAT - University Syllabus Style:
+Unit 2: Machine Learning Algorithms
+1. Supervised learning techniques
+2. Classification and regression methods
+3. Decision trees and random forests
+4. Support vector machines
+5. Model evaluation metrics
+6. K-nearest neighbors algorithm
+7. Ensemble learning methods
+8. Cross-validation techniques
 
-POOR EXAMPLE (TOO LONG - AVOID):
-1. Database normalization up to BCNF: theory, anomalies, practical normalization exercises
-2. Query optimization techniques: execution plans, indexing strategies, real-world performance tuning
+RULES:
+1. Unit title: Use keywords to create specific title (5-10 words)
+2. Topics: 8-10 SHORT topic names (3-8 words each)
+3. Topics MUST be derived from user's keywords
+4. NO detailed descriptions - just topic names
+5. NO generic titles like "Introduction and Fundamentals"
 
-Keep each topic to 3-8 words. Be specific but BRIEF."""
+GOOD EXAMPLES:
+- "Neural network architectures and layers"
+- "Backpropagation algorithm implementation"
+- "Convolutional neural networks for images"
+
+BAD EXAMPLES (TOO LONG):
+- "Neural network architectures including multi-layer perceptrons, activation functions, and their theoretical foundations with practical examples"
+- "Comprehensive introduction to the fundamental principles and background concepts"
+
+Keep it CONCISE and SPECIFIC to the subject."""
 
         user_prompt = f"""Course: {course_title}
 Unit: {unit_number} of {total_units}
-Topics to cover: {', '.join(keywords[:5])}
+Focus: {unit_focus}
+Hours: {hours_per_unit}
+Keywords to use: {', '.join(keywords[:8])}
 {prev_summary}
 
 Generate Unit {unit_number} with:
-- Descriptive title (3-5 words)
-- 5 topics (3-8 words EACH, no detailed explanations)
+- Unit title using the keywords (5-10 words)
+- 8-10 CONCISE topic names (3-8 words each)
+- Topics MUST relate to the provided keywords
+- Cover ALL major aspects of the subject
 
 Format:
-Unit {unit_number}: [Short Title]
-1. [Topic in 3-8 words]
-2. [Topic in 3-8 words]
-3. [Topic in 3-8 words]
-4. [Topic in 3-8 words]
-5. [Topic in 3-8 words]
+Unit {unit_number}: [Title using keywords]
+1. [Topic from keywords - 3-8 words]
+2. [Topic from keywords - 3-8 words]
+3. [Topic from keywords - 3-8 words]
+4. [Topic from keywords - 3-8 words]
+5. [Topic from keywords - 3-8 words]
 
-Keep it SHORT and CONCISE."""
+Be specific to the subject matter using the keywords provided."""
 
         return {
             "system": system_prompt,

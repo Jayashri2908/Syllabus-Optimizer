@@ -1,0 +1,371 @@
+/* Professional Animation Library - 2025 Corporate Design */
+
+/* ============================================
+   KEYFRAME DEFINITIONS
+   ============================================ */
+
+/* Fade Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scale Animations */
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes subtleScale {
+    from {
+        transform: scale(1);
+    }
+
+    to {
+        transform: scale(1.02);
+    }
+}
+
+/* Slide Animations */
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Professional Spinner */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spinSlow {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Pulse Animation */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes subtlePulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+}
+
+/* Shimmer Effect for Loading */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+/* Bouncy Reveal for major items */
+@keyframes bouncyReveal {
+    0% {
+        opacity: 0;
+        transform: scale(0.9) translateY(40px);
+    }
+
+    60% {
+        opacity: 1;
+        transform: scale(1.02) translateY(-5px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Floating Animation for cards */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+/* Slide Down for Dropdowns */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Fade Utilities */
+.animate-fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in-down {
+    animation: fadeInDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Scale Utilities */
+.animate-scale-in {
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.hover-scale {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-scale:hover {
+    transform: scale(1.02);
+}
+
+/* Slide Utilities */
+.animate-slide-in-left {
+    animation: slideInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-right {
+    animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Spinner Utilities */
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+.animate-spin-slow {
+    animation: spinSlow 2s linear infinite;
+}
+
+/* Bouncy Utilities */
+.animate-bouncy-reveal {
+    animation: bouncyReveal 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-float {
+    animation: float 4s ease-in-out infinite;
+}
+
+/* Pulse Utilities */
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-subtle-pulse {
+    animation: subtlePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Stagger Delays for Sequential Animations */
+.stagger-1 {
+    animation-delay: 0.1s;
+}
+
+.stagger-2 {
+    animation-delay: 0.2s;
+}
+
+.stagger-3 {
+    animation-delay: 0.3s;
+}
+
+.stagger-4 {
+    animation-delay: 0.4s;
+}
+
+.stagger-5 {
+    animation-delay: 0.5s;
+}
+
+/* ============================================
+   HOVER EFFECTS
+   ============================================ */
+
+.hover-lift {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -8px rgba(15, 23, 42, 0.15);
+}
+
+.hover-glow {
+    transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-glow:hover {
+    box-shadow: 0 0 0 3px var(--brand-light);
+}
+
+.hover-border-shift {
+    transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-border-shift:hover {
+    border-color: var(--brand);
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+
+.skeleton {
+    background: linear-gradient(90deg,
+            #f1f5f9 0%,
+            #e2e8f0 50%,
+            #f1f5f9 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
+}
+
+.skeleton-text {
+    height: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.skeleton-heading {
+    height: 2rem;
+    margin-bottom: 1rem;
+    width: 60%;
+}
+
+.skeleton-card {
+    height: 200px;
+    border-radius: 12px;
+}
+
+/* ============================================
+   PROFESSIONAL TRANSITIONS
+   ============================================ */
+
+.transition-smooth {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.transition-fast {
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.transition-colors {
+    transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================
+   REDUCED MOTION SUPPORT
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

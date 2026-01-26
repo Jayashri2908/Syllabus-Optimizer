@@ -512,7 +512,7 @@ class SyllabusGenerator:
                 system_prompt=prompts['system'],
                 task_type='generation',
                 temperature=0.6,
-                max_tokens=250  # Reduced for shorter topic descriptions
+                max_tokens=1500  # Increased for comprehensive topic descriptions
             )
             
             # Parse unit
@@ -523,44 +523,152 @@ class SyllabusGenerator:
         return units[:num_units]
     
     def _parse_unit_response(self, response: str, unit_number: int, hours: int) -> Dict[str, Any]:
-        """Parse AI-generated unit response into structured format"""
+        """Parse AI-generated unit response into structured format with comprehensive topics"""
         lines = response.split('\n')
         unit = None
         current_topics = []
+        current_topic = None
+        overview_lines = []
+        learning_activities = []
+        
+        # State machine for parsing
+        parsing_state = 'searching'  # searching, overview, topic, subtopics, concepts, examples, activities
         
         for line in lines:
-            line = line.strip()
+            line_stripped = line.strip()
+            if not line_stripped:
+                continue
             
             # Look for unit title
-            if ('unit' in line.lower() and ':' in line) or (line and unit is None and len(line) > 10 and not line[0].isdigit()):
-                # Extract title
-                if ':' in line:
-                    title = line.split(':', 1)[1].strip()
+            if ('unit' in line_stripped.lower() and ':' in line_stripped) or \
+               (line_stripped.startswith('**Unit') and ':' in line_stripped):
+                if ':' in line_stripped:
+                    title = line_stripped.split(':', 1)[1].strip().strip('*').strip()
                 else:
-                    title = line
+                    title = line_stripped.strip('*').strip()
                 
                 unit = {
                     'unit_number': unit_number,
                     'title': title,
+                    'overview': '',
                     'topics': [],
+                    'learning_activities': [],
                     'hours': hours
                 }
-            # Look for topics
-            elif line and (line[0].isdigit() or line.startswith('-') or line.startswith('•')):
-                topic = line.lstrip('0123456789.-•) ').strip()
-                if topic and len(topic) > 10:  # Filter very short topics
-                    current_topics.append(topic)
+                parsing_state = 'overview'
+                continue
+            
+            # Look for overview section
+            if 'overview' in line_stripped.lower() and ':' in line_stripped:
+                parsing_state = 'overview'
+                overview_text = line_stripped.split(':', 1)[1].strip() if ':' in line_stripped else ''
+                if overview_text:
+                    overview_lines.append(overview_text)
+                continue
+            
+            # Look for new topic (numbered or bold format)
+            if (line_stripped and (
+                (line_stripped[0].isdigit() and '.' in line_stripped[:3]) or
+                line_stripped.startswith('**') or
+                line_stripped.startswith('- **')
+            )):
+                # Save previous topic if exists
+                if current_topic:
+                    current_topics.append(current_topic)
+                
+                # Extract topic title
+                topic_title = line_stripped.lstrip('0123456789.-) ').strip('*').strip()
+                if ':' in topic_title and len(topic_title.split(':')[0]) < 80:
+                    topic_title = topic_title.split(':')[0].strip()
+                
+                if len(topic_title) > 8:  # Valid topic
+                    current_topic = {
+                        'topic': topic_title,
+                        'description': '',
+                        'subtopics': [],
+                        'key_concepts': [],
+                        'practical_examples': []
+                    }
+                    parsing_state = 'topic'
+                continue
+            
+            # Parse description
+            if current_topic and parsing_state == 'topic':
+                if 'description:' in line_stripped.lower():
+                    desc = line_stripped.split(':', 1)[1].strip() if ':' in line_stripped else ''
+                    current_topic['description'] = desc
+                    continue
+                elif 'subtopic' in line_stripped.lower():
+                    parsing_state = 'subtopics'
+                    subtopics_text = line_stripped.split(':', 1)[1].strip() if ':' in line_stripped else ''
+                    if subtopics_text:
+                        current_topic['subtopics'] = [s.strip() for s in subtopics_text.split(',')]
+                    continue
+                elif 'key concept' in line_stripped.lower() or 'concepts:' in line_stripped.lower():
+                    parsing_state = 'concepts'
+                    concepts_text = line_stripped.split(':', 1)[1].strip() if ':' in line_stripped else ''
+                    if concepts_text:
+                        current_topic['key_concepts'] = [c.strip() for c in concepts_text.split(',')]
+                    continue
+                elif 'practical' in line_stripped.lower() or 'example' in line_stripped.lower():
+                    parsing_state = 'examples'
+                    examples_text = line_stripped.split(':', 1)[1].strip() if ':' in line_stripped else ''
+                    if examples_text:
+                        current_topic['practical_examples'] = [e.strip() for e in examples_text.split(',')]
+                    continue
+                elif not current_topic['description'] and len(line_stripped) > 20:
+                    # This is likely the description
+                    current_topic['description'] = line_stripped
+                    continue
+            
+            # Parse subtopics
+            if parsing_state == 'subtopics' and current_topic:
+                if line_stripped.startswith('-') or line_stripped.startswith('•'):
+                    subtopic = line_stripped.lstrip('-•* ').strip()
+                    if subtopic:
+                        current_topic['subtopics'].append(subtopic)
+                continue
+            
+            # Parse learning activities
+            if 'learning activit' in line_stripped.lower() or 'activities:' in line_stripped.lower():
+                parsing_state = 'activities'
+                continue
+            
+            if parsing_state == 'activities':
+                if line_stripped.startswith('-') or line_stripped.startswith('•') or line_stripped[0].isdigit():
+                    activity = line_stripped.lstrip('0123456789.-•) ').strip()
+                    if activity:
+                        learning_activities.append(activity)
+            
+            # Collect overview text
+            if parsing_state == 'overview' and unit and 'topic' not in line_stripped.lower():
+                if not line_stripped.startswith('**') and not line_stripped[0].isdigit():
+                    overview_lines.append(line_stripped)
+        
+        # Save last topic
+        if current_topic:
+            current_topics.append(current_topic)
         
         # Add topics to unit
         if unit:
             unit['topics'] = current_topics[:6]  # Max 6 topics
+            unit['overview'] = ' '.join(overview_lines[:4])  # First 4 sentences
+            unit['learning_activities'] = learning_activities[:4]
         
         # Fallback if parsing failed
         if not unit:
             unit = {
                 'unit_number': unit_number,
                 'title': f"Unit {unit_number}",
-                'topics': current_topics[:5] if current_topics else ["Topic 1", "Topic 2", "Topic 3", "Topic 4", "Topic 5"],
+                'overview': f"This unit covers key concepts for unit {unit_number}.",
+                'topics': current_topics[:5] if current_topics else [
+                    {'topic': 'Introduction and Fundamentals', 'description': 'Core concepts and foundational knowledge.', 'subtopics': [], 'key_concepts': [], 'practical_examples': []},
+                    {'topic': 'Key Principles and Theory', 'description': 'Theoretical foundations and principles.', 'subtopics': [], 'key_concepts': [], 'practical_examples': []},
+                    {'topic': 'Practical Applications', 'description': 'Real-world applications and use cases.', 'subtopics': [], 'key_concepts': [], 'practical_examples': []},
+                    {'topic': 'Advanced Techniques', 'description': 'Advanced methods and optimization strategies.', 'subtopics': [], 'key_concepts': [], 'practical_examples': []},
+                    {'topic': 'Integration and Best Practices', 'description': 'Integration approaches and industry standards.', 'subtopics': [], 'key_concepts': [], 'practical_examples': []}
+                ],
+                'learning_activities': learning_activities if learning_activities else [],
                 'hours': hours
             }
         

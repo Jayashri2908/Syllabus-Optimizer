@@ -80,3 +80,6 @@ Thumbs.db
 
 # Uploaded files
 uploads/
+
+# Node.js
+node_modules/

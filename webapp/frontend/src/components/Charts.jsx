@@ -12,10 +12,10 @@ const BLOOM_COLORS = {
 };
 
 export const BloomDistributionChart = ({ bloomAnalysis }) => {
-    console.log('BloomDistributionChart received:', bloomAnalysis);
+
 
     if (!bloomAnalysis) {
-        console.log('No bloom analysis data');
+
         return null;
     }
 
@@ -42,11 +42,11 @@ export const BloomDistributionChart = ({ bloomAnalysis }) => {
     data = data.filter(item => item.value > 0 || item.percentage > 0);
 
     if (data.length === 0) {
-        console.log('No valid data to display');
+
         return null;
     }
 
-    console.log('Chart data:', data);
+
 
     // Custom label renderer that only shows for significant slices
     const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage, name }) => {
@@ -105,7 +105,7 @@ export const BloomDistributionChart = ({ bloomAnalysis }) => {
 };
 
 export const BloomBalanceChart = ({ bloomAnalysis }) => {
-    console.log('BloomBalanceChart received:', bloomAnalysis);
+
 
     if (!bloomAnalysis) return null;
 
@@ -129,7 +129,7 @@ export const BloomBalanceChart = ({ bloomAnalysis }) => {
 
     if (data.length === 0) return null;
 
-    console.log('Balance chart data:', data);
+
 
     return (
         <div className="chart-container">
@@ -163,7 +163,7 @@ function getRecommendedPercentage(level) {
 }
 
 export const COPOHeatmap = ({ mapping }) => {
-    console.log('COPOHeatmap received:', mapping);
+
 
     if (!mapping) return null;
 

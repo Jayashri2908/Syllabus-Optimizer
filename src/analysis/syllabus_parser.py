@@ -21,6 +21,16 @@ try:
 except ImportError:
     logging.warning("python-docx not installed. Install with: pip install python-docx")
 
+# OCR support for scanned PDFs
+try:
+    import pytesseract
+    from pdf2image import convert_from_path
+    from PIL import Image
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
+    logging.info("OCR libraries not installed. Scanned PDFs won't be supported. Install with: pip install pytesseract pdf2image Pillow")
+
 from ..utils.text_processing import TextProcessor
 
 
@@ -66,14 +76,21 @@ class SyllabusParser:
         if pdfplumber is None and PyPDF2 is None:
             raise ImportError("PDF libraries not installed. Please install PyPDF2 and pdfplumber.")
         
+        self.logger.info(f"Parsing PDF: {file_path}")
+        
         try:
             # Try pdfplumber first (better for tables)
             if pdfplumber:
                 with pdfplumber.open(file_path) as pdf:
-                    for page in pdf.pages:
+                    self.logger.info(f"PDF has {len(pdf.pages)} pages")
+                    for i, page in enumerate(pdf.pages):
                         page_text = page.extract_text()
                         if page_text:
                             text += page_text + "\n"
+                            self.logger.debug(f"Page {i+1}: extracted {len(page_text)} chars")
+                        else:
+                            self.logger.warning(f"Page {i+1}: no text extracted")
+                self.logger.info(f"pdfplumber extracted total {len(text)} chars")
             else:
                 raise ImportError("pdfplumber not installed")
                 
@@ -85,17 +102,142 @@ class SyllabusParser:
                 try:
                     with open(file_path, 'rb') as f:
                         pdf_reader = PyPDF2.PdfReader(f)
-                        for page in pdf_reader.pages:
+                        self.logger.info(f"PyPDF2: PDF has {len(pdf_reader.pages)} pages")
+                        for i, page in enumerate(pdf_reader.pages):
                             page_text = page.extract_text()
                             if page_text:
                                 text += page_text + "\n"
+                                self.logger.debug(f"Page {i+1}: extracted {len(page_text)} chars")
+                    self.logger.info(f"PyPDF2 extracted total {len(text)} chars")
                 except Exception as e2:
                     self.logger.error(f"PDF parsing failed: {e2}")
                     raise
             else:
                 if not text: # Only raise if we haven't extracted anything yet and both failed/missing
                      raise ImportError("PyPDF2 not installed and pdfplumber failed") from e
+        
+        # If no text extracted or very minimal text (likely garbage from scanned PDF), try OCR
+        # Using 50 chars as threshold since scanned PDFs often extract some whitespace/garbage
+        extracted_text_length = len(text.strip())
+        if extracted_text_length < 50:
+            self.logger.info(f"Minimal text extracted ({extracted_text_length} chars), attempting OCR for scanned PDF...")
+            if OCR_AVAILABLE:
+                self.logger.info("Using local Tesseract OCR...")
+                ocr_text = self._ocr_pdf(file_path)
+            else:
+                # Try online OCR if local OCR is not available
+                self.logger.info("Local OCR not available, attempting online OCR (OCR.space API)...")
+                ocr_text = self._ocr_online(file_path)
+            
+            # Use OCR text if it has more content than original extraction
+            if len(ocr_text.strip()) > extracted_text_length:
+                self.logger.info(f"OCR extracted {len(ocr_text)} chars (more than original {extracted_text_length})")
+                text = ocr_text
+            else:
+                self.logger.warning(f"OCR did not improve extraction (got {len(ocr_text.strip())} chars)")
+            
+        if len(text.strip()) > 0:
+            self.logger.info(f"PDF extraction successful: {len(text.strip())} total characters")
+        else:
+            self.logger.error("Failed to extract text from PDF (likely a scanned document)")
+            if not OCR_AVAILABLE:
+                self.logger.error("Install OCR to handle scanned PDFs: pip install pytesseract pdf2image Pillow")
+                self.logger.error("Also install Tesseract: https://github.com/tesseract-ocr/tesseract")
                 
+        return text
+    
+    def _ocr_online(self, file_path: Path) -> str:
+        """Extract text from scanned PDF using free online OCR API (OCR.space)"""
+        import requests
+        import os
+        
+        text = ""
+        
+        # Check file size - free API has 1MB limit
+        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+        if file_size_mb > 1:
+            self.logger.warning(f"File is {file_size_mb:.1f}MB - OCR.space free API limit is 1MB")
+            self.logger.info("Consider using a smaller PDF or installing local Tesseract OCR")
+        
+        # Retry logic for network issues
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                self.logger.info(f"OCR.space API attempt {attempt + 1}/{max_retries}...")
+                
+                # OCR.space free API - no signup required for basic usage
+                api_url = "https://api.ocr.space/parse/image"
+                
+                with open(file_path, 'rb') as f:
+                    response = requests.post(
+                        api_url,
+                        files={'file': f},
+                        data={
+                            'apikey': 'helloworld',  # Free demo API key
+                            'language': 'eng',
+                            'isOverlayRequired': False,
+                            'filetype': 'PDF',
+                            'detectOrientation': True,
+                            'scale': True,
+                            'OCREngine': 2  # Better for dense text
+                        },
+                        timeout=120  # Increased timeout for large files
+                    )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get('ParsedResults'):
+                        for page_result in result['ParsedResults']:
+                            page_text = page_result.get('ParsedText', '')
+                            if page_text:
+                                text += page_text + "\n"
+                        if text:
+                            self.logger.info(f"Online OCR extracted {len(text)} chars")
+                            return text  # Success, return immediately
+                    else:
+                        error_msg = result.get('ErrorMessage', '') or result.get('OCRExitCode', 'Unknown error')
+                        self.logger.warning(f"OCR.space returned no results: {error_msg}")
+                        if 'limit' in str(error_msg).lower() or 'size' in str(error_msg).lower():
+                            self.logger.info("File may be too large for free API")
+                            break  # Don't retry if it's a size limit issue
+                else:
+                    self.logger.error(f"OCR.space API error: {response.status_code}")
+                    
+            except requests.exceptions.Timeout:
+                self.logger.warning(f"OCR timeout on attempt {attempt + 1}")
+                if attempt < max_retries - 1:
+                    self.logger.info("Retrying...")
+                    continue
+            except Exception as e:
+                self.logger.error(f"Online OCR failed: {e}")
+                break
+            
+        return text
+    
+    def _ocr_pdf(self, file_path: Path) -> str:
+        """Extract text from scanned PDF using local OCR (Tesseract)"""
+        text = ""
+        try:
+            self.logger.info(f"Converting PDF pages to images for OCR...")
+            # Convert PDF pages to images
+            images = convert_from_path(str(file_path), dpi=200)
+            self.logger.info(f"Converted {len(images)} pages to images")
+            
+            for i, image in enumerate(images):
+                self.logger.info(f"OCR processing page {i+1}...")
+                page_text = pytesseract.image_to_string(image, lang='eng')
+                if page_text:
+                    text += page_text + "\n"
+                    self.logger.info(f"Page {i+1}: OCR extracted {len(page_text)} chars")
+                else:
+                    self.logger.warning(f"Page {i+1}: OCR found no text")
+                    
+            self.logger.info(f"OCR extracted total {len(text)} chars")
+            
+        except Exception as e:
+            self.logger.error(f"Local OCR failed: {e}")
+            self.logger.info("Make sure Tesseract OCR is installed: https://github.com/tesseract-ocr/tesseract")
+            
         return text
         
     def _parse_docx(self, file_path: Path) -> str:
@@ -196,6 +338,8 @@ class SyllabusParser:
         Returns:
             Structured syllabus data
         """
+        self.logger.info(f"Extracting structure from text of {len(text)} chars")
+        
         # Extract only the first course's text if this is a multi-course document
         course_text = self._extract_first_course_text(text)
         
@@ -213,19 +357,31 @@ class SyllabusParser:
             'raw_text': text  # Keep original full text for reference
         }
         
+        self.logger.info(f"Extraction complete: title='{structure['course_title']}', outcomes={len(structure['learning_outcomes'])}, units={len(structure['units'])}, raw_text={len(structure['raw_text'])} chars")
+        
         return structure
         
     def _extract_course_title(self, text: str) -> str:
         """Extract course title"""
         patterns = [
             # Pattern for "COURSECODE: Course Title" format
-            r'([A-Z]{2,}\d+):\s*(.+?)(?=\n)',
+            r'([A-Z]{2,}[\d]+):\s*(.+?)(?=\n)',
             # Pattern for "Course Title:" format
             r'(?:Course Title|Course Name)[:\s]+(.+?)(?=\n|Course Code)',
             # Pattern for title followed by Course Type
             r'([A-Za-z][A-Za-z\s&]+?)\nCourse\s*Type',
             # Subject pattern
-            r'(?:Subject|Course)[:\s]+(.+?)(?=\n)'
+            r'(?:Subject|Course)[:\s]+(.+?)(?=\n)',
+            # Pattern for "Title: Something" at start
+            r'^(.+?)\n(?:Course\s*Type|Credits?|L-T-P)',
+            # Pattern for syllabus headers
+            r'Syllabus\s*(?:for|of)?\s*:?\s*(.+?)(?=\n)',
+            # Pattern for "Name of the Course:" 
+            r'(?:Name of the course|Course name)[:\s]+(.+?)(?=\n)',
+            # Pattern for lines after department headers
+            r'(?:Department\s*of\s*.+?\n+)(.+?)(?=\n)',
+            # Pattern matching any bolded or emphasized title
+            r'\*\*(.+?)\*\*',
         ]
         
         for pattern in patterns:
@@ -233,43 +389,97 @@ class SyllabusParser:
             if match:
                 # Handle patterns with multiple groups
                 if len(match.groups()) >= 2 and match.group(2):
-                    return match.group(2).strip()
-                return match.group(1).strip()
+                    title = match.group(2).strip()
+                else:
+                    title = match.group(1).strip()
+                # Clean up title - remove extra whitespace and common prefixes
+                title = re.sub(r'\s+', ' ', title)
+                title = re.sub(r'^(Course|Subject|Title)[:\s]*', '', title, flags=re.IGNORECASE)
+                if title and len(title) > 3:
+                    return title
+        
+        # Fallback: Try to find first meaningful line (often the title)
+        lines = text.split('\n')
+        for line in lines[:15]:  # Check first 15 lines
+            line = line.strip()
+            # Look for lines that look like titles (mixed case, reasonable length)
+            if line and len(line) > 10 and len(line) < 100:
+                if not re.match(r'^(Course\s*Type|Credits?|L-T-P|Semester|University|Department|Programme)', line, re.IGNORECASE):
+                    if re.match(r'[A-Z]', line):  # Starts with capital letter
+                        return line
                 
         return "Unknown Course"
         
     def _extract_course_code(self, text: str) -> str:
         """Extract course code"""
         patterns = [
-            # Pattern for course codes like MSCCS24101, CSE301, etc.
+            # Pattern for course codes like MSCCS24101, CSE301, CS101, etc.
+            r'(?:Course\s*Code|Code)[:\s]+([A-Z]{2,}[\d]+[A-Z]?\d*)',
             r'\b([A-Z]{2,}\d{4,6})\b',
-            r'(?:Course Code|Code)[:\s]+([A-Z0-9]+)',
-            r'\b([A-Z]{2,4}\d{3,4})\b'
+            r'\b([A-Z]{2,4}\d{3,4})\b',
+            # Pattern for codes at the start of title line
+            r'^([A-Z]{2,}\d+)[:\s]',
+            # Pattern for codes in table format
+            r'Course\s*Code\s*\n?\s*([A-Z]{2,}[\d]+)',
+            # Pattern for codes like 22CS301
+            r'\b(\d{2}[A-Z]{2,}\d{3})\b',
         ]
         
         for pattern in patterns:
-            match = re.search(pattern, text)
+            match = re.search(pattern, text, re.MULTILINE | re.IGNORECASE)
             if match:
-                return match.group(1).upper()
-                
+                code = match.group(1).upper()
+                # Validate - should have both letters and numbers
+                if re.match(r'^[A-Z]+\d+$', code) or re.match(r'^\d+[A-Z]+\d+$', code):
+                    # Exclude CO patterns (CO1, CO2, etc.) - these are course outcomes, not course codes
+                    if re.match(r'^CO\d+$', code):
+                        continue
+                    return code
+        
+        # Fallback: Look for any alphanumeric pattern that looks like a code (at least 5 chars)
+        code_match = re.search(r'\b([A-Z]{2,}\d{3,}[A-Z]?\d*)\b', text)
+        if code_match:
+            code = code_match.group(1).upper()
+            if not re.match(r'^CO\d+$', code):
+                return code
+            
         return "UNKNOWN"
         
     def _extract_credits(self, text: str) -> str:
         """Extract credit hours (L-T-P format)"""
         patterns = [
-            r'(?:Credits?|Credit Hours?)[:\s]+(\d+-\d+-\d+)',
-            r'(?:L-T-P)[:\s]+(\d+-\d+-\d+)',
-            r'(\d+)\s*:\s*(\d+)\s*:\s*(\d+)'
+            # Standard L-T-P format
+            r'(?:L-T-P|L T P|LTP)[:\s]*([\d]+)\s*[-:]\s*([\d]+)\s*[-:]\s*([\d]+)',
+            r'(?:Credits?|Credit Hours?)[:\s]+([\d]+[-][\d]+[-][\d]+)',
+            r'([\d]+)\s*[-]\s*([\d]+)\s*[-]\s*([\d]+)\s*(?:Credits?|Hours?)?',
+            # Table format: L  T  P  Total
+            r'L\s+T\s+P\s+Total\s*\n?\s*([\d]+)\s+([\d]+)\s+([\d]+)',
+            # Credits as single number
+            r'(?:Credits?|Credit\s*Hours?)[:\s]+(\d+)\s*$',
+            # Pattern for "3:1:0" or "3 : 1 : 0"
+            r'(\d+)\s*:\s*(\d+)\s*:\s*(\d+)',
+            # Teaching Hours format
+            r'(?:Teaching\s*Hours?|Lecture\s*Hours?)[:\s]*(\d+)',
         ]
         
         for pattern in patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
             if match:
                 if len(match.groups()) == 3:
                     return f"{match.group(1)}-{match.group(2)}-{match.group(3)}"
-                return match.group(1)
+                elif len(match.groups()) == 1:
+                    # Single credit value - assume it's lecture only
+                    credit = match.group(1)
+                    if '-' in credit:
+                        return credit
+                    return f"{credit}-0-0"
+        
+        # Fallback: Look for any X-X-X pattern in first 500 chars
+        ltp_match = re.search(r'\b(\d)\s*[-:]\s*(\d)\s*[-:]\s*(\d)\b', text[:500])
+        if ltp_match:
+            return f"{ltp_match.group(1)}-{ltp_match.group(2)}-{ltp_match.group(3)}"
                 
-        return "0-0-0"
+        return "3-0-0"  # Default to typical lecture course
         
     def _extract_prerequisites(self, text: str) -> List[str]:
         """Extract prerequisites"""
@@ -310,7 +520,7 @@ class SyllabusParser:
             
             # Pattern for numbered outcomes: "1 Analyze worst-case..."
             numbered_pattern = r'^\s*(\d+)\s+([A-Z][^\n]+?)(?=\n\s*\d+\s+[A-Z]|\nMapping|$)'
-            matches = re.finditer(numbered_pattern, co_text, re.MULTILINE | re.DOTALL)
+            matches = list(re.finditer(numbered_pattern, co_text, re.MULTILINE | re.DOTALL))
             
             for match in matches:
                 num = match.group(1)
@@ -331,6 +541,54 @@ class SyllabusParser:
                     'description': description,
                     'bloom_level': bloom_level
                 })
+            
+            # NEW: Handle flattened PDF table format where CO numbers and statements are on separate lines
+            # Format: "CO No.\n1\n2\n3...\nStatement\nFirst outcome...\nSecond outcome..."
+            if not outcomes:
+                # Look for "Statement" header followed by outcomes
+                statement_match = re.search(r'Statement\n(.+?)(?:Mapping|CO\s*PO|$)', co_text, re.DOTALL | re.IGNORECASE)
+                if statement_match:
+                    statement_text = statement_match.group(1)
+                    # Extract lines that look like outcomes (start with capital, long enough)
+                    co_num = 1
+                    current_outcome = ""
+                    
+                    for line in statement_text.split('\n'):
+                        line = line.strip()
+                        # Skip empty lines and noise
+                        if not line or len(line) < 10:
+                            continue
+                        # Skip lines that look like table headers or mapping data
+                        if re.match(r'^(CO\s*No|PO|PSO|BTL|\d+\s*$)', line, re.IGNORECASE):
+                            continue
+                        # Skip lines that are mostly numbers (mapping rows)
+                        if re.match(r'^[\d\s,.-]+$', line):
+                            continue
+                        
+                        # Check if this starts with a capital letter (new outcome)
+                        if re.match(r'^[A-Z]', line):
+                            # Save previous outcome if exists
+                            if current_outcome:
+                                bloom_level = self.text_processor.classify_bloom_level(current_outcome)
+                                outcomes.append({
+                                    'code': f'CO{co_num}',
+                                    'description': current_outcome.strip(),
+                                    'bloom_level': bloom_level
+                                })
+                                co_num += 1
+                            current_outcome = line
+                        else:
+                            # Continuation of previous outcome
+                            current_outcome += " " + line
+                    
+                    # Don't forget the last outcome
+                    if current_outcome and len(current_outcome) >= 20:
+                        bloom_level = self.text_processor.classify_bloom_level(current_outcome)
+                        outcomes.append({
+                            'code': f'CO{co_num}',
+                            'description': current_outcome.strip(),
+                            'bloom_level': bloom_level
+                        })
         
         # Fallback: Pattern for CO1:, CO2:, etc.
         if not outcomes:
@@ -361,13 +619,15 @@ class SyllabusParser:
         
         # Multiple patterns for different unit formats
         patterns = [
-            # Format: "Unit No I Title Hours" or "Unit No 1 Title Hours"
+            # Format: "Unit No I Title Hours" or "Unit No 1 Title Hours" (same line)
             r'Unit\s*No\.?\s*([IVX]+|\d+)\s+(.+?)\s+(\d+)\s*Hours?',
+            # Format: "Unit No 1 Title" followed by "Hours X" on next line (flattened table)
+            r'Unit\s*No\.?\s*(\d+)\s+([A-Za-z][A-Za-z\s&,-]+?)(?=\nHours)',
             # Format: "Unit 1: Title" or "Unit I: Title"
             r'Unit\s+(\d+|[IVX]+)[:\s]+(.+?)(?=\n)',
         ]
         
-        # Try first pattern (Unit No format)
+        # Try first pattern (Unit No format with hours on same line)
         pattern = patterns[0]
         matches = list(re.finditer(pattern, text, re.IGNORECASE))
         
@@ -404,28 +664,73 @@ class SyllabusParser:
                     'hours': hours
                 })
         else:
-            # Try second pattern (Unit 1: format)
+            # Try second pattern (flattened table: "Unit No X Title" then "Hours Y" on next line)
             pattern = patterns[1]
-            matches = re.finditer(pattern, text, re.IGNORECASE | re.DOTALL)
+            header_matches = list(re.finditer(pattern, text, re.IGNORECASE))
             
-            for match in matches:
-                unit_num = match.group(1)
-                unit_content = match.group(2).strip()
+            if header_matches:
+                for i, match in enumerate(header_matches):
+                    unit_num = match.group(1)
+                    title = match.group(2).strip()
+                    
+                    # Look for Hours on next line
+                    hours_search_start = match.end()
+                    hours_match = re.search(r'Hours\s*(\d+)', text[hours_search_start:hours_search_start+50], re.IGNORECASE)
+                    hours = int(hours_match.group(1)) if hours_match else 0
+                    
+                    # Find content between this unit's Hours and next unit (or end)
+                    if hours_match:
+                        start = hours_search_start + hours_match.end()
+                    else:
+                        start = match.end()
+                    
+                    if i + 1 < len(header_matches):
+                        end = header_matches[i + 1].start()
+                    else:
+                        # Find next section marker
+                        next_section = re.search(r'\n(Textbooks?|References?|Assessment|CO\n)', text[start:], re.IGNORECASE)
+                        end = start + next_section.start() if next_section else len(text)
+                    
+                    unit_content = text[start:end].strip()
+                    
+                    # Extract topics - lines that contain actual content
+                    topics = []
+                    for line in unit_content.split('\n'):
+                        line = line.strip()
+                        # Skip empty lines, page headers, CO/BTL references, and noise
+                        if line and len(line) > 10 and not re.match(r'^[\d\s,]+$', line):
+                            if not re.match(r'^(Unit|CO|BTL|M\.Sc|Vishwakarma|Hours|BTECH|Pattern)', line, re.IGNORECASE):
+                                topics.append(line)
+                    
+                    units.append({
+                        'unit_number': unit_num,
+                        'title': title,
+                        'topics': topics[:10],
+                        'hours': hours
+                    })
+            else:
+                # Try third pattern (Unit 1: format)
+                pattern = patterns[2]
+                matches = re.finditer(pattern, text, re.IGNORECASE | re.DOTALL)
                 
-                lines = unit_content.split('\n')
-                title = lines[0].strip() if lines else ""
-                
-                hours_match = re.search(r'(\d+)\s*(?:hours?|hrs?)', unit_content, re.IGNORECASE)
-                hours = int(hours_match.group(1)) if hours_match else 0
-                
-                topics = [line.strip() for line in lines[1:] if line.strip() and len(line.strip()) > 10]
-                
-                units.append({
-                    'unit_number': unit_num,
-                    'title': title,
-                    'topics': topics[:10],
-                    'hours': hours
-                })
+                for match in matches:
+                    unit_num = match.group(1)
+                    unit_content = match.group(2).strip()
+                    
+                    lines = unit_content.split('\n')
+                    title = lines[0].strip() if lines else ""
+                    
+                    hours_match = re.search(r'(\d+)\s*(?:hours?|hrs?)', unit_content, re.IGNORECASE)
+                    hours = int(hours_match.group(1)) if hours_match else 0
+                    
+                    topics = [line.strip() for line in lines[1:] if line.strip() and len(line.strip()) > 10]
+                    
+                    units.append({
+                        'unit_number': unit_num,
+                        'title': title,
+                        'topics': topics[:10],
+                        'hours': hours
+                    })
             
         return units
         

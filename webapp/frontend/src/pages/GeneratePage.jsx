@@ -1,7 +1,7 @@
 // Cache bust: 2026-01-10T23:31:00 - React must parse topic objects properly
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { FileEdit, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileEdit, FileText, ChevronDown, ChevronUp, BookOpen, Layers, Settings, School, Download, Wand2 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useSyllabus } from '../context/SyllabusContext';
 
@@ -12,7 +12,7 @@ function GeneratePage() {
     const [expandedSections, setExpandedSections] = useState({
         institution: true,
         course: true,
-        content: false,
+        content: true,
         references: false,
         settings: false
     });
@@ -35,6 +35,8 @@ function GeneratePage() {
         semester: 'I',
         year: '2024-25',
         course_level: 'intermediate',
+        cie_marks: '60',
+        ese_marks: '40',
 
         // Content
         program_outcomes: ['PO1', 'PO2', 'PO3', 'PO4', 'PO5'],
@@ -70,7 +72,7 @@ function GeneratePage() {
         setError(null);
         setGeneratedSyllabus(null);
 
-        const loadingToast = toast.loading('🎨 Generating syllabus with AI...');
+        const loadingToast = toast.loading('Generating syllabus with AI...');
 
         try {
             const keywords = formData.keywords.split(',').map(k => k.trim()).filter(k => k);
@@ -88,11 +90,11 @@ function GeneratePage() {
             });
 
             setGeneratedSyllabus(response.syllabus);
-            toast.success('✅ Syllabus generated successfully!', { id: loadingToast });
+            toast.success('Syllabus generated successfully', { id: loadingToast });
         } catch (err) {
             const errorMsg = err.response?.data?.detail || 'Failed to generate syllabus';
             setError(errorMsg);
-            toast.error(`❌ ${errorMsg}`, { id: loadingToast });
+            toast.error(`Generation failed: ${errorMsg}`, { id: loadingToast });
         } finally {
             setLoading(false);
         }
@@ -100,7 +102,7 @@ function GeneratePage() {
 
     const handleExportPDF = async () => {
         if (!generatedSyllabus) return;
-        const loadingToast = toast.loading('📄 Exporting PDF...');
+        const loadingToast = toast.loading('Exporting PDF...');
         try {
             await apiService.exportPDF({
                 ...generatedSyllabus,
@@ -108,15 +110,15 @@ function GeneratePage() {
                 faculty_name: formData.faculty_name,
                 department: formData.department,
             });
-            toast.success('✅ PDF downloaded successfully!', { id: loadingToast });
+            toast.success('PDF downloaded successfully', { id: loadingToast });
         } catch (err) {
-            toast.error('❌ Failed to export PDF', { id: loadingToast });
+            toast.error('Failed to export PDF', { id: loadingToast });
         }
     };
 
     const handleExportWord = async () => {
         if (!generatedSyllabus) return;
-        const loadingToast = toast.loading('📝 Exporting Word document...');
+        const loadingToast = toast.loading('Exporting Word document...');
         try {
             await apiService.exportWord({
                 ...generatedSyllabus,
@@ -124,193 +126,175 @@ function GeneratePage() {
                 faculty_name: formData.faculty_name,
                 department: formData.department,
             });
-            toast.success('✅ Word document downloaded successfully!', { id: loadingToast });
+            toast.success('Word document downloaded successfully', { id: loadingToast });
         } catch (err) {
-            toast.error('❌ Failed to export Word', { id: loadingToast });
+            toast.error('Failed to export Word', { id: loadingToast });
         }
     };
 
-    const handleExportLatexPDF = async () => {
-        if (!generatedSyllabus) return;
-        const loadingToast = toast.loading('📐 Exporting LaTeX PDF...');
-        try {
-            const exportData = {
-                ...generatedSyllabus,
-                university_name: formData.university_name,
-                faculty_name: formData.faculty_name,
-                department: formData.department,
-            };
-
-            const response = await fetch('http://localhost:8000/api/export/latex-pdf', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ syllabus_data: exportData })
-            });
-
-            if (!response.ok) throw new Error('Export failed');
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${exportData.course_code || 'syllabus'}_latex.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-            toast.success('✅ LaTeX PDF downloaded successfully!', { id: loadingToast });
-        } catch (err) {
-            toast.error('❌ Failed to export LaTeX PDF', { id: loadingToast });
-        }
-    };
-
-    const SectionHeader = ({ title, section, icon }) => (
-        <div className="section-header" onClick={() => toggleSection(section)}>
-            <div className="section-title">
-                <span className="section-icon">{icon}</span>
-                <h3>{title}</h3>
+    const SectionHeader = ({ title, section, icon: Icon }) => (
+        <div
+            className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors border-b border-gray-100"
+            onClick={() => toggleSection(section)}
+        >
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 text-brand rounded-lg">
+                    <Icon size={20} />
+                </div>
+                <h3 className="font-bold text-gray-800">{title}</h3>
             </div>
-            {expandedSections[section] ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            {expandedSections[section] ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
         </div>
     );
 
     return (
-        <div className="generate-page">
-            <div className="container">
-                <div className="page-header">
-                    <h1 className="page-title">📚 Generate Syllabus [TEST-v3]</h1>
-                    <p className="page-subtitle">
-                        Create a professional academic syllabus using AI
-                    </p>
+        <div className="container py-8 animate-fade-in">
+            <div className="page-header">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold mb-4">
+                    <Wand2 size={14} />
+                    <span>AI Content Generation</span>
                 </div>
+                <h1 className="page-title">Generate Syllabus</h1>
+                <p className="page-subtitle">
+                    Create a professional academic syllabus using AI
+                </p>
+            </div>
 
-                <div className="main-content">
-                    {/* Form Section */}
-                    <div className="form-container">
-                        <form onSubmit={handleSubmit}>
-
-                            {/* Institution Details */}
-                            <div className="form-section-card">
-                                <SectionHeader title="Institution Details" section="institution" icon="🏛️" />
-                                {expandedSections.institution && (
-                                    <div className="section-content">
-                                        <div className="form-row">
-                                            <div className="form-group">
-                                                <label>University Name</label>
-                                                <input
-                                                    type="text"
-                                                    name="university_name"
-                                                    value={formData.university_name}
-                                                    onChange={handleChange}
-                                                    placeholder="e.g., Vishwakarma University, Pune"
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Faculty/School</label>
-                                                <input
-                                                    type="text"
-                                                    name="faculty_name"
-                                                    value={formData.faculty_name}
-                                                    onChange={handleChange}
-                                                    placeholder="e.g., Faculty of Science and Technology"
-                                                />
-                                            </div>
+            <div className="flex flex-col lg:flex-row gap-8 items-start">
+                {/* Form Section */}
+                <div className="w-full lg:w-3/5 space-y-6">
+                    <form onSubmit={handleSubmit}>
+                        {/* Institution Details */}
+                        <div className="card mb-6 p-0 overflow-hidden">
+                            <SectionHeader title="Institution Details" section="institution" icon={School} />
+                            {expandedSections.institution && (
+                                <div className="p-6 space-y-4">
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div className="form-group">
+                                            <label>University Name</label>
+                                            <input
+                                                type="text"
+                                                name="university_name"
+                                                value={formData.university_name}
+                                                onChange={handleChange}
+                                                placeholder="e.g., Vishwakarma University, Pune"
+                                            />
                                         </div>
-                                        <div className="form-row">
-                                            <div className="form-group">
-                                                <label>Department</label>
-                                                <input
-                                                    type="text"
-                                                    name="department"
-                                                    value={formData.department}
-                                                    onChange={handleChange}
-                                                    placeholder="e.g., Computer Science"
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Program</label>
-                                                <input
-                                                    type="text"
-                                                    name="program"
-                                                    value={formData.program}
-                                                    onChange={handleChange}
-                                                    placeholder="e.g., M.Sc Computer Science"
-                                                />
-                                            </div>
+                                        <div className="form-group">
+                                            <label>Faculty/School</label>
+                                            <input
+                                                type="text"
+                                                name="faculty_name"
+                                                value={formData.faculty_name}
+                                                onChange={handleChange}
+                                                placeholder="e.g., Faculty of Science and Technology"
+                                            />
                                         </div>
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Course Details */}
-                            <div className="form-section-card">
-                                <SectionHeader title="Course Details" section="course" icon="📖" />
-                                {expandedSections.course && (
-                                    <div className="section-content">
-                                        <div className="form-row">
-                                            <div className="form-group flex-2">
-                                                <label>Course Title *</label>
-                                                <input
-                                                    type="text"
-                                                    name="course_title"
-                                                    value={formData.course_title}
-                                                    onChange={handleChange}
-                                                    placeholder="e.g., Design and Analysis of Algorithms"
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Course Code *</label>
-                                                <input
-                                                    type="text"
-                                                    name="course_code"
-                                                    value={formData.course_code}
-                                                    onChange={handleChange}
-                                                    placeholder="e.g., MSCCS24101"
-                                                    required
-                                                />
-                                            </div>
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div className="form-group">
+                                            <label>Department</label>
+                                            <input
+                                                type="text"
+                                                name="department"
+                                                value={formData.department}
+                                                onChange={handleChange}
+                                                placeholder="e.g., Computer Science"
+                                            />
                                         </div>
-
-                                        <div className="form-row">
-                                            <div className="form-group">
-                                                <label>Course Type</label>
-                                                <select name="course_type" value={formData.course_type} onChange={handleChange}>
-                                                    <option value="DSC">DSC - Discipline Specific Core</option>
-                                                    <option value="DSE">DSE - Discipline Specific Elective</option>
-                                                    <option value="GEC">GEC - Generic Elective Core</option>
-                                                    <option value="SEC">SEC - Skill Enhancement Course</option>
-                                                    <option value="AEC">AEC - Ability Enhancement Course</option>
-                                                    <option value="VAC">VAC - Value Added Course</option>
-                                                </select>
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Semester</label>
-                                                <select name="semester" value={formData.semester} onChange={handleChange}>
-                                                    <option value="I">Semester I</option>
-                                                    <option value="II">Semester II</option>
-                                                    <option value="III">Semester III</option>
-                                                    <option value="IV">Semester IV</option>
-                                                    <option value="V">Semester V</option>
-                                                    <option value="VI">Semester VI</option>
-                                                    <option value="VII">Semester VII</option>
-                                                    <option value="VIII">Semester VIII</option>
-                                                </select>
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Academic Year</label>
-                                                <input
-                                                    type="text"
-                                                    name="year"
-                                                    value={formData.year}
-                                                    onChange={handleChange}
-                                                    placeholder="e.g., 2024-25"
-                                                />
-                                            </div>
+                                        <div className="form-group">
+                                            <label>Program</label>
+                                            <input
+                                                type="text"
+                                                name="program"
+                                                value={formData.program}
+                                                onChange={handleChange}
+                                                placeholder="e.g., M.Sc Computer Science"
+                                            />
                                         </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
-                                        <div className="form-row">
+                        {/* Course Details */}
+                        <div className="card mb-6 p-0 overflow-hidden">
+                            <SectionHeader title="Course Details" section="course" icon={BookOpen} />
+                            {expandedSections.course && (
+                                <div className="p-6 space-y-4">
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div className="form-group md:col-span-2">
+                                            <label>Course Title *</label>
+                                            <input
+                                                type="text"
+                                                name="course_title"
+                                                value={formData.course_title}
+                                                onChange={handleChange}
+                                                placeholder="e.g., Design and Analysis of Algorithms"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Course Code *</label>
+                                            <input
+                                                type="text"
+                                                name="course_code"
+                                                value={formData.course_code}
+                                                onChange={handleChange}
+                                                placeholder="e.g., MSCCS24101"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Course Type</label>
+                                            <select name="course_type" value={formData.course_type} onChange={handleChange}>
+                                                <option value="DSC">DSC - Discipline Specific Core</option>
+                                                <option value="DSE">DSE - Discipline Specific Elective</option>
+                                                <option value="GEC">GEC - Generic Elective Core</option>
+                                                <option value="SEC">SEC - Skill Enhancement Course</option>
+                                                <option value="AEC">AEC - Ability Enhancement Course</option>
+                                                <option value="VAC">VAC - Value Added Course</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid md:grid-cols-3 gap-4">
+                                        <div className="form-group">
+                                            <label>Semester</label>
+                                            <select name="semester" value={formData.semester} onChange={handleChange}>
+                                                <option value="I">Semester I</option>
+                                                <option value="II">Semester II</option>
+                                                <option value="III">Semester III</option>
+                                                <option value="IV">Semester IV</option>
+                                                <option value="V">Semester V</option>
+                                                <option value="VI">Semester VI</option>
+                                                <option value="VII">Semester VII</option>
+                                                <option value="VIII">Semester VIII</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Academic Year</label>
+                                            <input
+                                                type="text"
+                                                name="year"
+                                                value={formData.year}
+                                                onChange={handleChange}
+                                                placeholder="e.g., 2024-25"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Course Level</label>
+                                            <select name="course_level" value={formData.course_level} onChange={handleChange}>
+                                                <option value="introductory">Introductory</option>
+                                                <option value="intermediate">Intermediate</option>
+                                                <option value="advanced">Advanced</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                        <h4 className="text-xs font-bold uppercase text-subtle mb-3">Credits Structure (L-T-P)</h4>
+                                        <div className="grid grid-cols-3 gap-4">
                                             <div className="form-group">
                                                 <label>Lecture (L)</label>
                                                 <input
@@ -341,76 +325,101 @@ function GeneratePage() {
                                                     min="0" max="6"
                                                 />
                                             </div>
-                                            <div className="form-group">
-                                                <label>Course Level</label>
-                                                <select name="course_level" value={formData.course_level} onChange={handleChange}>
-                                                    <option value="introductory">Introductory</option>
-                                                    <option value="intermediate">Intermediate</option>
-                                                    <option value="advanced">Advanced</option>
-                                                </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="form-group">
+                                            <label>CIE Marks</label>
+                                            <input
+                                                type="number"
+                                                name="cie_marks"
+                                                value={formData.cie_marks}
+                                                onChange={handleChange}
+                                                min="0" max="100"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>ESE Marks</label>
+                                            <input
+                                                type="number"
+                                                name="ese_marks"
+                                                value={formData.ese_marks}
+                                                onChange={handleChange}
+                                                min="0" max="100"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Total Marks</label>
+                                            <div className="p-3 bg-slate-100 rounded-md text-center font-bold text-primary border border-slate-200">
+                                                {parseInt(formData.cie_marks || 0) + parseInt(formData.ese_marks || 0)}
                                             </div>
                                         </div>
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
+                        </div>
 
-                            {/* Course Content */}
-                            <div className="form-section-card">
-                                <SectionHeader title="Course Content" section="content" icon="📝" />
-                                {expandedSections.content && (
-                                    <div className="section-content">
+                        {/* Course Content */}
+                        <div className="card mb-6 p-0 overflow-hidden">
+                            <SectionHeader title="Course Content" section="content" icon={Layers} />
+                            {expandedSections.content && (
+                                <div className="p-6 space-y-4">
+                                    <div className="form-group">
+                                        <label>Keywords / Topics (AI Context) *</label>
+                                        <textarea
+                                            name="keywords"
+                                            value={formData.keywords}
+                                            onChange={handleChange}
+                                            placeholder="Enter comma-separated keywords (e.g., algorithms, complexity, sorting, graphs, divide and conquer)"
+                                            rows={3}
+                                            required
+                                        />
+                                        <p className="text-xs text-subtle mt-1">These keywords guide the AI in generating relevant content.</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-4">
                                         <div className="form-group">
-                                            <label>Keywords / Topics *</label>
-                                            <textarea
-                                                name="keywords"
-                                                value={formData.keywords}
+                                            <label>No. of Units</label>
+                                            <input
+                                                type="number"
+                                                name="num_units"
+                                                value={formData.num_units}
                                                 onChange={handleChange}
-                                                placeholder="Enter comma-separated keywords (e.g., algorithms, complexity, sorting, graphs)"
-                                                rows={2}
-                                                required
+                                                min="3" max="8"
                                             />
                                         </div>
-
-                                        <div className="form-row">
-                                            <div className="form-group">
-                                                <label>Number of Units</label>
-                                                <input
-                                                    type="number"
-                                                    name="num_units"
-                                                    value={formData.num_units}
-                                                    onChange={handleChange}
-                                                    min="3" max="8"
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Number of COs</label>
-                                                <input
-                                                    type="number"
-                                                    name="num_outcomes"
-                                                    value={formData.num_outcomes}
-                                                    onChange={handleChange}
-                                                    min="3" max="8"
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Domain</label>
-                                                <select name="domain" value={formData.domain} onChange={handleChange}>
-                                                    <option value="engineering">Engineering</option>
-                                                    <option value="science">Science</option>
-                                                    <option value="management">Management</option>
-                                                    <option value="humanities">Humanities</option>
-                                                </select>
-                                            </div>
+                                        <div className="form-group">
+                                            <label>No. of COs</label>
+                                            <input
+                                                type="number"
+                                                name="num_outcomes"
+                                                value={formData.num_outcomes}
+                                                onChange={handleChange}
+                                                min="3" max="8"
+                                            />
                                         </div>
+                                        <div className="form-group">
+                                            <label>Domain</label>
+                                            <select name="domain" value={formData.domain} onChange={handleChange}>
+                                                <option value="engineering">Engineering</option>
+                                                <option value="science">Science</option>
+                                                <option value="management">Management</option>
+                                                <option value="humanities">Humanities</option>
+                                            </select>
+                                        </div>
+                                    </div>
 
-                                        <div className="unit-topics-grid">
-                                            <label>Unit-wise Topics (Optional)</label>
+                                    <div className="border-t border-gray-100 pt-4 mt-4">
+                                        <label className="block text-sm font-bold text-gray-700 mb-3">Unit-wise Topics (Optional Customization)</label>
+                                        <div className="space-y-3">
                                             {Array.from({ length: formData.num_units }, (_, i) => (
-                                                <div key={i} className="unit-input">
-                                                    <span className="unit-badge">U{i + 1}</span>
+                                                <div key={i} className="flex gap-3 items-center">
+                                                    <span className="shrink-0 w-8 h-8 rounded bg-primary text-white flex items-center justify-center font-bold text-xs">U{i + 1}</span>
                                                     <input
+                                                        className="flex-1 text-sm"
                                                         type="text"
-                                                        placeholder={`Unit ${i + 1} topics (comma-separated)`}
+                                                        placeholder={`Specific topics for Unit ${i + 1}...`}
                                                         value={formData.unit_topics[i]?.topics?.join(', ') || ''}
                                                         onChange={(e) => {
                                                             const topics = e.target.value.split(',').map(t => t.trim()).filter(t => t);
@@ -423,262 +432,177 @@ function GeneratePage() {
                                             ))}
                                         </div>
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
+                        </div>
 
-                            {/* References */}
-                            <div className="form-section-card">
-                                <SectionHeader title="References & Textbooks" section="references" icon="📚" />
-                                {expandedSections.references && (
-                                    <div className="section-content">
-                                        <p className="hint">Leave empty to auto-generate references</p>
-                                        <div className="form-group">
-                                            <label>Textbooks</label>
-                                            <textarea
-                                                name="textbooks"
-                                                value={formData.textbooks}
-                                                onChange={handleChange}
-                                                placeholder="e.g., Introduction to Algorithms by Cormen, Data Structures by Aho"
-                                                rows={2}
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Reference Books</label>
-                                            <textarea
-                                                name="references"
-                                                value={formData.references}
-                                                onChange={handleChange}
-                                                placeholder="Additional reference materials"
-                                                rows={2}
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Online Resources</label>
-                                            <textarea
-                                                name="online_resources"
-                                                value={formData.online_resources}
-                                                onChange={handleChange}
-                                                placeholder="e.g., Coursera ML Course, MIT OCW"
-                                                rows={2}
-                                            />
-                                        </div>
+                        {/* References */}
+                        <div className="card mb-6 p-0 overflow-hidden">
+                            <SectionHeader title="References & Textbooks" section="references" icon={BookOpen} />
+                            {expandedSections.references && (
+                                <div className="p-6 space-y-4">
+                                    <div className="bg-yellow-50 p-3 rounded-md border border-yellow-100 text-sm text-yellow-800 mb-2">
+                                        Leave these fields empty to let AI suggest the best books and resources.
                                     </div>
-                                )}
-                            </div>
+                                    <div className="form-group">
+                                        <label>Textbooks</label>
+                                        <textarea
+                                            name="textbooks"
+                                            value={formData.textbooks}
+                                            onChange={handleChange}
+                                            placeholder="e.g., Introduction to Algorithms by Cormen..."
+                                            rows={2}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Reference Books</label>
+                                        <textarea
+                                            name="references"
+                                            value={formData.references}
+                                            onChange={handleChange}
+                                            placeholder="Additional reference materials..."
+                                            rows={2}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Online Resources</label>
+                                        <textarea
+                                            name="online_resources"
+                                            value={formData.online_resources}
+                                            onChange={handleChange}
+                                            placeholder="e.g., Coursera ML Course, MIT OCW..."
+                                            rows={2}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
-                            {/* Submit Button */}
-                            <button type="submit" className="submit-btn" disabled={loading}>
-                                {loading ? (
-                                    <><span className="spinner"></span> Generating...</>
-                                ) : (
-                                    '✨ Generate Syllabus'
-                                )}
-                            </button>
-                        </form>
-                    </div>
+                        {/* Submit Button */}
+                        <button type="submit" className="btn btn-primary w-full py-4 text-lg shadow-lg" disabled={loading}>
+                            {loading ? (
+                                <><Wand2 className="animate-spin mr-2" /> Generating Syllabus...</>
+                            ) : (
+                                <><Wand2 className="mr-2" /> Generate Syllabus with AI</>
+                            )}
+                        </button>
+                    </form>
+                </div>
 
-                    {/* Result Section */}
-                    <div className="result-container">
+                {/* Result Section */}
+                <div className="w-full lg:w-2/5">
+                    <div className="sticky top-6">
                         {error && (
-                            <div className="error-box">
+                            <div className="alert alert-error mb-4">
                                 <strong>Error:</strong> {error}
                             </div>
                         )}
 
                         {!generatedSyllabus && !error && (
-                            <div className="empty-state">
-                                <div className="empty-icon">📄</div>
-                                <h3>No Syllabus Generated</h3>
-                                <p>Fill in the form and click "Generate Syllabus" to create your course syllabus.</p>
+                            <div className="card p-8 text-center bg-slate-50 border-dashed border-2">
+                                <FileText size={48} className="mx-auto text-slate-300 mb-4" />
+                                <h3 className="text-lg font-bold text-gray-500 mb-2">Ready to Generate</h3>
+                                <p className="text-sm text-gray-400">
+                                    Fill in the details on the left and click "Generate" to see your AI-crafted syllabus here.
+                                </p>
                             </div>
                         )}
 
                         {generatedSyllabus && (
-                            <div className="result-card">
-                                <div className="result-header">
-                                    <h2>Generated Syllabus</h2>
-                                    <div className="export-btns">
-                                        <button onClick={handleExportPDF} className="export-btn pdf">
-                                            <FileText size={16} /> PDF
+                            <div className="card p-0 overflow-hidden animate-fade-in shadow-xl border-indigo-100">
+                                <div className="bg-gradient-to-r from-primary to-primary-light p-4 text-white flex justify-between items-center">
+                                    <h2 className="font-bold text-lg">Syllabus Preview</h2>
+                                    <div className="flex gap-2">
+                                        <button onClick={handleExportPDF} className="p-2 bg-white/20 hover:bg-white/30 rounded text-white transition-colors" title="Export PDF">
+                                            <Download size={18} />
                                         </button>
-                                        <button onClick={handleExportLatexPDF} className="export-btn latex">
-                                            📐 LaTeX PDF
-                                        </button>
-                                        <button onClick={handleExportWord} className="export-btn word">
-                                            <FileEdit size={16} /> Word
+                                        <button onClick={handleExportWord} className="p-2 bg-white/20 hover:bg-white/30 rounded text-white transition-colors" title="Export Word">
+                                            <FileEdit size={18} />
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="syllabus-preview">
-                                    {/* Course Header */}
-                                    <div className="preview-section header-section">
-                                        <h3>{generatedSyllabus.course_code}: {generatedSyllabus.course_title}</h3>
-                                        <div className="meta-grid">
-                                            <span><strong>Credits:</strong> {generatedSyllabus.credits}</span>
-                                            {generatedSyllabus.program && <span><strong>Program:</strong> {generatedSyllabus.program}</span>}
-                                            {generatedSyllabus.course_level && (
-                                                <span className={`level-badge ${generatedSyllabus.course_level}`}>
-                                                    {generatedSyllabus.course_level}
-                                                </span>
-                                            )}
+                                <div className="p-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                                    {/* Header Info */}
+                                    <div className="mb-6 pb-6 border-b border-gray-100">
+                                        <h3 className="text-xl font-bold text-primary mb-2 line-clamp-2">{generatedSyllabus.course_title}</h3>
+                                        <div className="flex flex-wrap gap-2 text-xs font-semibold text-subtle uppercase tracking-wider">
+                                            <span className="bg-slate-100 px-2 py-1 rounded">{generatedSyllabus.course_code}</span>
+                                            <span className="bg-slate-100 px-2 py-1 rounded">{generatedSyllabus.credits} Credits</span>
+                                            <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded">{generatedSyllabus.course_level}</span>
                                         </div>
                                     </div>
 
-                                    {/* Overview */}
+                                    {/* Description */}
                                     {generatedSyllabus.overview && (
-                                        <div className="preview-section">
-                                            <h4>Course Description</h4>
-                                            <p>{generatedSyllabus.overview}</p>
+                                        <div className="mb-6">
+                                            <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Course Description</h4>
+                                            <p className="text-sm text-gray-600 leading-relaxed">{generatedSyllabus.overview}</p>
                                         </div>
                                     )}
 
-                                    {/* Course Outcomes */}
+                                    {/* Outcomes */}
                                     {generatedSyllabus.learning_outcomes && (
-                                        <div className="preview-section">
-                                            <h4>Course Outcomes</h4>
-                                            <table className="co-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>CO</th>
-                                                        <th>Statement</th>
-                                                        <th>BTL</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {generatedSyllabus.learning_outcomes.map((co, idx) => (
-                                                        <tr key={idx}>
-                                                            <td>{co.code}</td>
-                                                            <td>{co.description}</td>
-                                                            <td className="btl">{co.bloom_level}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                        <div className="mb-6">
+                                            <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Course Outcomes</h4>
+                                            <div className="space-y-2">
+                                                {generatedSyllabus.learning_outcomes.map((co, idx) => (
+                                                    <div key={idx} className="text-sm border-l-2 border-indigo-200 pl-3 py-1">
+                                                        <span className="font-bold text-indigo-700 mr-2">{co.code}:</span>
+                                                        <span className="text-gray-700">{co.description}</span>
+                                                        <span className="ml-2 text-xs bg-gray-100 px-1 rounded text-gray-500">({co.bloom_level})</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
 
-                                    {/* Units */}
+                                    {/* Units Content */}
                                     {generatedSyllabus.units && (
-                                        <div className="preview-section">
-                                            <h4>Course Content <span style={{ fontSize: '0.7em', color: '#888' }}>(v2.1)</span></h4>
-                                            {console.log('DEBUG: units type:', typeof generatedSyllabus.units, 'first unit topics type:', typeof generatedSyllabus.units[0]?.topics)}
-                                            {generatedSyllabus.units.map((unit, idx) => {
-                                                // Helper to parse a single topic if it's a string
-                                                const parseTopic = (topic) => {
-                                                    if (!topic) return { topic: '' };
-                                                    if (typeof topic === 'object') return topic;
-                                                    if (typeof topic === 'string') {
+                                        <div className="mb-6">
+                                            <h4 className="text-sm font-bold text-gray-900 uppercase mb-3">Course Content</h4>
+                                            <div className="space-y-4">
+                                                {generatedSyllabus.units.map((unit, idx) => {
+                                                    // Helper to parse topic strings if needed (same logic as before)
+                                                    let topicsArray = unit.topics || [];
+                                                    if (typeof topicsArray === 'string') {
                                                         try {
-                                                            // Try to parse Python dict format (single quotes -> double quotes)
-                                                            return JSON.parse(topic.replace(/'/g, '"'));
+                                                            topicsArray = JSON.parse(topicsArray.replace(/'/g, '"'));
                                                         } catch (e) {
-                                                            return { topic: topic }; // Just use string as topic name
+                                                            topicsArray = [{ topic: topicsArray }];
                                                         }
                                                     }
-                                                    return { topic: String(topic) };
-                                                };
 
-                                                // Helper to safely extract topic content
-                                                const getTopicName = (topic) => {
-                                                    const t = parseTopic(topic);
-                                                    return t?.topic || '';
-                                                };
-                                                const getTopicDesc = (topic) => {
-                                                    const t = parseTopic(topic);
-                                                    return t?.description || null;
-                                                };
-                                                const getSubtopics = (topic) => {
-                                                    const t = parseTopic(topic);
-                                                    return Array.isArray(t?.subtopics) ? t.subtopics : [];
-                                                };
-                                                const getKeyConcepts = (topic) => {
-                                                    const t = parseTopic(topic);
-                                                    return Array.isArray(t?.key_concepts) ? t.key_concepts : [];
-                                                };
-
-                                                // Get topics array (handle string or array)
-                                                let topicsArray = unit.topics || [];
-                                                if (typeof topicsArray === 'string') {
-                                                    try {
-                                                        topicsArray = JSON.parse(topicsArray.replace(/'/g, '"'));
-                                                    } catch (e) {
-                                                        topicsArray = [{ topic: topicsArray }];
-                                                    }
-                                                }
-
-                                                return (
-                                                    <div key={idx} className="unit-block">
-                                                        <div className="unit-header">
-                                                            <span className="unit-num">Unit {unit.unit_number}</span>
-                                                            <span className="unit-title">{unit.title}</span>
-                                                            <span className="unit-hours">{unit.hours} Hrs</span>
-                                                        </div>
-                                                        {unit.overview && (
-                                                            <p className="unit-overview">{unit.overview}</p>
-                                                        )}
-                                                        <div className="topic-list-detailed">
-                                                            {Array.isArray(topicsArray) && topicsArray.map((topic, tidx) => (
-                                                                <div key={tidx} className="topic-item">
-                                                                    <div className="topic-name">
-                                                                        {getTopicName(topic)}
-                                                                    </div>
-                                                                    {getTopicDesc(topic) && (
-                                                                        <p className="topic-description">{getTopicDesc(topic)}</p>
-                                                                    )}
-                                                                    {getSubtopics(topic).length > 0 && (
-                                                                        <ul className="subtopic-list">
-                                                                            {getSubtopics(topic).map((st, stidx) => (
-                                                                                <li key={stidx}>{st}</li>
-                                                                            ))}
-                                                                        </ul>
-                                                                    )}
-                                                                    {getKeyConcepts(topic).length > 0 && (
-                                                                        <div className="key-concepts">
-                                                                            <strong>Key Concepts:</strong> {getKeyConcepts(topic).join(', ')}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        {unit.learning_activities && unit.learning_activities.length > 0 && (
-                                                            <div className="learning-activities">
-                                                                <strong>Learning Activities:</strong>
-                                                                <ul>
-                                                                    {unit.learning_activities.map((act, aidx) => (
-                                                                        <li key={aidx}>{act}</li>
-                                                                    ))}
-                                                                </ul>
+                                                    return (
+                                                        <div key={idx} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <h5 className="font-bold text-sm text-primary">Unit {unit.unit_number}: {unit.title}</h5>
+                                                                <span className="text-xs bg-white px-2 py-0.5 rounded border border-gray-200 whitespace-nowrap">{unit.hours} Hrs</span>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
+                                                            <ul className="list-disc list-inside text-xs text-gray-600 space-y-1 ml-1">
+                                                                {Array.isArray(topicsArray) && topicsArray.slice(0, 4).map((t, i) => (
+                                                                    <li key={i} className="line-clamp-1">{typeof t === 'string' ? t : (t.topic || 'Topic')}</li>
+                                                                ))}
+                                                                {Array.isArray(topicsArray) && topicsArray.length > 4 && (
+                                                                    <li className="italic text-gray-400">and {topicsArray.length - 4} more...</li>
+                                                                )}
+                                                            </ul>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     )}
 
                                     {/* References */}
-                                    {generatedSyllabus.references && (
-                                        <div className="preview-section">
-                                            <h4>References</h4>
-                                            {generatedSyllabus.references.textbooks?.length > 0 && (
-                                                <div className="ref-group">
-                                                    <strong>Textbooks:</strong>
-                                                    <ol>
-                                                        {generatedSyllabus.references.textbooks.map((book, idx) => (
-                                                            <li key={idx}>{book}</li>
-                                                        ))}
-                                                    </ol>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* CO-PO Mapping */}
-                                    {generatedSyllabus.copo_summary && (
-                                        <div className="preview-section copo">
-                                            <h4>CO-PO Mapping</h4>
-                                            <p>{generatedSyllabus.copo_summary}</p>
+                                    {generatedSyllabus.references?.textbooks && (
+                                        <div className="mb-6">
+                                            <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Textbooks</h4>
+                                            <ul className="text-xs text-gray-600 list-decimal list-inside space-y-1">
+                                                {generatedSyllabus.references.textbooks.slice(0, 3).map((book, i) => (
+                                                    <li key={i}>{book}</li>
+                                                ))}
+                                            </ul>
                                         </div>
                                     )}
                                 </div>
@@ -687,559 +611,6 @@ function GeneratePage() {
                     </div>
                 </div>
             </div>
-
-            <style>{`
-                .generate-page {
-                    padding: 2rem 0;
-                    min-height: 100vh;
-                    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
-                    transition: background var(--transition-base);
-                }
-
-                .container {
-                    max-width: none;
-                    margin: 0;
-                    padding: 0 1.5rem;
-                    width: 100%;
-                }
-
-                .page-header {
-                    text-align: center;
-                    margin-bottom: 2rem;
-                }
-
-                .page-title {
-                    font-size: 2.5rem;
-                    font-weight: 700;
-                    color: var(--text-primary);
-                    margin-bottom: 0.5rem;
-                }
-
-                .page-subtitle {
-                    color: var(--text-secondary);
-                    font-size: 1.1rem;
-                }
-
-                .main-content {
-                    display: grid;
-                    grid-template-columns: 65% 1fr;
-                    gap: 1.5rem;
-                    align-items: start;
-                }
-
-                /* Form Styles */
-                .form-container {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 1rem;
-                }
-
-                .form-section-card {
-                    background: var(--bg-primary);
-                    border-radius: 12px;
-                    box-shadow: var(--shadow-md);
-                    overflow: hidden;
-                    border: 1px solid var(--border);
-                    transition: background var(--transition-base), border-color var(--transition-base);
-                }
-
-                .section-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 1rem 1.25rem;
-                    background: var(--bg-secondary);
-                    cursor: pointer;
-                    border-bottom: 1px solid var(--border);
-                    transition: background 0.2s;
-                    color: var(--text-primary);
-                }
-
-                .section-header:hover {
-                    background: var(--bg-hover);
-                }
-
-                .section-title {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                }
-
-                .section-title h3 {
-                    font-size: 1rem;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    margin: 0;
-                }
-
-                .section-icon {
-                    font-size: 1.25rem;
-                }
-
-                .section-content {
-                    padding: 1.25rem;
-                }
-
-                .form-row {
-                    display: flex;
-                    gap: 1rem;
-                    margin-bottom: 1rem;
-                }
-
-                .form-row .form-group {
-                    flex: 1;
-                }
-
-                .form-row .form-group.flex-2 {
-                    flex: 2;
-                }
-
-                .form-group {
-                    margin-bottom: 0.75rem;
-                }
-
-                .form-group label {
-                    display: block;
-                    font-size: 0.85rem;
-                    font-weight: 500;
-                    color: var(--text-secondary);
-                    margin-bottom: 0.35rem;
-                }
-
-                .form-group input,
-                .form-group select,
-                .form-group textarea {
-                    width: 100%;
-                    padding: 0.6rem 0.75rem;
-                    border: 1px solid var(--border);
-                    border-radius: 8px;
-                    font-size: 0.9rem;
-                    transition: border-color 0.2s, box-shadow 0.2s;
-                    background: var(--bg-primary);
-                    color: var(--text-primary);
-                }
-
-                .form-group input:focus,
-                .form-group select:focus,
-                .form-group textarea:focus {
-                    outline: none;
-                    border-color: var(--primary);
-                    box-shadow: 0 0 0 3px hsla(220, 90%, 56%, 0.15);
-                }
-
-                .hint {
-                    font-size: 0.8rem;
-                    color: var(--text-secondary);
-                    margin-bottom: 1rem;
-                }
-
-                .unit-topics-grid {
-                    margin-top: 1rem;
-                }
-
-                .unit-topics-grid label {
-                    display: block;
-                    font-size: 0.85rem;
-                    font-weight: 500;
-                    color: var(--text-secondary);
-                    margin-bottom: 0.5rem;
-                }
-
-                .unit-input {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    margin-bottom: 0.5rem;
-                }
-
-                .unit-badge {
-                    background: var(--primary);
-                    color: white;
-                    padding: 0.35rem 0.6rem;
-                    border-radius: 6px;
-                    font-size: 0.75rem;
-                    font-weight: 600;
-                }
-
-                .unit-input input {
-                    flex: 1;
-                    padding: 0.5rem 0.75rem;
-                    border: 1px solid var(--border);
-                    border-radius: 6px;
-                    background: var(--bg-primary);
-                    color: var(--text-primary);
-                }
-
-                .submit-btn {
-                    width: 100%;
-                    padding: 1rem;
-                    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-                    color: white;
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    border: none;
-                    border-radius: 12px;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 0.5rem;
-                    transition: transform 0.2s, box-shadow 0.2s;
-                }
-
-                .submit-btn:hover:not(:disabled) {
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 20px hsla(220, 90%, 56%, 0.3);
-                }
-
-                .submit-btn:disabled {
-                    opacity: 0.7;
-                    cursor: not-allowed;
-                }
-
-                .spinner {
-                    width: 20px;
-                    height: 20px;
-                    border: 2px solid rgba(255,255,255,0.3);
-                    border-top-color: white;
-                    border-radius: 50%;
-                    animation: spin 0.8s linear infinite;
-                }
-
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-
-                /* Result Styles */
-                .result-container {
-                    position: sticky;
-                    top: 1rem;
-                }
-
-                .empty-state {
-                    background: var(--bg-primary);
-                    border-radius: 12px;
-                    padding: 1.5rem;
-                    text-align: center;
-                    box-shadow: var(--shadow-md);
-                    font-size: 0.9rem;
-                    border: 1px solid var(--border);
-                }
-
-                .empty-icon {
-                    font-size: 2.5rem;
-                    margin-bottom: 0.5rem;
-                }
-
-                .empty-state h3 {
-                    color: var(--text-primary);
-                    margin-bottom: 0.5rem;
-                }
-
-                .empty-state p {
-                    color: var(--text-secondary);
-                }
-
-                .error-box {
-                    background: hsla(0, 84%, 60%, 0.1);
-                    border: 1px solid hsla(0, 84%, 60%, 0.3);
-                    color: var(--error);
-                    padding: 1rem;
-                    border-radius: 8px;
-                    margin-bottom: 1rem;
-                }
-
-                .result-card {
-                    background: var(--bg-primary);
-                    border-radius: 12px;
-                    box-shadow: var(--shadow-md);
-                    overflow: hidden;
-                    border: 1px solid var(--border);
-                }
-
-                .result-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 1rem 1.25rem;
-                    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-                    color: white;
-                }
-
-                .result-header h2 {
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    margin: 0;
-                }
-
-                .export-btns {
-                    display: flex;
-                    gap: 0.5rem;
-                }
-
-                .export-btn {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.35rem;
-                    padding: 0.5rem 0.75rem;
-                    border: none;
-                    border-radius: 6px;
-                    font-size: 0.85rem;
-                    font-weight: 500;
-                    cursor: pointer;
-                    transition: opacity 0.2s;
-                }
-
-                .export-btn.pdf {
-                    background: var(--error);
-                    color: white;
-                }
-
-                .export-btn.word {
-                    background: hsl(217, 91%, 60%);
-                    color: white;
-                }
-
-                .syllabus-preview {
-                    padding: 1.25rem;
-                    max-height: 70vh;
-                    overflow-y: auto;
-                    color: var(--text-primary);
-                }
-
-                .preview-section {
-                    margin-bottom: 1.5rem;
-                    padding-bottom: 1rem;
-                    border-bottom: 1px solid var(--border);
-                }
-
-                .preview-section:last-child {
-                    border-bottom: none;
-                    margin-bottom: 0;
-                }
-
-                .preview-section h4 {
-                    font-size: 0.9rem;
-                    font-weight: 600;
-                    color: var(--primary);
-                    margin-bottom: 0.75rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-
-                .header-section h3 {
-                    font-size: 1.2rem;
-                    color: var(--text-primary);
-                    margin-bottom: 0.5rem;
-                }
-
-                .meta-grid {
-                    display: flex;
-                    gap: 1rem;
-                    flex-wrap: wrap;
-                    font-size: 0.85rem;
-                    color: var(--text-secondary);
-                }
-
-                .level-badge {
-                    padding: 0.25rem 0.5rem;
-                    border-radius: 4px;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    text-transform: capitalize;
-                }
-
-                .level-badge.introductory { background: hsla(160, 84%, 39%, 0.15); color: hsla(160, 84%, 39%, 1); }
-                .level-badge.intermediate { background: hsla(217, 91%, 60%, 0.15); color: hsla(217, 91%, 60%, 1); }
-                .level-badge.advanced { background: hsla(28, 100%, 50%, 0.15); color: hsla(28, 100%, 50%, 1); }
-
-                [data-theme="dark"] .level-badge.introductory { background: hsla(160, 84%, 39%, 0.25); color: hsla(160, 84%, 70%, 1); }
-                [data-theme="dark"] .level-badge.intermediate { background: hsla(217, 91%, 60%, 0.25); color: hsla(217, 91%, 80%, 1); }
-                [data-theme="dark"] .level-badge.advanced { background: hsla(28, 100%, 50%, 0.25); color: hsla(28, 100%, 70%, 1); }
-
-                .co-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    font-size: 0.85rem;
-                }
-
-                .co-table th, .co-table td {
-                    padding: 0.5rem;
-                    border: 1px solid var(--border);
-                    text-align: left;
-                    color: var(--text-primary);
-                }
-
-                .co-table th {
-                    background: var(--bg-secondary);
-                    font-weight: 600;
-                    color: var(--text-secondary);
-                }
-
-                .co-table .btl {
-                    text-transform: capitalize;
-                    color: var(--primary);
-                    font-weight: 500;
-                }
-
-                .unit-block {
-                    background: var(--bg-secondary);
-                    border-radius: 8px;
-                    padding: 0.75rem;
-                    margin-bottom: 0.75rem;
-                }
-
-                .unit-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    margin-bottom: 0.5rem;
-                }
-
-                .unit-num {
-                    background: var(--primary);
-                    color: white;
-                    padding: 0.25rem 0.5rem;
-                    border-radius: 4px;
-                    font-size: 0.75rem;
-                    font-weight: 600;
-                }
-
-                .unit-title {
-                    flex: 1;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                }
-
-                .unit-hours {
-                    font-size: 0.8rem;
-                    color: var(--text-secondary);
-                }
-
-                .topic-list {
-                    margin: 0;
-                    padding-left: 1.5rem;
-                    font-size: 0.85rem;
-                    color: var(--text-secondary);
-                }
-
-                .topic-list li {
-                    margin-bottom: 0.25rem;
-                }
-
-                /* Detailed topic styles */
-                .unit-overview {
-                    font-style: italic;
-                    color: var(--text-secondary);
-                    font-size: 0.85rem;
-                    margin: 0.5rem 0 0.75rem 0;
-                    padding: 0.5rem;
-                    background: var(--bg-tertiary);
-                    border-radius: 4px;
-                    border-left: 3px solid var(--primary);
-                }
-
-                .topic-list-detailed {
-                    margin-top: 0.5rem;
-                }
-
-                .topic-item {
-                    margin-bottom: 0.75rem;
-                    padding: 0.5rem;
-                    background: var(--bg-primary);
-                    border-radius: 6px;
-                    border-left: 2px solid var(--primary);
-                }
-
-                .topic-name {
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    font-size: 0.9rem;
-                    margin-bottom: 0.25rem;
-                }
-
-                .topic-description {
-                    font-size: 0.8rem;
-                    color: var(--text-secondary);
-                    margin: 0.25rem 0;
-                    line-height: 1.5;
-                }
-
-                .subtopic-list {
-                    margin: 0.25rem 0 0.25rem 1rem;
-                    padding-left: 0.5rem;
-                    font-size: 0.8rem;
-                    color: var(--text-secondary);
-                }
-
-                .subtopic-list li {
-                    margin-bottom: 0.15rem;
-                }
-
-                .key-concepts {
-                    font-size: 0.75rem;
-                    color: var(--accent);
-                    margin-top: 0.25rem;
-                }
-
-                .learning-activities {
-                    margin-top: 0.5rem;
-                    padding-top: 0.5rem;
-                    border-top: 1px dashed var(--border);
-                    font-size: 0.8rem;
-                }
-
-                .learning-activities ul {
-                    margin: 0.25rem 0 0 1rem;
-                    padding-left: 0.5rem;
-                    color: var(--text-secondary);
-                }
-
-                .ref-group {
-                    margin-bottom: 0.75rem;
-                }
-
-                .ref-group ol {
-                    margin: 0.5rem 0 0 1.5rem;
-                    font-size: 0.85rem;
-                    color: var(--text-secondary);
-                }
-
-                .copo {
-                    background: linear-gradient(135deg, hsla(250, 84%, 90%, 0.5) 0%, hsla(260, 84%, 90%, 0.5) 100%);
-                    padding: 1rem;
-                    border-radius: 8px;
-                }
-
-                [data-theme="dark"] .copo {
-                    background: linear-gradient(135deg, hsla(250, 44%, 20%, 0.5) 0%, hsla(260, 44%, 20%, 0.5) 100%);
-                }
-
-                .copo p {
-                    font-style: italic;
-                    color: var(--primary);
-                }
-
-                @media (max-width: 1024px) {
-                    .main-content {
-                        grid-template-columns: 1fr;
-                    }
-
-                    .result-container {
-                        position: static;
-                    }
-                }
-
-                @media (max-width: 640px) {
-                    .form-row {
-                        flex-direction: column;
-                    }
-
-                    .page-title {
-                        font-size: 1.75rem;
-                    }
-                }
-            `}</style>
         </div>
     );
 }

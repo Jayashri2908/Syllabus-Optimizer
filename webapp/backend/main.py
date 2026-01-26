@@ -69,10 +69,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-print("\n" + "="*50)
-print("  SCDO BACKEND SERVER - AI-POWERED ONLY  ")
-print("  IBM Granite Integration Required  ")
-print("="*50 + "\n")
+logger.info("="*50)
+logger.info("  SCDO BACKEND SERVER - AI-POWERED ONLY  ")
+logger.info("  IBM Granite Integration Required  ")
+logger.info("="*50)
 
 # Initialize components
 parser = None
@@ -280,22 +280,122 @@ async def optimize_syllabus(request: OptimizeRequest):
     try:
         syllabus_data = request.syllabus_data
         
-        # Get Bloom's distribution analysis
+        # Get parsed data
         outcomes = syllabus_data.get('learning_outcomes', [])
-        bloom_analysis = bloom_mapper.analyze_distribution(outcomes)
-        
-        # Get rebalancing suggestions
-        rebalancing = bloom_mapper.suggest_rebalancing(bloom_analysis)
-        
-        # Get content optimization suggestions
         units = syllabus_data.get('units', [])
+        course_title = syllabus_data.get('course_title', 'Unknown Course')
+        raw_text = syllabus_data.get('raw_text', '')
+        
+        # Determine how much data was successfully parsed
+        has_outcomes = outcomes and len(outcomes) > 0
+        has_units = units and len(units) > 0
+        has_raw_text = raw_text and len(raw_text) > 100
+        
+        # Log what we have for debugging
+        logger.info(f"Optimize: course_title='{course_title}', outcomes={len(outcomes)}, units={len(units)}, raw_text={len(raw_text)} chars")
+        
+        # Use AI analysis when we have raw_text but missing key data (outcomes or units)
+        # This ensures we provide useful analysis even when parsing is incomplete
+        needs_ai_enhancement = has_raw_text and (not has_outcomes or not has_units)
+        
+        ai_analysis_result = None
+        if needs_ai_enhancement:
+            logger.info("Incomplete parsing detected - using AI to analyze raw content")
+            try:
+                # Use content optimizer with raw text for better analysis
+                from src.ai.model_manager import ModelManager
+                ai = ModelManager()
+                
+                # Generate AI-based analysis of the raw text
+                analysis_prompt = f"""Analyze this syllabus document and provide detailed optimization suggestions:
+
+SYLLABUS CONTENT:
+{raw_text[:5000]}
+
+Provide a comprehensive analysis:
+
+## 1. Course Identification
+- Course title and code
+- Subject area and level
+
+## 2. Content Structure
+- Main units/modules identified
+- Topic flow and organization
+- Any gaps in coverage
+
+## 3. Learning Outcomes Analysis
+- List any outcomes/objectives found
+- Bloom's taxonomy levels detected
+- Recommendations for improvement
+
+## 4. Unit Sequencing Assessment  
+- Is the current sequence logical?
+- Prerequisites consideration
+- Suggested reordering if needed
+
+## 5. Modern Topics to Add
+- Current industry trends missing
+- Emerging technologies relevant
+- Practical skills needed
+
+## 6. Compliance Suggestions
+- NEP 2020 alignment recommendations
+- Accreditation readiness
+
+## 7. Top 5 Priority Improvements
+Be specific with actionable steps.
+"""
+
+                ai_analysis_result = ai.generate(
+                    prompt=analysis_prompt,
+                    system_prompt="You are an expert curriculum analyst specializing in higher education syllabus optimization. Provide detailed, actionable analysis based on the document content.",
+                    task_type='analysis',
+                    temperature=0.4,
+                    max_tokens=2000
+                )
+                logger.info(f"AI analysis generated: {len(ai_analysis_result)} chars")
+                
+            except Exception as ai_err:
+                logger.error(f"AI analysis of raw text failed: {ai_err}")
+                ai_analysis_result = None
+        
+        # If we have no structured data at all, return AI-only analysis
+        if not has_outcomes and not has_units and ai_analysis_result:
+            return {
+                'success': True,
+                'parsing_status': 'ai_analyzed',
+                'optimization': {
+                    'bloom_analysis': {
+                        'total_outcomes': 0,
+                        'comparison': {},
+                        'message': 'Structured parsing incomplete - see AI analysis for details'
+                    },
+                    'rebalancing_suggestions': ['Review AI analysis below for Bloom\'s recommendations'],
+                    'sequence_optimization': {
+                        'optimization_suggestions': ai_analysis_result
+                    },
+                    'modern_topics': [],
+                    'ai_analysis': ai_analysis_result,
+                    'co_po_mapping': None
+                },
+                'syllabus': syllabus_data
+            }
+        
+        
+        # Standard analysis when parsing succeeded
+        bloom_analysis = bloom_mapper.analyze_distribution(outcomes)
+        rebalancing = bloom_mapper.suggest_rebalancing(bloom_analysis)
         sequence_opt = content_optimizer.optimize_unit_sequence(units)
         
         # Get modern content suggestions
-        course_title = syllabus_data.get('course_title', '')
         current_topics = []
         for unit in units:
-            current_topics.extend(unit.get('topics', []))
+            topics = unit.get('topics', [])
+            for topic in topics:
+                if isinstance(topic, dict):
+                    current_topics.append(topic.get('topic', ''))
+                else:
+                    current_topics.append(str(topic))
             
         modern_topics = content_optimizer.suggest_modern_content(
             course_title, current_topics
@@ -545,7 +645,13 @@ async def export_pdf(request: OptimizeRequest):
         # Log what we received for debugging
         logger.info(f"Exporting PDF for course: {syllabus_data.get('course_title', 'N/A')}")
         if analysis_data:
-            logger.info("Analysis data included via Analysis Report")
+            logger.info(f"Analysis data keys: {list(analysis_data.keys())}")
+            if analysis_data.get('ai_analysis'):
+                logger.info(f"AI analysis found: {len(analysis_data['ai_analysis'])} chars")
+            if analysis_data.get('sequence_optimization'):
+                logger.info(f"Sequence optimization found: {analysis_data['sequence_optimization'].keys() if isinstance(analysis_data['sequence_optimization'], dict) else 'string'}")
+        else:
+            logger.info("No analysis_data provided")
         
         # Create temp PDF file
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
@@ -730,12 +836,21 @@ async def export_word(request: OptimizeRequest):
     
     try:
         syllabus_data = request.syllabus_data
+        analysis_data = request.analysis_data  # Get optimization results
         
         # Handle nested structure
         if 'data' in syllabus_data and isinstance(syllabus_data.get('data'), dict):
             syllabus_data = syllabus_data['data']
         elif 'syllabus' in syllabus_data and isinstance(syllabus_data.get('syllabus'), dict):
             syllabus_data = syllabus_data['syllabus']
+        
+        # Merge analysis_data fields into syllabus_data if present
+        # This ensures CO-PO mapping and other optimization results are available
+        if analysis_data:
+            if analysis_data.get('co_po_mapping') and not syllabus_data.get('co_po_mapping'):
+                syllabus_data['co_po_mapping'] = analysis_data['co_po_mapping']
+            if analysis_data.get('bloom_analysis') and not syllabus_data.get('bloom_analysis'):
+                syllabus_data['bloom_analysis'] = analysis_data['bloom_analysis']
         
         logger.info(f"Exporting Word for course: {syllabus_data.get('course_title', 'N/A')}")
         

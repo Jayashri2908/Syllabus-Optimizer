@@ -1,31 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, BookOpen, BarChart2, FileText, Zap } from 'lucide-react';
+import Logo3D from './components/Logo3D';
 import HomePage from './pages/HomePage';
 import AnalyzePage from './pages/AnalyzePage';
 import GeneratePage from './pages/GeneratePage';
 import OptimizePage from './pages/OptimizePage';
 import './index.css';
 
+// NavLink Helper Component
+const NavLink = ({ to, icon: Icon, label, onClick }) => {
+  const location = useLocation();
+  const isActive = location.pathname === to;
+
+  return (
+    <Link
+      to={to}
+      className={`nav-link ${isActive ? 'active' : ''}`}
+      onClick={onClick}
+    >
+      <Icon size={18} />
+      <span>{label}</span>
+    </Link>
+  );
+};
+
 function App() {
-  const [theme, setTheme] = useState('light');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Load theme from localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    setTheme(savedTheme);
-    document.documentElement.setAttribute('data-theme', savedTheme);
-  }, []);
-
-  // Toggle theme
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-  };
 
   // Close mobile menu when route changes
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -39,20 +41,22 @@ function App() {
           toastOptions={{
             duration: 4000,
             style: {
-              background: 'var(--bg-primary)',
-              color: 'var(--text-primary)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-md)',
+              background: '#ffffff',
+              color: '#0f172a',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              fontFamily: 'Inter, sans-serif',
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
             },
             success: {
               iconTheme: {
-                primary: 'var(--success)',
+                primary: '#15803d',
                 secondary: 'white',
               },
             },
             error: {
               iconTheme: {
-                primary: 'var(--error)',
+                primary: '#b91c1c',
                 secondary: 'white',
               },
             },
@@ -61,33 +65,43 @@ function App() {
 
         {/* Navigation */}
         <nav className="navbar">
-          <div className="container">
-            <div className="navbar-content">
-              <Link to="/" className="navbar-brand" onClick={closeMobileMenu}>
-                <span className="brand-icon">📚</span>
-                <span className="brand-text">SCDO</span>
-              </Link>
-
-              <div className={`navbar-links ${mobileMenuOpen ? 'open' : ''}`}>
-                <Link to="/" className="nav-link" onClick={closeMobileMenu}>Home</Link>
-                <Link to="/analyze" className="nav-link" onClick={closeMobileMenu}>Analyze</Link>
-                <Link to="/generate" className="nav-link" onClick={closeMobileMenu}>Generate</Link>
-                <Link to="/optimize" className="nav-link" onClick={closeMobileMenu}>Optimize</Link>
+          <div className="navbar-content px-6">
+            <Link to="/" className="navbar-brand" onClick={closeMobileMenu}>
+              <div className="brand-logo-container">
+                <Logo3D />
               </div>
-
-              <div className="navbar-actions">
-                <button onClick={toggleTheme} className="theme-toggle" aria-label="Toggle theme">
-                  {theme === 'light' ? '🌙' : '☀️'}
-                </button>
-
-                <button
-                  className="mobile-menu-toggle"
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  aria-label="Toggle menu"
-                >
-                  {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
+              <div className="flex flex-col">
+                <span className="brand-text">Syllabus Optimizer</span>
+                <span className="brand-subtitle">Enterprise Edition</span>
               </div>
+            </Link>
+
+            {/* Desktop Nav */}
+            <div className="navbar-links hidden-mobile">
+              <NavLink to="/" icon={BookOpen} label="Home" />
+              <NavLink to="/analyze" icon={BarChart2} label="Analyze" />
+              <NavLink to="/generate" icon={FileText} label="Generate" />
+              <NavLink to="/optimize" icon={Zap} label="Optimize" />
+            </div>
+
+            <div className="navbar-actions">
+              <button
+                className="mobile-menu-toggle"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Nav */}
+          <div className={`mobile-nav ${mobileMenuOpen ? 'open' : ''}`}>
+            <div className="mobile-nav-content">
+              <NavLink to="/" icon={BookOpen} label="Home" onClick={closeMobileMenu} />
+              <NavLink to="/analyze" icon={BarChart2} label="Analyze" onClick={closeMobileMenu} />
+              <NavLink to="/generate" icon={FileText} label="Generate" onClick={closeMobileMenu} />
+              <NavLink to="/optimize" icon={Zap} label="Optimize" onClick={closeMobileMenu} />
             </div>
           </div>
         </nav>
@@ -105,183 +119,161 @@ function App() {
         {/* Footer */}
         <footer className="footer">
           <div className="container">
-            <p className="footer-text">
-              © 2025 SCDO - Powered by IBM Granite AI
-            </p>
+            <div className="flex flex-col items-center justify-center gap-2">
+              <p className="footer-text">
+                © 2025 SCDO Inc. All rights reserved.
+              </p>
+              <p className="text-xs text-subtle">
+                Enterprise Grade Syllabus Management System
+              </p>
+            </div>
           </div>
         </footer>
       </div>
 
       <style>{`
         .navbar {
-          background: var(--bg-primary);
+          background: white;
           border-bottom: 1px solid var(--border);
-          padding: var(--spacing-md) 0;
           position: sticky;
           top: 0;
           z-index: 100;
-          backdrop-filter: blur(10px);
-          background: rgba(255, 255, 255, 0.95);
-        }
-
-        [data-theme="dark"] .navbar {
-          background: rgba(20, 20, 30, 0.95);
+          height: 70px;
+          display: flex;
+          align-items: center;
+          box-shadow: var(--shadow-sm);
         }
 
         .navbar-content {
           display: flex;
           align-items: center;
           justify-content: space-between;
+          width: 100%;
         }
 
         .navbar-brand {
           display: flex;
           align-items: center;
-          gap: var(--spacing-sm);
+          gap: 12px;
           text-decoration: none;
-          font-size: 1.5rem;
-          font-weight: 700;
-          color: var(--text-primary);
         }
-
-        .brand-icon {
-          font-size: 2rem;
+        
+        .brand-logo-container {
+            background: linear-gradient(135deg, var(--primary), #334155);
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-sm);
         }
+        
+        .text-white { color: white; }
 
         .brand-text {
-          background: linear-gradient(135deg, var(--primary), var(--secondary));
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          font-weight: 700;
+          font-size: 1.125rem;
+          color: var(--text-primary);
+          line-height: 1.1;
+        }
+        
+        .brand-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .navbar-links {
           display: flex;
-          gap: var(--spacing-lg);
+          gap: 4px;
+          background: var(--bg-surface);
+          padding: 4px;
+          border-radius: 10px;
         }
 
         .nav-link {
+          display: flex;
+          align-items: center;
+          gap: 8px;
           text-decoration: none;
           color: var(--text-secondary);
-          font-weight: 600;
-          transition: all var(--transition-fast);
-          position: relative;
-          padding: var(--spacing-sm);
+          font-weight: 500;
+          font-size: 0.9rem;
+          padding: 8px 16px;
+          border-radius: 6px;
+          transition: all 0.2s ease;
         }
 
         .nav-link:hover {
-          color: var(--primary);
+          color: var(--text-primary);
+          background: rgba(0,0,0,0.03);
         }
-
-        .nav-link::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 0;
-          height: 2px;
-          background: var(--primary);
-          transition: width var(--transition-fast);
-        }
-
-        .nav-link:hover::after {
-          width: 100%;
-        }
-
-        .navbar-actions {
-          display: flex;
-          align-items: center;
-          gap: var(--spacing-md);
-        }
-
-        .theme-toggle {
-          background: var(--bg-tertiary);
-          border: 1px solid var(--border);
-          border-radius: var(--radius-md);
-          padding: var(--spacing-sm);
-          font-size: 1.25rem;
-          cursor: pointer;
-          transition: all var(--transition-fast);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .theme-toggle:hover {
-          transform: scale(1.1);
-          box-shadow: var(--shadow-md);
+        
+        .nav-link.active {
+            background: white;
+            color: var(--brand);
+            box-shadow: var(--shadow-sm);
+            font-weight: 600;
         }
 
         .mobile-menu-toggle {
           display: none;
-          background: var(--bg-tertiary);
-          border: 1px solid var(--border);
-          border-radius: var(--radius-md);
-          padding: var(--spacing-sm);
-          cursor: pointer;
-          transition: all var(--transition-fast);
-          align-items: center;
-          justify-content: center;
+          background: transparent;
+          border: none;
           color: var(--text-primary);
+          cursor: pointer;
         }
-
-        .main-content {
-          min-height: calc(100vh - 200px);
-          padding: var(--spacing-2xl) 0;
+        
+        .mobile-nav {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            width: 100%;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem;
+            transform: translateY(-150%);
+            transition: transform 0.3s ease;
+            z-index: 99;
+        }
+        
+        .mobile-nav.open {
+            transform: translateY(0);
+        }
+        
+        .mobile-nav-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
         .footer {
-          background: var(--bg-secondary);
+          background: white;
           border-top: 1px solid var(--border);
-          padding: var(--spacing-lg) 0;
-          text-align: center;
+          padding: 2rem 0;
+          margin-top: auto;
         }
 
         .footer-text {
           color: var(--text-secondary);
           font-size: 0.875rem;
-          margin: 0;
+          font-weight: 500;
         }
 
         @media (max-width: 768px) {
-          .navbar-links {
-            position: fixed;
-            top: 60px;
-            left: -100%;
-            width: 100%;
-            height: calc(100vh - 60px);
-            background: var(--bg-primary);
-            flex-direction: column;
-            padding: var(--spacing-xl);
-            gap: var(--spacing-md);
-            transition: left var(--transition-base);
-            border-right: 1px solid var(--border);
-            box-shadow: var(--shadow-xl);
-          }
-
-          .navbar-links.open {
-            left: 0;
+          .hidden-mobile {
+            display: none;
           }
 
           .mobile-menu-toggle {
-            display: flex;
-          }
-
-          .nav-link {
-            padding: var(--spacing-md);
-            border-radius: var(--radius-md);
-          }
-
-          .nav-link:hover {
-            background: var(--bg-secondary);
-          }
-
-          .nav-link::after {
-            display: none;
+            display: block;
           }
         }
       `}</style>
-    </Router>
+    </Router >
   );
 }
 

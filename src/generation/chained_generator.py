@@ -123,7 +123,7 @@ class ChainedSyllabusGenerator:
         
         for section in self.GENERATION_ORDER:
             if verbose:
-                print(f"  → Generating {section}...")
+                self.logger.info(f"  → Generating {section}...")
             
             self.logger.info(f"Generating section: {section}")
             
@@ -150,7 +150,7 @@ class ChainedSyllabusGenerator:
         syllabus['quality_grade'] = validation['grade']
         
         if verbose:
-            print(f"  ✓ Generation complete (Quality: {validation['grade']})")
+            self.logger.info(f"  ✓ Generation complete (Quality: {validation['grade']})")
         
         self.logger.info(f"Syllabus generated with quality score: {validation['score']}")
         
@@ -199,6 +199,7 @@ class ChainedSyllabusGenerator:
     ) -> Dict[str, Any]:
         """
         Generate fallback content when section generation fails.
+        Uses user-provided keywords to create specific content.
         
         Args:
             section: Section name
@@ -208,112 +209,107 @@ class ChainedSyllabusGenerator:
             Basic fallback content for the section
         """
         course_title = context.get('course_title', 'Course')
-        keywords = context.get('keywords', ['topic'])
+        keywords = context.get('keywords', [])
+        num_units = context.get('num_units', 5)
+        
+        # Ensure we have enough keywords
+        if not keywords:
+            keywords = [course_title.split()[0] if course_title else 'Topic']
+        
+        # Create units dynamically from keywords
+        def generate_fallback_units():
+            units = []
+            keywords_per_unit = max(1, len(keywords) // num_units)
+            
+            for i in range(num_units):
+                start_idx = i * keywords_per_unit
+                end_idx = start_idx + keywords_per_unit if i < num_units - 1 else len(keywords)
+                unit_keywords = keywords[start_idx:end_idx] if start_idx < len(keywords) else [keywords[0]]
+                
+                # Create unit title from keywords
+                if unit_keywords:
+                    primary_keyword = unit_keywords[0]
+                    if i == 0:
+                        unit_title = f"{primary_keyword} Fundamentals and Concepts"
+                    elif i == num_units - 1:
+                        unit_title = f"Advanced {primary_keyword} and Applications"
+                    else:
+                        unit_title = f"{primary_keyword} Techniques and Methods"
+                else:
+                    unit_title = f"Unit {i+1}: Core Concepts"
+                
+                # Create topics from unit keywords
+                topics = []
+                for j, kw in enumerate(unit_keywords[:5]):
+                    topics.append({
+                        "topic": f"{kw} - Theory and Principles",
+                        "description": f"This topic covers the theoretical foundations and practical aspects of {kw}. Students will learn key concepts, techniques, and real-world applications. The topic includes hands-on exercises and case studies to reinforce understanding.",
+                        "subtopics": [f"{kw} basics", f"{kw} techniques", f"{kw} best practices"],
+                        "key_concepts": [kw, f"{kw} principles"],
+                        "practical_examples": [f"{kw} implementation", f"{kw} case study"]
+                    })
+                
+                # Ensure at least 3 topics per unit
+                while len(topics) < 3:
+                    idx = len(topics)
+                    topics.append({
+                        "topic": f"Advanced {keywords[idx % len(keywords)]} Concepts",
+                        "description": f"Advanced exploration of {keywords[idx % len(keywords)]} with focus on practical applications and industry best practices.",
+                        "subtopics": ["Advanced theory", "Implementation", "Optimization"],
+                        "key_concepts": ["Advanced concepts", "Best practices"],
+                        "practical_examples": ["Industry application"]
+                    })
+                
+                units.append({
+                    "unit_number": i + 1,
+                    "title": unit_title,
+                    "overview": f"This unit covers {', '.join(unit_keywords[:3])}. Students will learn fundamental concepts, techniques, and applications related to {primary_keyword}. The unit builds on previous knowledge and prepares students for advanced topics.",
+                    "topics": topics[:5],
+                    "learning_activities": [f"{primary_keyword} lab exercise", "Case study analysis", "Group project"],
+                    "suggested_readings": [f"Chapter {i+1}: {primary_keyword}"],
+                    "hours": 10
+                })
+            
+            return units
         
         fallbacks = {
             "overview": {
-                "overview_text": f"This course provides comprehensive coverage of {course_title}. "
-                                f"Students will learn fundamental concepts and practical applications. "
+                "overview_text": f"This course provides comprehensive coverage of {course_title}, focusing on {', '.join(keywords[:3]) if keywords else 'core topics'}. "
+                                f"Students will learn fundamental concepts and practical applications including {', '.join(keywords[3:6]) if len(keywords) > 3 else 'advanced techniques'}. "
                                 f"The curriculum includes hands-on exercises and real-world case studies. "
-                                f"Upon completion, students will be prepared for industry roles."
+                                f"Upon completion, students will be prepared for industry roles in {keywords[0] if keywords else 'the field'}."
             },
             "objectives": {
                 "objectives": [
-                    {"text": f"Understand the fundamental concepts of {course_title}"},
-                    {"text": f"Apply {keywords[0] if keywords else 'core'} concepts to solve problems"},
-                    {"text": "Develop practical skills through hands-on projects"},
-                    {"text": "Analyze real-world applications and case studies"},
-                    {"text": "Design solutions using industry-standard practices"}
+                    {"text": f"Understand the fundamental concepts of {keywords[0] if keywords else course_title}"},
+                    {"text": f"Apply {keywords[1] if len(keywords) > 1 else keywords[0] if keywords else 'core'} techniques to solve practical problems"},
+                    {"text": f"Analyze {keywords[2] if len(keywords) > 2 else 'real-world'} applications and case studies"},
+                    {"text": f"Design solutions using {keywords[3] if len(keywords) > 3 else 'industry-standard'} practices"},
+                    {"text": f"Evaluate and optimize {keywords[4] if len(keywords) > 4 else 'implementations'} for performance"}
                 ]
             },
             "outcomes": {
                 "outcomes": [
-                    {"code": "CO1", "description": f"Explain fundamental concepts of {course_title}", "bloom_level": "understand"},
-                    {"code": "CO2", "description": f"Apply {keywords[0] if keywords else 'core'} techniques to solve problems", "bloom_level": "apply"},
-                    {"code": "CO3", "description": "Analyze and evaluate different approaches", "bloom_level": "analyze"},
-                    {"code": "CO4", "description": "Design and implement practical solutions", "bloom_level": "create"},
-                    {"code": "CO5", "description": "Evaluate solutions against requirements", "bloom_level": "evaluate"}
+                    {"code": "CO1", "description": f"Explain fundamental concepts of {keywords[0] if keywords else course_title}", "bloom_level": "understand"},
+                    {"code": "CO2", "description": f"Apply {keywords[1] if len(keywords) > 1 else keywords[0] if keywords else 'core'} techniques to solve problems", "bloom_level": "apply"},
+                    {"code": "CO3", "description": f"Analyze {keywords[2] if len(keywords) > 2 else 'different'} approaches and evaluate their effectiveness", "bloom_level": "analyze"},
+                    {"code": "CO4", "description": f"Design and implement solutions using {keywords[3] if len(keywords) > 3 else 'learned'} techniques", "bloom_level": "create"},
+                    {"code": "CO5", "description": f"Evaluate {keywords[4] if len(keywords) > 4 else 'solutions'} against requirements and standards", "bloom_level": "evaluate"}
                 ]
             },
             "units": {
-                "units": [
-                    {
-                        "unit_number": 1, 
-                        "title": "Introduction and Fundamentals", 
-                        "overview": f"This unit introduces the foundational concepts of {course_title}. Students will learn the basic terminology, history, and importance of the subject. The unit establishes a strong foundation for subsequent topics.",
-                        "topics": [
-                            {"topic": "Introduction and Background", "description": f"Overview of {course_title}, its evolution, and significance in the modern context. Historical developments and current trends.", "subtopics": ["Historical context", "Current relevance", "Future directions"], "key_concepts": ["Foundation", "Evolution"], "practical_examples": ["Industry overview"]},
-                            {"topic": "Fundamental Concepts", "description": "Core principles and basic building blocks that form the foundation of the subject. Essential terminology and definitions.", "subtopics": ["Core principles", "Basic definitions", "Key terminology"], "key_concepts": ["Basics", "Foundations"], "practical_examples": ["Introductory examples"]},
-                            {"topic": "Tools and Environment Setup", "description": "Setting up the development environment and tools required for practical work. Configuration and best practices.", "subtopics": ["Tool installation", "Configuration", "Environment setup"], "key_concepts": ["Setup", "Tools"], "practical_examples": ["Lab setup"]}
-                        ], 
-                        "learning_activities": ["Introduction lecture", "Environment setup lab", "Reading assignment"],
-                        "suggested_readings": ["Chapter 1: Introduction"],
-                        "hours": 10
-                    },
-                    {
-                        "unit_number": 2, 
-                        "title": "Core Concepts and Principles", 
-                        "overview": "This unit covers the essential principles and techniques central to the subject. Students will develop a deep understanding of core methodologies and their applications.",
-                        "topics": [
-                            {"topic": "Core Principles and Theory", "description": "Detailed study of fundamental principles that govern the subject. Theoretical foundations and their practical implications.", "subtopics": ["Theory foundations", "Key principles", "Conceptual framework"], "key_concepts": ["Theory", "Principles"], "practical_examples": ["Theoretical applications"]},
-                            {"topic": "Techniques and Methods", "description": "Standard techniques and methodologies used in practice. Step-by-step approaches and best practices.", "subtopics": ["Standard methods", "Techniques", "Best practices"], "key_concepts": ["Methods", "Techniques"], "practical_examples": ["Method demonstration"]},
-                            {"topic": "Problem Analysis", "description": "Approaches to analyzing problems and identifying appropriate solutions. Analytical thinking and systematic problem-solving.", "subtopics": ["Problem identification", "Analysis methods", "Solution strategies"], "key_concepts": ["Analysis", "Problem-solving"], "practical_examples": ["Case analysis"]}
-                        ], 
-                        "learning_activities": ["Theory lecture", "Practice exercises", "Group discussion"],
-                        "suggested_readings": ["Chapter 2: Core Concepts"],
-                        "hours": 10
-                    },
-                    {
-                        "unit_number": 3, 
-                        "title": "Advanced Topics and Applications", 
-                        "overview": "Building on foundational knowledge, this unit explores advanced concepts and their real-world applications. Students will learn sophisticated techniques and industry practices.",
-                        "topics": [
-                            {"topic": "Advanced Concepts", "description": "In-depth exploration of advanced topics that build upon fundamental concepts. Complex scenarios and sophisticated approaches.", "subtopics": ["Advanced theory", "Complex scenarios", "Edge cases"], "key_concepts": ["Advanced", "Complex"], "practical_examples": ["Advanced scenarios"]},
-                            {"topic": "Real-world Applications", "description": "Practical applications in industry and research. Case studies demonstrating real-world implementation.", "subtopics": ["Industry applications", "Research applications", "Case studies"], "key_concepts": ["Applications", "Implementation"], "practical_examples": ["Industry case study"]},
-                            {"topic": "Optimization and Best Practices", "description": "Techniques for optimization and industry best practices. Performance tuning and quality assurance.", "subtopics": ["Optimization strategies", "Performance tuning", "Quality practices"], "key_concepts": ["Optimization", "Best practices"], "practical_examples": ["Performance optimization"]}
-                        ], 
-                        "learning_activities": ["Advanced lecture", "Case study analysis", "Practical exercise"],
-                        "suggested_readings": ["Chapter 3: Advanced Topics"],
-                        "hours": 10
-                    },
-                    {
-                        "unit_number": 4, 
-                        "title": "Practical Implementation", 
-                        "overview": "This unit focuses on hands-on implementation and practical skills development. Students will work on projects and gain experience with real-world scenarios.",
-                        "topics": [
-                            {"topic": "Implementation Strategies", "description": "Approaches to implementing solutions effectively. Planning, design, and execution strategies.", "subtopics": ["Planning", "Design", "Execution"], "key_concepts": ["Implementation", "Strategy"], "practical_examples": ["Project planning"]},
-                            {"topic": "Tools and Technologies", "description": "Industry-standard tools and technologies used for implementation. Hands-on experience with practical tools.", "subtopics": ["Industry tools", "Technologies", "Frameworks"], "key_concepts": ["Tools", "Technologies"], "practical_examples": ["Tool demonstration"]},
-                            {"topic": "Testing and Validation", "description": "Approaches to testing and validating implementations. Quality assurance and verification methods.", "subtopics": ["Testing methods", "Validation", "Quality assurance"], "key_concepts": ["Testing", "Validation"], "practical_examples": ["Testing exercise"]}
-                        ], 
-                        "learning_activities": ["Implementation lab", "Mini project", "Peer review"],
-                        "suggested_readings": ["Chapter 4: Implementation"],
-                        "hours": 10
-                    },
-                    {
-                        "unit_number": 5, 
-                        "title": "Integration and Project Work", 
-                        "overview": "The final unit integrates all concepts through comprehensive project work. Students demonstrate mastery through practical application and presentation.",
-                        "topics": [
-                            {"topic": "System Integration", "description": "Techniques for integrating components into complete solutions. End-to-end implementation and deployment.", "subtopics": ["Component integration", "System design", "Deployment"], "key_concepts": ["Integration", "Systems"], "practical_examples": ["Full system implementation"]},
-                            {"topic": "Project Development", "description": "Comprehensive project development applying all learned concepts. Planning, execution, and documentation.", "subtopics": ["Project planning", "Development", "Documentation"], "key_concepts": ["Projects", "Development"], "practical_examples": ["Capstone project"]},
-                            {"topic": "Presentation and Evaluation", "description": "Presenting project work and receiving feedback. Professional presentation skills and evaluation criteria.", "subtopics": ["Presentation skills", "Demo", "Evaluation"], "key_concepts": ["Presentation", "Evaluation"], "practical_examples": ["Project demo"]}
-                        ], 
-                        "learning_activities": ["Project work", "Presentation preparation", "Final evaluation"],
-                        "suggested_readings": ["Project guidelines"],
-                        "hours": 10
-                    }
-                ]
+                "units": generate_fallback_units()
             },
             "references": {
                 "textbooks": [
-                    f"Introduction to {course_title} by Standard Author (Publisher)",
-                    f"Fundamentals of {keywords[0] if keywords else 'the Subject'} by Expert Author"
+                    f"Introduction to {keywords[0] if keywords else course_title} by Standard Author (Publisher)",
+                    f"Fundamentals of {keywords[1] if len(keywords) > 1 else keywords[0] if keywords else 'the Subject'} by Expert Author"
                 ],
                 "reference_books": [
-                    f"Advanced {course_title} by Senior Author"
+                    f"Advanced {keywords[0] if keywords else course_title} by Senior Author"
                 ],
                 "online_resources": [
-                    "Official documentation and tutorials",
+                    f"Official documentation and tutorials for {keywords[0] if keywords else 'the subject'}",
                     "Relevant online courses on Coursera/edX"
                 ]
             }

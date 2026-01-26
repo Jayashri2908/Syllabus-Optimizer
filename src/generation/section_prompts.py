@@ -200,10 +200,7 @@ Requirements:
     @staticmethod
     def get_units_prompt(context: Dict[str, Any]) -> str:
         """
-        Generate user prompt for unit-wise syllabus section.
-        
-        Args:
-            context: Includes previous sections and unit structure hints
+        Generate user prompt for unit-wise syllabus section - University format.
         """
         keywords = context.get('keywords', [])
         num_units = context.get('num_units', 5)
@@ -214,123 +211,110 @@ Requirements:
         try:
             parts = credits.split('-')
             l, t = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
-            total_hours = (l + t) * 15  # 15 weeks
+            total_hours = (l + t) * 15
             hours_per_unit = total_hours // num_units
         except:
             hours_per_unit = 10
         
-        # Get outline from previous sections
-        outcomes = context.get('learning_outcomes', context.get('outcomes', {}))
-        if isinstance(outcomes, dict):
-            outcome_list = outcomes.get('outcomes', [])
-            co_texts = [o.get('description', '')[:80] for o in outcome_list[:4] if isinstance(o, dict)]
-            outcomes_summary = '; '.join(co_texts)
-        else:
-            outcomes_summary = ""
-        
         # Check for user-provided unit topics
         unit_topics = context.get('unit_topics', [])
-        unit_hints = ""
+        unit_structure = ""
         if unit_topics:
             hints = []
             for ut in unit_topics[:num_units]:
                 unit_num = ut.get('unit_number', 0)
                 topics = ut.get('topics', [])
                 if unit_num and topics:
-                    hints.append(f"Unit {unit_num}: {', '.join(topics[:4])}")
+                    hints.append(f"Unit {unit_num}: {', '.join(topics[:6])}")
             if hints:
-                unit_hints = f"\n\nSuggested unit structure:\n" + "\n".join(hints)
+                unit_structure = "\n\n**USER-PROVIDED UNIT STRUCTURE (USE THESE):**\n" + "\n".join(hints)
         
-        return f"""Generate a COMPREHENSIVE and DETAILED unit-wise syllabus for:
+        # Distribute keywords across units
+        keyword_hints = ""
+        if keywords and not unit_topics:
+            kw_per_unit = max(1, len(keywords) // num_units)
+            keyword_hints = "\n\n**KEYWORD DISTRIBUTION (use for unit themes):**"
+            for i in range(num_units):
+                start = i * kw_per_unit
+                end = start + kw_per_unit if i < num_units - 1 else len(keywords)
+                unit_kw = keywords[start:end] if start < len(keywords) else []
+                if unit_kw:
+                    keyword_hints += f"\n- Unit {i+1}: {', '.join(unit_kw)}"
+        
+        return f"""Generate a CONCISE university-style syllabus for:
 
 Course: {course_title}
-Number of Units: {num_units}
-Hours per Unit: {hours_per_unit}
-Key Topics to Cover: {', '.join(keywords[:10])}
-Domain: {context.get('domain', 'engineering')}
+Units: {num_units}
+Hours/Unit: {hours_per_unit}
 
-Previous Context:
-Learning Outcomes: {outcomes_summary[:300]}{unit_hints}
+**KEYWORDS (use these as topic names):**
+{', '.join(keywords) if keywords else 'Not provided'}{unit_structure}{keyword_hints}
 
-IMPORTANT: Generate EXTENSIVE, DETAILED content. Each topic description should be 4-6 sentences covering theory, practical aspects, and applications.
+**CRITICAL RULES:**
+1. Unit titles: 5-10 words, using keywords
+2. Topics: 8-10 SHORT names per unit (3-8 words each)
+3. Use the keywords provided - DO NOT use generic names
+4. NO descriptions, subtopics, or examples - just topic names
+5. Cover ALL major aspects of each unit's theme
 
-Respond with JSON in this exact format:
+Respond with JSON:
 {{
   "units": [
     {{
       "unit_number": 1,
-      "title": "Comprehensive Descriptive Unit Title",
-      "overview": "A detailed 4-5 sentence overview explaining what this unit covers, why it is important, what students will learn, and how it connects to the overall course objectives. This should give students a clear understanding of the unit's scope and significance.",
+      "title": "[Title from keywords - 5-10 words]",
       "topics": [
-        {{
-          "topic": "Detailed Main Topic Title (5-12 words)",
-          "description": "A comprehensive 4-6 sentence description that explains: (1) what this topic covers theoretically, (2) the key concepts and principles involved, (3) practical applications and real-world examples, (4) common techniques or methods used, (5) how it relates to other topics. Be specific and include technical details.",
-          "subtopics": [
-            "Specific subtopic covering a key concept or technique",
-            "Another detailed subtopic with practical focus",
-            "Advanced subtopic or application area",
-            "Related tools, methods, or case studies"
-          ],
-          "key_concepts": ["Concept 1", "Concept 2", "Concept 3"],
-          "practical_examples": ["Example application 1", "Real-world use case 2"]
-        }},
-        {{
-          "topic": "Second Comprehensive Topic Title",
-          "description": "Another detailed 4-6 sentence description covering theoretical foundations, practical implementation details, industry relevance, common challenges and solutions, and connections to prerequisite knowledge.",
-          "subtopics": ["Subtopic A", "Subtopic B", "Subtopic C"],
-          "key_concepts": ["Key principle 1", "Key principle 2"],
-          "practical_examples": ["Industry example", "Lab exercise scenario"]
-        }}
+        {{"topic": "[Topic from keywords - 3-8 words]"}},
+        {{"topic": "[Topic from keywords - 3-8 words]"}},
+        {{"topic": "[Topic from keywords - 3-8 words]"}},
+        {{"topic": "[Topic from keywords - 3-8 words]"}},
+        {{"topic": "[Topic from keywords - 3-8 words]"}},
+        {{"topic": "[Topic from keywords - 3-8 words]"}},
+        {{"topic": "[Topic from keywords - 3-8 words]"}},
+        {{"topic": "[Topic from keywords - 3-8 words]"}}
       ],
-      "learning_activities": [
-        "Hands-on laboratory exercise: Detailed description of the lab activity",
-        "Case study analysis: Analysis of a real-world application",
-        "Programming/Design assignment: Specific project or problem set",
-        "Group discussion: Topic for collaborative learning"
-      ],
-      "suggested_readings": ["Chapter X from Textbook", "Research paper or article"],
-      "assessment_ideas": ["Quiz on theoretical concepts", "Practical lab evaluation"],
       "hours": {hours_per_unit}
-    }},
-    ... (repeat this detailed structure for all {num_units} units)
+    }}
   ]
 }}
 
-CRITICAL REQUIREMENTS - BE VERY DETAILED:
+EXAMPLE for "Machine Learning, Neural Networks, Deep Learning, CNN, RNN":
+{{
+  "units": [
+    {{
+      "unit_number": 1,
+      "title": "Introduction to Machine Learning Fundamentals",
+      "topics": [
+        {{"topic": "Machine learning concepts and types"}},
+        {{"topic": "Supervised and unsupervised learning"}},
+        {{"topic": "Training and validation techniques"}},
+        {{"topic": "Feature engineering methods"}},
+        {{"topic": "Model evaluation metrics"}},
+        {{"topic": "Bias-variance tradeoff"}},
+        {{"topic": "Overfitting and underfitting"}},
+        {{"topic": "Cross-validation techniques"}}
+      ],
+      "hours": 10
+    }},
+    {{
+      "unit_number": 2,
+      "title": "Neural Networks Architecture and Training",
+      "topics": [
+        {{"topic": "Artificial neural network basics"}},
+        {{"topic": "Perceptrons and multilayer networks"}},
+        {{"topic": "Activation functions and layers"}},
+        {{"topic": "Backpropagation algorithm"}},
+        {{"topic": "Gradient descent optimization"}},
+        {{"topic": "Weight initialization techniques"}},
+        {{"topic": "Batch normalization methods"}},
+        {{"topic": "Regularization and dropout"}}
+      ],
+      "hours": 10
+    }}
+  ]
+}}
 
-1. UNIT OVERVIEW (4-5 sentences each):
-   - Explain what the unit covers in detail
-   - Why this unit is important
-   - Prerequisites or connections to previous units
-   - Expected learning outcomes for this unit
-
-2. TOPICS - Generate 5-6 topics per unit, each with:
-   - Topic title: 5-12 words, specific and descriptive
-   - Description: 4-6 FULL SENTENCES covering:
-     * Theoretical foundations and key concepts
-     * Practical implementation or application details
-     * Real-world examples and industry relevance
-     * Common techniques, algorithms, or methods
-     * Connections to other topics or prerequisites
-   - Subtopics: 3-5 specific sub-areas for each topic
-   - Key concepts: 2-4 essential terms or principles
-   - Practical examples: 1-2 real-world applications
-
-3. LEARNING ACTIVITIES (3-4 per unit):
-   - Specific, actionable activities
-   - Mix of individual and group work
-   - Include labs, projects, discussions, presentations
-
-4. ADDITIONAL CONTENT:
-   - Suggested readings for each unit
-   - Assessment ideas (quizzes, assignments, projects)
-
-5. PROGRESSION:
-   - Unit 1: Foundation and fundamentals
-   - Middle units: Core concepts with increasing complexity
-   - Final units: Advanced topics, integration, and applications
-
-Generate RICH, COMPREHENSIVE content. Do NOT be brief. Each unit should have substantial detail."""
+Generate exactly {num_units} units with 8-10 concise topic names each from the keywords."""
 
     @staticmethod
     def get_references_prompt(context: Dict[str, Any]) -> str:

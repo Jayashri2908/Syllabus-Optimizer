@@ -63,6 +63,12 @@ pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
 
+### 5. Frontend Setup
+```bash
+cd webapp/frontend
+npm install
+```
+
 ## Configuration
 
 ### AI Models Setup (Choose One)
