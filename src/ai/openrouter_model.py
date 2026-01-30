@@ -20,8 +20,8 @@ class OpenRouterModel(BaseAIModel):
     def __init__(self, config: dict = None):
         super().__init__(config)
         self.api_key = os.getenv('OPENROUTER_API_KEY', self.config.get('api_key'))
-        # Default to Xiaomi MiMo-V2-Flash FREE version
-        self.model_name = self.config.get('model', 'xiaomi/mimo-v2-flash:free')
+        # Default to Nvidia Nemotron (Free)
+        self.model_name = self.config.get('model', 'nvidia/nemotron-3-nano-30b-a3b:free')
         self.client = None
         
         if self.api_key and OPENAI_AVAILABLE:
@@ -86,18 +86,18 @@ class OpenRouterModel(BaseAIModel):
         """Get model information"""
         # Determine model display info
         model_display = self.model_name
-        cost_info = 'FREE (MiMo beta)'
+        cost_info = 'FREE (OpenRouter)'
         
-        if 'mimo' in self.model_name.lower():
-            cost_info = 'FREE (Beta until Jan 2026, then $0.1/$0.3 per 1M tokens)'
-        elif self.model_name != 'xiaomi/mimo-v2-flash':
+        if 'free' in self.model_name.lower():
+            cost_info = 'FREE (OpenRouter)'
+        else:
             cost_info = 'Varies by model (check openrouter.ai/pricing)'
         
         return {
-            'name': 'OpenRouter (MiMo)',
+            'name': 'OpenRouter',
             'model': model_display,
-            'provider': 'OpenRouter / Xiaomi',
+            'provider': 'OpenRouter / Nvidia',
             'cost': cost_info,
             'available': self.is_available(),
-            'strengths': 'Large context (256K), fast reasoning, coding, free access to 300+ models'
+            'strengths': 'Reasoning, coding, free access'
         }

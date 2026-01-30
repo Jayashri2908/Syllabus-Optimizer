@@ -1,9 +1,9 @@
 # AI Models Configuration - MIMO (PRIMARY) + GEMINI + GRANITE
 
-# OpenRouter - Xiaomi MiMo (PRIMARY - FREE)
+# OpenRouter - Nvidia Nemotron (PRIMARY - FREE)
 openrouter:
   enabled: true
-  model: 'xiaomi/mimo-v2-flash:free'
+  model: 'nvidia/nemotron-3-nano-30b-a3b:free'
   # Set OPENROUTER_API_KEY environment variable
   # Get free key: https://openrouter.ai
 
