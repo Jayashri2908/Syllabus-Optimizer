@@ -12,6 +12,8 @@ from ..utils.text_processing import TextProcessor
 from .lesson_plan_extractor import LessonPlanExtractor
 from .redundancy_detector import RedundancyDetector
 from .content_analyzer import ContentAnalyzer
+from ..validation.nep_2020_validator import NEP2020Validator
+from ..validation.accreditation_checker import AccreditationChecker
 
 
 class GapAnalyzer:
@@ -25,6 +27,8 @@ class GapAnalyzer:
         self.lesson_plan_extractor = LessonPlanExtractor()
         self.redundancy_detector = RedundancyDetector()
         self.content_analyzer = ContentAnalyzer()
+        self.nep_validator = NEP2020Validator()
+        self.accreditation_checker = AccreditationChecker()
         
     def _load_bloom_taxonomy(self) -> dict:
         """Load Bloom's taxonomy configuration"""
@@ -56,7 +60,12 @@ class GapAnalyzer:
             'structural_issues': self._analyze_structure(syllabus_data),
             'lesson_plan_analysis': self._analyze_lesson_plans(syllabus_data),
             'redundancies': self._analyze_redundancies(syllabus_data),
-            'content_quality': self.content_analyzer.analyze(syllabus_data),  # NEW: Advanced content analysis
+            'content_quality': self.content_analyzer.analyze(syllabus_data),
+            'nep_2020_compliance': self.nep_validator.validate(syllabus_data),
+            'accreditation_compliance': {
+                'nba': self.accreditation_checker.check_nba_compliance(syllabus_data),
+                'naac': self.accreditation_checker.check_naac_compliance(syllabus_data)
+            },
             'recommendations': []
         }
         
@@ -282,54 +291,72 @@ class GapAnalyzer:
             
         return issues
         
-    def _generate_recommendations(self, report: Dict[str, Any]) -> List[str]:
-        """Generate actionable recommendations"""
+    def _generate_recommendations(self, report: Dict[str, Any]) -> List[Dict[str, str]]:
+        """Generate actionable recommendations with priority levels"""
         recommendations = []
         
-        # Bloom's coverage recommendations
+        # Bloom's coverage recommendations (Medium priority)
         bloom_gaps = report['bloom_coverage'].get('gaps', [])
         for gap in bloom_gaps:
             level = gap['level']
             issue = gap['issue']
             if issue == 'underrepresented':
-                recommendations.append(
-                    f"Add more learning outcomes at '{level}' level to meet recommended distribution"
-                )
+                recommendations.append({
+                    'text': f"Add more learning outcomes at '{level}' level to meet recommended distribution",
+                    'priority': 'medium',
+                    'category': 'bloom_taxonomy'
+                })
             elif issue == 'overrepresented':
-                recommendations.append(
-                    f"Consider reducing '{level}' level outcomes and diversifying cognitive levels"
-                )
+                recommendations.append({
+                    'text': f"Consider reducing '{level}' level outcomes and diversifying cognitive levels",
+                    'priority': 'low',
+                    'category': 'bloom_taxonomy'
+                })
                 
-        # CO-PO mapping recommendations
+        # CO-PO mapping recommendations (High priority - accreditation critical)
         co_po_gaps = report['co_po_mapping_gaps'].get('gaps', [])
         if co_po_gaps:
-            recommendations.append(
-                "Complete CO-PO mapping for all course outcomes to meet accreditation requirements"
-            )
+            recommendations.append({
+                'text': "Complete CO-PO mapping for all course outcomes to meet accreditation requirements",
+                'priority': 'high',
+                'category': 'accreditation'
+            })
             
-        # Assessment recommendations
+        # Assessment recommendations (High priority)
         assessment_gaps = report['assessment_gaps'].get('gaps', [])
         for gap in assessment_gaps:
             if gap['type'] == 'total_mismatch':
-                recommendations.append(
-                    "Adjust assessment component weightages to total 100%"
-                )
+                recommendations.append({
+                    'text': "Adjust assessment component weightages to total 100%",
+                    'priority': 'high',
+                    'category': 'assessment'
+                })
             elif gap['type'] == 'missing_component':
-                recommendations.append(
-                    f"Add {gap['component']} assessment component"
-                )
+                recommendations.append({
+                    'text': f"Add {gap['component']} assessment component",
+                    'priority': 'medium',
+                    'category': 'assessment'
+                })
                 
-        # Content recommendations
+        # Content recommendations (Medium priority)
         content_gaps = report['content_gaps'].get('gaps', [])
         for gap in content_gaps:
             if gap['type'] == 'insufficient_references':
-                recommendations.append(
-                    "Add more reference materials (textbooks, research papers, online resources)"
-                )
+                recommendations.append({
+                    'text': "Add more reference materials (textbooks, research papers, online resources)",
+                    'priority': 'medium',
+                    'category': 'content'
+                })
             elif gap['type'] == 'missing_hours':
-                recommendations.append(
-                    "Specify contact hours for each unit"
-                )
+                recommendations.append({
+                    'text': "Specify contact hours for each unit",
+                    'priority': 'high',
+                    'category': 'structure'
+                })
+        
+        # Sort by priority: high > medium > low
+        priority_order = {'high': 0, 'medium': 1, 'low': 2}
+        recommendations.sort(key=lambda x: priority_order.get(x.get('priority', 'low'), 2))
                 
         return recommendations
         

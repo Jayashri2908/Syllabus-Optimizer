@@ -52,7 +52,8 @@ function AnalyzePage() {
   const handleExportPDF = async () => {
     if (!analysisResults) return;
     try {
-      const response = await fetch('http://localhost:8000/api/export/pdf', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${API_URL}/api/export/pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -198,7 +199,7 @@ function AnalyzePage() {
 
           {/* Tab Navigation */}
           <div className="tab-nav">
-            {['overview', 'content', 'structure', 'recommendations'].map(tab => (
+            {['overview', 'content', 'structure', 'compliance', 'recommendations'].map(tab => (
               <button
                 key={tab}
                 className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
@@ -323,19 +324,75 @@ function AnalyzePage() {
                     <div className="space-y-4">
                       {analysis.content_quality.hours_distribution.distribution?.map((item, idx) => (
                         <div key={idx} className="flex items-center gap-4">
-                          <div className="w-12 font-bold text-sm text-subtle">Unit {item.unit_number}</div>
+                          <div className="w-16 font-bold text-sm text-subtle">Unit {item.unit_number}</div>
                           <div className="flex-1 bg-slate-100 h-8 rounded-md overflow-hidden relative group">
                             <div className="absolute inset-y-0 left-0 bg-indigo-500 rounded-md flex items-center px-2 text-xs font-bold text-white transition-all group-hover:bg-indigo-600" style={{ width: `${Math.max(item.percentage, 5)}%` }}>
                               {item.hours}h
                             </div>
                           </div>
-                          <div className="w-12 text-right text-xs text-subtle font-medium">{item.percentage}%</div>
+                          <div className="w-20 text-right text-xs text-subtle font-medium">
+                            {typeof item.percentage === 'number' ? item.percentage.toFixed(1) : item.percentage}%
+                          </div>
+                          {item.topic_count !== undefined && (
+                            <div className="w-20 text-xs text-subtle">{item.topic_count} topics</div>
+                          )}
                         </div>
                       ))}
                     </div>
-                    <div className="mt-6 pt-4 border-t border-gray-100 text-center text-sm text-subtle">
-                      Total: <span className="font-bold text-primary">{analysis.content_quality.hours_distribution.total_hours}h</span> |
-                      Avg: <span className="font-bold text-primary">{analysis.content_quality.hours_distribution.average_hours?.toFixed(1)}h/unit</span>
+                    <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between text-sm text-subtle">
+                      <span>Total: <span className="font-bold text-primary">{analysis.content_quality.hours_distribution.total_hours}h</span></span>
+                      <span>Avg: <span className="font-bold text-primary">{analysis.content_quality.hours_distribution.average_hours}h/unit</span></span>
+                      {analysis.content_quality.hours_distribution.average_hours_per_topic !== undefined && (
+                        <span>Avg/Topic: <span className="font-bold text-primary">{analysis.content_quality.hours_distribution.average_hours_per_topic}h</span></span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Unit Theory Analysis */}
+                {analysis.content_quality?.unit_analysis && (
+                  <div className="card">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                        <Layers size={20} className="text-brand" />
+                        Unit Content Analysis
+                      </h3>
+                      <div className="text-sm text-subtle bg-slate-50 px-3 py-1 rounded-full">
+                        {analysis.content_quality.unit_analysis.summary}
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4 mb-4">
+                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 text-center">
+                        <div className="text-2xl font-bold text-blue-700">{analysis.content_quality.unit_analysis.theory_ratio}%</div>
+                        <div className="text-xs font-semibold text-blue-600 uppercase">Theory Content</div>
+                      </div>
+                      <div className="p-4 bg-green-50 rounded-lg border border-green-100 text-center">
+                        <div className="text-2xl font-bold text-green-700">{analysis.content_quality.unit_analysis.practical_ratio}%</div>
+                        <div className="text-xs font-semibold text-green-600 uppercase">Practical Content</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {analysis.content_quality.unit_analysis.units?.map((unit, idx) => (
+                        <div key={idx} className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold">Unit {unit.unit_number}: {unit.title}</span>
+                            <span className="text-sm text-subtle">{unit.hours}h | {unit.total_topics} topics</span>
+                          </div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="flex-1 bg-slate-200 h-2 rounded-full overflow-hidden">
+                              <div className="h-full bg-blue-500" style={{ width: `${unit.theory_percentage}%` }}></div>
+                            </div>
+                            <span className="text-xs text-subtle w-16">{unit.theory_percentage}% theory</span>
+                          </div>
+                          {unit.key_concepts?.length > 0 && (
+                            <div className="text-xs text-subtle">
+                              <span className="font-medium">Key concepts:</span> {unit.key_concepts.join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -413,6 +470,105 @@ function AnalyzePage() {
               </div>
             )}
 
+            {activeTab === 'compliance' && (
+              <div className="grid gap-6">
+                {/* NEP 2020 Compliance */}
+                <div className="card">
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                      <Shield size={20} className="text-brand" />
+                      NEP 2020 Compliance
+                    </h3>
+                    {analysis.nep_2020_compliance?.compliance_score !== undefined && (
+                      <span className={`badge ${analysis.nep_2020_compliance.compliance_score >= 70 ? 'badge-success' : analysis.nep_2020_compliance.compliance_score >= 50 ? 'badge-warning' : 'badge-error'}`}>
+                        {analysis.nep_2020_compliance.compliance_score}% Compliant
+                      </span>
+                    )}
+                  </div>
+
+                  {analysis.nep_2020_compliance?.checks && (
+                    <div className="space-y-3">
+                      {Object.entries(analysis.nep_2020_compliance.checks).map(([key, check]) => (
+                        <div key={key} className={`p-4 rounded-lg border ${check.passed ? 'bg-green-50 border-green-100' : 'bg-yellow-50 border-yellow-100'}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium capitalize">{key.replace(/_/g, ' ')}</span>
+                            {check.passed ? (
+                              <CheckCircle size={16} className="text-green-600" />
+                            ) : (
+                              <AlertTriangle size={16} className="text-yellow-600" />
+                            )}
+                          </div>
+                          {check.details && <p className="text-sm text-subtle">{check.details}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {analysis.nep_2020_compliance?.recommendations?.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <h4 className="font-semibold text-sm mb-2 text-subtle">NEP 2020 Recommendations</h4>
+                      <ul className="list-disc ml-5 space-y-1 text-sm">
+                        {analysis.nep_2020_compliance.recommendations.slice(0, 5).map((rec, idx) => (
+                          <li key={idx}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* NBA/NAAC Accreditation */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* NBA Compliance */}
+                  <div className="card">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                      <h3 className="font-bold text-lg">NBA Compliance</h3>
+                      {analysis.accreditation_compliance?.nba?.compliance_score !== undefined && (
+                        <span className={`badge ${analysis.accreditation_compliance.nba.compliance_score >= 70 ? 'badge-success' : 'badge-warning'}`}>
+                          {analysis.accreditation_compliance.nba.compliance_score}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      {analysis.accreditation_compliance?.nba?.checks && Object.entries(analysis.accreditation_compliance.nba.checks).slice(0, 4).map(([key, check]) => (
+                        <div key={key} className="flex items-center justify-between py-2 border-b border-gray-50">
+                          <span className="capitalize">{key.replace(/_/g, ' ')}</span>
+                          {check.passed ? (
+                            <CheckCircle size={14} className="text-green-600" />
+                          ) : (
+                            <AlertTriangle size={14} className="text-yellow-600" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* NAAC Compliance */}
+                  <div className="card">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                      <h3 className="font-bold text-lg">NAAC Compliance</h3>
+                      {analysis.accreditation_compliance?.naac?.compliance_score !== undefined && (
+                        <span className={`badge ${analysis.accreditation_compliance.naac.compliance_score >= 70 ? 'badge-success' : 'badge-warning'}`}>
+                          {analysis.accreditation_compliance.naac.compliance_score}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      {analysis.accreditation_compliance?.naac?.checks && Object.entries(analysis.accreditation_compliance.naac.checks).slice(0, 4).map(([key, check]) => (
+                        <div key={key} className="flex items-center justify-between py-2 border-b border-gray-50">
+                          <span className="capitalize">{key.replace(/_/g, ' ')}</span>
+                          {check.passed ? (
+                            <CheckCircle size={14} className="text-green-600" />
+                          ) : (
+                            <AlertTriangle size={14} className="text-yellow-600" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'recommendations' && (
               <div className="card">
                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
@@ -425,12 +581,30 @@ function AnalyzePage() {
                   </div>
                 </div>
                 <ul className="space-y-3">
-                  {analysis.recommendations?.map((rec, idx) => (
-                    <li key={idx} className="flex gap-4 p-4 rounded-lg bg-slate-50 border border-slate-100 group hover:border-brand-light hover:bg-white hover:shadow-sm transition-all">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-light text-brand flex items-center justify-center font-bold text-xs mt-0.5">{idx + 1}</span>
-                      <span className="text-sm text-primary leading-relaxed">{rec}</span>
-                    </li>
-                  ))}
+                  {analysis.recommendations?.map((rec, idx) => {
+                    // Support both string and object format
+                    const text = typeof rec === 'string' ? rec : rec.text;
+                    const priority = typeof rec === 'object' ? rec.priority : null;
+                    const priorityColors = {
+                      high: 'bg-red-100 text-red-700 border-red-200',
+                      medium: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+                      low: 'bg-blue-100 text-blue-700 border-blue-200'
+                    };
+
+                    return (
+                      <li key={idx} className="flex gap-4 p-4 rounded-lg bg-slate-50 border border-slate-100 group hover:border-brand-light hover:bg-white hover:shadow-sm transition-all">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-light text-brand flex items-center justify-center font-bold text-xs mt-0.5">{idx + 1}</span>
+                        <div className="flex-1">
+                          <span className="text-sm text-primary leading-relaxed">{text}</span>
+                        </div>
+                        {priority && (
+                          <span className={`flex-shrink-0 text-xs font-semibold px-2 py-1 rounded border ${priorityColors[priority] || ''}`}>
+                            {priority.toUpperCase()}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}

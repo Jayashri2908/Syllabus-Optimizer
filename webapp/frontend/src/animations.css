@@ -207,6 +207,10 @@
     animation: fadeInDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.animate-slide-down {
+    animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Scale Utilities */
 .animate-scale-in {
     animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -353,6 +357,44 @@
     transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
         background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
         border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================
+   NEW BUTTON & FORM ANIMATIONS
+   ============================================ */
+
+@keyframes buttonGlow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    }
+}
+
+@keyframes scaleInForm {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-button-glow {
+    animation: buttonGlow 2s infinite;
+}
+
+.animate-scale-in {
+    animation: scaleInForm 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ============================================

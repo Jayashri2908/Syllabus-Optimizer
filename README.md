@@ -71,57 +71,35 @@ npm install
 
 ## Configuration
 
-### AI Models Setup (Choose One)
+### Environment Variables
 
-The system supports multiple **FREE** AI models with automatic fallback:
+Copy the example environment file and update it with your credentials:
 
-#### 🎯 Option 1: OpenRouter + MiMo (RECOMMENDED - FREE)
+```bash
+# Windows (PowerShell)
+cp .env.example .env
 
-**Why MiMo?**
-- ✅ **100% FREE** during beta (until ~Jan 2026)
-- ✅ **No credit card** required
-- ✅ **256K context window** - handles large syllabi
-- ✅ **Fast & accurate** for educational content
-- ✅ **One API key** for 300+ models
+# Linux/Mac
+cp .env.example .env
+```
 
-**Quick Setup:**
-1. Get free API key: [https://openrouter.ai](https://openrouter.ai)
-2. Set environment variable:
-   ```powershell
-   $env:OPENROUTER_API_KEY='your_key_here'
-   ```
-3. Done! See [OPENROUTER_SETUP.md](OPENROUTER_SETUP.md) for details
+Open `.env` and populate the following keys:
+- `OPENROUTER_API_KEY`: Required for primary AI features (get from [openrouter.ai](https://openrouter.ai))
+- `GEMINI_API_KEY`: Optional fallback (get from [Google AI Studio](https://makersuite.google.com/app/apikey))
+- IBM credentials if using IBM Granite models (see below)
 
-#### Option 2: Google Gemini (FREE)
+### IBM Cloud Setup (Optional)
 
-1. Get free API key: [https://makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey)
-2. Set environment variable:
-   ```powershell
-   $env:GEMINI_API_KEY='your_key_here'
-   ```
-3. See [GEMINI_SETUP_STEPS.md](GEMINI_SETUP_STEPS.md) for details
-
-#### Option 3: IBM Granite (FREE TIER)
-
-> **Note:** This project uses **only FREE services**. IBM watsonx.ai offers a free tier for IBM Granite models. No paid services required!
+If you plan to use IBM Granite models, you also need to configure the IBM specific settings.
 
 1. Create a **free** IBM Cloud account at https://cloud.ibm.com/
 2. Set up watsonx.ai (free tier available)
-3. Get your free API credentials
-4. Update `configs/ibm_config.yaml` with your credentials:
-
-```yaml
-ibm_granite:
-  api_key: "YOUR_IBM_CLOUD_API_KEY_HERE"
-  project_id: "YOUR_PROJECT_ID_HERE"
-  url: "https://us-south.ml.cloud.ibm.com"
-```
-
-Or set environment variables:
-```bash
-export IBM_CLOUD_API_KEY="your_api_key"
-export IBM_PROJECT_ID="your_project_id"
-```
+3. Copy the example config:
+   ```bash
+   cp configs/ibm_config.yaml.example configs/ibm_config.yaml
+   ```
+4. Update `configs/ibm_config.yaml` with your API key and Project ID.
+   Alternatively, you can set these in your `.env` file as shown in `.env.example`.
 
 **Free Tier Limits:**
 - IBM Granite API: Limited requests per month (sufficient for development/testing)

@@ -274,12 +274,13 @@ class ReferencesSection(BaseModel):
     """Schema for references"""
     textbooks: List[str] = Field(
         ..., 
-        min_length=2, 
+        min_length=1, 
         max_length=6,
         description="List of textbooks with author and publisher"
     )
     reference_books: List[str] = Field(
         default_factory=list, 
+        min_length=0,
         max_length=5,
         description="Additional reference books"
     )

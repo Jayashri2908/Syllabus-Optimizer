@@ -301,17 +301,9 @@ class ChainedSyllabusGenerator:
                 "units": generate_fallback_units()
             },
             "references": {
-                "textbooks": [
-                    f"Introduction to {keywords[0] if keywords else course_title} by Standard Author (Publisher)",
-                    f"Fundamentals of {keywords[1] if len(keywords) > 1 else keywords[0] if keywords else 'the Subject'} by Expert Author"
-                ],
-                "reference_books": [
-                    f"Advanced {keywords[0] if keywords else course_title} by Senior Author"
-                ],
-                "online_resources": [
-                    f"Official documentation and tutorials for {keywords[0] if keywords else 'the subject'}",
-                    "Relevant online courses on Coursera/edX"
-                ]
+                "textbooks": [],
+                "reference_books": [],
+                "online_resources": []
             }
         }
         

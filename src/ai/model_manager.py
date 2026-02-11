@@ -121,7 +121,8 @@ class ModelManager:
         task_type: str = 'generation',
         temperature: float = 0.7,
         max_tokens: int = 1000,
-        preferred_model: Optional[str] = None
+        preferred_model: Optional[str] = None,
+        **kwargs
     ) -> str:
         """
         Generate text using best available model
@@ -143,7 +144,8 @@ class ModelManager:
             prompt=prompt,
             system_prompt=system_prompt,
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            **kwargs
         )
     
     def generate_json(
@@ -155,7 +157,8 @@ class ModelManager:
         temperature: float = 0.2,
         max_tokens: int = 1000,
         preferred_model: Optional[str] = None,
-        max_retries: int = 2
+        max_retries: int = 2,
+        **kwargs
     ) -> Dict[str, Any]:
         """
         Generate with guaranteed JSON output and optional Pydantic validation.
@@ -196,7 +199,8 @@ CRITICAL: Respond ONLY with valid JSON.
                     prompt=json_prompt,
                     system_prompt=system_prompt,
                     temperature=temperature,
-                    max_tokens=max_tokens
+                    max_tokens=max_tokens,
+                    **kwargs
                 )
                 
                 # Extract JSON from response

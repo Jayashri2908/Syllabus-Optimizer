@@ -13,6 +13,10 @@ from pathlib import Path
 import tempfile
 import os
 
+# Force HF to use local files only and skip version checks
+os.environ['HF_HUB_OFFLINE'] = '1'
+os.environ['TRANSFORMERS_OFFLINE'] = '1'
+
 # Load environment variables from .env file
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent.parent / ".env")
@@ -111,10 +115,10 @@ try:
     reference_suggester = ReferenceSuggester()  # Initialize
     bloom_mapper_initialized = True
     content_optimizer_initialized = True
-    logger.info("✅ AI components initialized successfully (AI models active)")
+    logger.info("[OK] AI components initialized successfully (AI models active)")
 except Exception as e:
-    logger.error(f"❌ AI component initialization failed: {e}")
-    logger.error("⚠️  IBM Granite credentials required! Run: python setup_credentials.py")
+    logger.error(f"[ERROR] AI component initialization failed: {e}")
+    logger.error("[WARNING] IBM Granite credentials required! Run: python setup_credentials.py")
     logger.warning("Generation endpoint will return error until credentials are configured.")
     
     # Try to initialize RAG analyzer as fallback for analysis
@@ -231,6 +235,8 @@ async def upload_syllabus(file: UploadFile = File(...)):
                 
             syllabus_data = parser.parse_file(tmp_path)
             
+            logger.info(f"Successfully parsed syllabus: {file.filename} ({len(syllabus_data.get('units', []))} units, {len(syllabus_data.get('learning_outcomes', []))} outcomes)")
+            
             return {
                 "success": True,
                 "filename": file.filename,
@@ -258,7 +264,9 @@ async def analyze_syllabus(syllabus_data: Dict[str, Any]):
         raise HTTPException(status_code=503, detail="Gap Analyzer service unavailable (check IBM credentials)")
         
     try:
+        logger.info(f"Analyzing syllabus for course: {syllabus_data.get('course_title', 'Unknown')}")
         analysis = gap_analyzer.analyze(syllabus_data)
+        logger.info(f"Analysis complete for {syllabus_data.get('course_title', 'Unknown')}")
         
         return {
             "success": True,
@@ -273,259 +281,99 @@ async def analyze_syllabus(syllabus_data: Dict[str, Any]):
 @app.post("/api/optimize")
 async def optimize_syllabus(request: OptimizeRequest):
     """
-    Get optimization suggestions for syllabus
-    
-    Returns: Optimization recommendations
+    Perform a complete optimization of the syllabus using a unified pipeline.
+    Returns: Both original and optimized syllabus for side-by-side comparison.
     """
     try:
-        syllabus_data = request.syllabus_data
+        original_syllabus = request.syllabus_data
+        course_title = original_syllabus.get('course_title', 'Unknown')
+        logger.info(f"Starting unified optimization for course: {course_title}")
         
-        # Get parsed data
-        outcomes = syllabus_data.get('learning_outcomes', [])
-        units = syllabus_data.get('units', [])
-        course_title = syllabus_data.get('course_title', 'Unknown Course')
-        raw_text = syllabus_data.get('raw_text', '')
+        # Determine if we should use fallback AI analysis (incomplete parsing)
+        outcomes = original_syllabus.get('learning_outcomes', [])
+        units = original_syllabus.get('units', [])
+        raw_text = original_syllabus.get('raw_text', '')
         
-        # Determine how much data was successfully parsed
-        has_outcomes = outcomes and len(outcomes) > 0
-        has_units = units and len(units) > 0
-        has_raw_text = raw_text and len(raw_text) > 100
+        has_enough_data = (outcomes and len(outcomes) > 0) or (units and len(units) > 0)
         
-        # Log what we have for debugging
-        logger.info(f"Optimize: course_title='{course_title}', outcomes={len(outcomes)}, units={len(units)}, raw_text={len(raw_text)} chars")
-        
-        # Use AI analysis when we have raw_text but missing key data (outcomes or units)
-        # This ensures we provide useful analysis even when parsing is incomplete
-        needs_ai_enhancement = has_raw_text and (not has_outcomes or not has_units)
-        
-        ai_analysis_result = None
-        if needs_ai_enhancement:
-            logger.info("Incomplete parsing detected - using AI to analyze raw content")
-            try:
-                # Use content optimizer with raw text for better analysis
-                from src.ai.model_manager import ModelManager
-                ai = ModelManager()
-                
-                # Generate AI-based analysis of the raw text
-                analysis_prompt = f"""Analyze this syllabus document and provide detailed optimization suggestions:
+        if not has_enough_data and raw_text:
+            logger.info(f"Incomplete parsing for '{course_title}' - using AI to optimize from raw content")
+            # In this case, we treat original_syllabus as the starting point but the prompt handles the rest
+            pass
 
-SYLLABUS CONTENT:
-{raw_text[:5000]}
-
-Provide a comprehensive analysis:
-
-## 1. Course Identification
-- Course title and code
-- Subject area and level
-
-## 2. Content Structure
-- Main units/modules identified
-- Topic flow and organization
-- Any gaps in coverage
-
-## 3. Learning Outcomes Analysis
-- List any outcomes/objectives found
-- Bloom's taxonomy levels detected
-- Recommendations for improvement
-
-## 4. Unit Sequencing Assessment  
-- Is the current sequence logical?
-- Prerequisites consideration
-- Suggested reordering if needed
-
-## 5. Modern Topics to Add
-- Current industry trends missing
-- Emerging technologies relevant
-- Practical skills needed
-
-## 6. Compliance Suggestions
-- NEP 2020 alignment recommendations
-- Accreditation readiness
-
-## 7. Top 5 Priority Improvements
-Be specific with actionable steps.
-"""
-
-                ai_analysis_result = ai.generate(
-                    prompt=analysis_prompt,
-                    system_prompt="You are an expert curriculum analyst specializing in higher education syllabus optimization. Provide detailed, actionable analysis based on the document content.",
-                    task_type='analysis',
-                    temperature=0.4,
-                    max_tokens=2000
-                )
-                logger.info(f"AI analysis generated: {len(ai_analysis_result)} chars")
-                
-            except Exception as ai_err:
-                logger.error(f"AI analysis of raw text failed: {ai_err}")
-                ai_analysis_result = None
-        
-        # If we have no structured data at all, return AI-only analysis
-        if not has_outcomes and not has_units and ai_analysis_result:
-            return {
-                'success': True,
-                'parsing_status': 'ai_analyzed',
-                'optimization': {
-                    'bloom_analysis': {
-                        'total_outcomes': 0,
-                        'comparison': {},
-                        'message': 'Structured parsing incomplete - see AI analysis for details'
-                    },
-                    'rebalancing_suggestions': ['Review AI analysis below for Bloom\'s recommendations'],
-                    'sequence_optimization': {
-                        'optimization_suggestions': ai_analysis_result
-                    },
-                    'modern_topics': [],
-                    'ai_analysis': ai_analysis_result,
-                    'co_po_mapping': None
-                },
-                'syllabus': syllabus_data
-            }
-        
-        
-        # Standard analysis when parsing succeeded
-        bloom_analysis = bloom_mapper.analyze_distribution(outcomes)
-        rebalancing = bloom_mapper.suggest_rebalancing(bloom_analysis)
-        sequence_opt = content_optimizer.optimize_unit_sequence(units)
-        
-        # Get modern content suggestions
-        current_topics = []
-        for unit in units:
-            topics = unit.get('topics', [])
-            for topic in topics:
-                if isinstance(topic, dict):
-                    current_topics.append(topic.get('topic', ''))
-                else:
-                    current_topics.append(str(topic))
+        # Call unified optimization pipeline
+        if not content_optimizer:
+            raise HTTPException(status_code=503, detail="Content Optimizer service unavailable")
             
-        modern_topics = content_optimizer.suggest_modern_content(
-            course_title, current_topics
-        )
+        logger.info(f"Calling LLM for optimization of '{course_title}'...")
+        optimization_result = content_optimizer.optimize_full_syllabus(original_syllabus)
+        logger.info(f"LLM optimization complete for '{course_title}'")
         
-        # Generate CO-PO-PSO mapping matrix
-        co_po_mapping = None
-        co_po_matrix = None
+        # New optimized structure
+        optimized_syllabus = optimization_result.get('optimized_syllabus', original_syllabus)
         
-        if co_po_mapper and outcomes:
-            try:
-                # Extract course outcomes with Bloom's levels
-                course_outcomes = []
-                for i, outcome in enumerate(outcomes):
-                    if isinstance(outcome, dict):
-                        course_outcomes.append({
-                            'code': outcome.get('code', f'CO{i+1}'),
-                            'description': outcome.get('description', ''),
-                            'bloom_level': outcome.get('bloom_level', 'Apply')
-                        })
-                    elif isinstance(outcome, str):
-                        course_outcomes.append({
-                            'code': f'CO{i+1}',
-                            'description': outcome,
-                            'bloom_level': 'Apply'
-                        })
-                
-                # Get program outcomes from request or use defaults
-                program_outcomes = request.syllabus_data.get('program_outcomes', [
-                    'PO1', 'PO2', 'PO3', 'PO4', 'PO5', 'PO6', 'PO7', 'PO8', 'PO9'
-                ])
-                
-                # Map course outcomes to program outcomes
-                co_po_mapping = co_po_mapper.map_co_to_po(
-                    course_outcomes=course_outcomes,
-                    program_outcomes=program_outcomes,
-                    domain=syllabus_data.get('domain', 'engineering')
-                )
-                
-                # Generate matrix string representation
-                co_po_matrix = co_po_mapper.generate_mapping_matrix(co_po_mapping)
-                
-            except Exception as e:
-                logger.error(f"CO-PO mapping failed: {e}")
-        
-        # NEW: Optimize course objectives
-        objectives_optimization = None
-        if objectives_optimizer:
-            try:
-                objectives = syllabus_data.get('objectives', [])
-                if objectives:
-                    course_info = {
-                        'course_title': course_title,
-                        'course_level': syllabus_data.get('level', 'undergraduate'),
-                        'domain': syllabus_data.get('domain', 'engineering'),
-                        'credits': syllabus_data.get('credits', 3)
-                    }
-                    objectives_optimization = objectives_optimizer.optimize_objectives(objectives, course_info)
-            except Exception as e:
-                logger.error(f"Objectives optimization failed: {e}")
-        
-        # NEW: Suggest references
-        reference_suggestions = None
-        if reference_suggester:
-            try:
-                current_refs = syllabus_data.get('references', [])
-                reference_suggestions = reference_suggester.suggest_references(
-                    course_title=course_title,
-                    topics=current_topics,
-                    domain=syllabus_data.get('domain', 'engineering'),
-                    current_references=current_refs
-                )
-            except Exception as e:
-                logger.error(f"Reference suggestion failed: {e}")
-        
-        # NEW: Validate NEP 2020 compliance
+        # Post-processing: Apply compliance checks on the OPTIMIZED syllabus
+        logger.info(f"Running post-processing compliance checks for '{course_title}'")
         nep_2020_compliance = None
         try:
             from src.validation.nep_2020_validator import NEP2020Validator
             nep_validator = NEP2020Validator()
-            nep_2020_compliance = nep_validator.validate(syllabus_data)
+            nep_2020_compliance = nep_validator.validate(optimized_syllabus)
+            logger.info(f"NEP 2020 validation complete for '{course_title}'")
         except Exception as e:
             logger.error(f"NEP 2020 validation failed: {e}")
-        
-        # NEW: Check accreditation compliance
+            
         accreditation_compliance = None
         try:
             from src.validation.accreditation_checker import AccreditationChecker
             accred_checker = AccreditationChecker()
             accreditation_compliance = {
-                'nba': accred_checker.check_nba_compliance(syllabus_data),
-                'naac': accred_checker.check_naac_compliance(syllabus_data)
+                'nba': accred_checker.check_nba_compliance(optimized_syllabus),
+                'naac': accred_checker.check_naac_compliance(optimized_syllabus)
             }
+            logger.info(f"Accreditation checks complete for '{course_title}'")
         except Exception as e:
             logger.error(f"Accreditation check failed: {e}")
-        
-        # Get lesson plan analysis and redundancies from gap_analyzer
-        lesson_plan_analysis = None
-        redundancies = None
-        try:
-            # The gap analyzer should have these methods
-            if hasattr(gap_analyzer, '_analyze_lesson_plans'):
-                lesson_plan_analysis = gap_analyzer._analyze_lesson_plans(syllabus_data)
-            if hasattr(gap_analyzer, '_analyze_redundancies'):
-                redundancies = gap_analyzer._analyze_redundancies(syllabus_data)
-        except Exception as e:
-            logger.error(f"Additional analysis failed: {e}")
-        
+
+        # Post-processing: CO-PO Mapping on the OPTIMIZED syllabus
+        co_po_mapping = None
+        if co_po_mapper:
+            try:
+                logger.info(f"Performing CO-PO mapping for '{course_title}'")
+                co_po_mapping = co_po_mapper.map_co_to_po(
+                    course_outcomes=optimized_syllabus.get('learning_outcomes', []),
+                    program_outcomes=original_syllabus.get('program_outcomes', [
+                        'PO1', 'PO2', 'PO3', 'PO4', 'PO5', 'PO6', 'PO7', 'PO8', 'PO9', 'PO10', 'PO11', 'PO12'
+                    ]),
+                    domain=optimized_syllabus.get('domain', 'engineering')
+                )
+                logger.info(f"CO-PO mapping complete for '{course_title}'")
+            except Exception as e:
+                logger.error(f"CO-PO mapping on optimized syllabus failed: {e}")
+
+        logger.info(f"Optimization pipeline successfully finished for '{course_title}'")
         return {
             'success': True,
+            'original_syllabus': original_syllabus,
+            'optimized_syllabus': optimized_syllabus,
             'optimization': {
-                'bloom_analysis': bloom_analysis,
-                'rebalancing_suggestions': rebalancing,
-                'sequence_optimization': sequence_opt,
-                'modern_topics': modern_topics,
-                'co_po_mapping': co_po_mapping,
-                'co_po_matrix': co_po_matrix,
-                'lesson_plan_analysis': lesson_plan_analysis,  # Added
-                'redundancies': redundancies,  # Added
-                'objectives_optimization': objectives_optimization,  # NEW
-                'reference_suggestions': reference_suggestions,  # NEW
-                'nep_2020_compliance': nep_2020_compliance,  # NEW
-                'accreditation_compliance': accreditation_compliance  # NEW
-            },
-            'syllabus': syllabus_data
+                'changes_summary': optimization_result.get('changes_summary', []),
+                'bloom_distribution': optimization_result.get('bloom_distribution', {}),
+                'rationale': optimization_result.get('rationale', ''),
+                'industry_relevance_score': optimization_result.get('industry_relevance_score', 0),
+                'prerequisite_rationale': optimization_result.get('prerequisite_rationale', ''),
+                'nep_2020_compliance': nep_2020_compliance,
+                'accreditation_compliance': accreditation_compliance,
+                'co_po_mapping': co_po_mapping
+            }
         }
         
     except Exception as e:
-        logger.error(f"Optimization failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Optimization pipeline failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+
 
 
 @app.post("/api/generate")
@@ -559,7 +407,7 @@ async def generate_syllabus(request: GenerateRequest):
             domain=request.domain,
             num_units=request.num_units,
             num_outcomes=request.num_outcomes,
-            use_chained_generation=True  # Enable detailed staggered LLM chaining
+            use_chained_generation=False  # Use upgraded SyllabusGenerator with structured JSON
         )
         
         # Add institution details to syllabus
@@ -811,8 +659,10 @@ async def export_excel(request: OptimizeRequest):
         )
         
         if not success:
+            logger.error(f"Excel export failed for '{syllabus_data.get('course_title', 'Unknown')}'")
             raise HTTPException(status_code=500, detail="Excel export failed")
             
+        logger.info(f"Excel export successful for '{syllabus_data.get('course_title', 'Unknown')}'")
         return FileResponse(
             output_path,
             media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -1042,7 +892,7 @@ async def export_word(request: OptimizeRequest):
 
         # Save document
         doc.save(output_path)
-        logger.info(f"Word document saved to {output_path}")
+        logger.info(f"Word export successful for '{syllabus_data.get('course_title', 'Unknown')}'")
         
         return FileResponse(
             output_path,

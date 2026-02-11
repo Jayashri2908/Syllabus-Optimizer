@@ -11,30 +11,38 @@ const BLOOM_COLORS = {
     create: '#8b5cf6',
 };
 
-export const BloomDistributionChart = ({ bloomAnalysis }) => {
+export const BloomDistributionChart = ({ bloomAnalysis, data: propData }) => {
+    // Accept data from either prop
+    const inputData = bloomAnalysis || propData;
 
-
-    if (!bloomAnalysis) {
-
+    if (!inputData) {
         return null;
     }
 
     // Handle the actual data structure from optimization
     let data = [];
 
-    if (bloomAnalysis.distribution) {
+    if (inputData.distribution) {
         // Has distribution object
-        data = Object.entries(bloomAnalysis.distribution).map(([level, count]) => ({
+        data = Object.entries(inputData.distribution).map(([level, count]) => ({
             name: level.charAt(0).toUpperCase() + level.slice(1),
             value: count,
-            percentage: bloomAnalysis.percentages?.[level] || 0,
+            percentage: inputData.percentages?.[level] || 0,
         }));
-    } else if (bloomAnalysis.comparison) {
-        // Has comparison object (current structure)
-        data = Object.entries(bloomAnalysis.comparison).map(([level, info]) => ({
+    } else if (inputData.comparison) {
+        // Has comparison object
+        data = Object.entries(inputData.comparison).map(([level, info]) => ({
             name: level.charAt(0).toUpperCase() + level.slice(1),
             value: Math.round(info.current || 0),
             percentage: info.current || 0,
+        }));
+    } else {
+        // Handle flat dictionary (simple key-value pairs)
+        // This is what properContentOptimizer returns: { 'remember': 10, 'understand': 20 }
+        data = Object.entries(inputData).map(([level, value]) => ({
+            name: level.charAt(0).toUpperCase() + level.slice(1),
+            value: value,
+            percentage: value,
         }));
     }
 
@@ -50,8 +58,8 @@ export const BloomDistributionChart = ({ bloomAnalysis }) => {
 
     // Custom label renderer that only shows for significant slices
     const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage, name }) => {
-        // Only show label if percentage is significant (> 5%)
-        if (percentage < 5) return null;
+        // Show all labels, or maybe threshold at 0.1
+        if (percentage < 0.1) return null;
 
         const RADIAN = Math.PI / 180;
         const radius = outerRadius + 30;

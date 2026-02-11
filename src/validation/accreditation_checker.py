@@ -187,7 +187,7 @@ class AccreditationChecker:
         lab_keywords = ['lab', 'laboratory', 'practical', 'experiment', 'hands-on']
         
         all_text = " ".join([
-            unit.get('title', '') + " " + " ".join(unit.get('topics', []))
+            unit.get('title', '') + " " + " ".join([t.get('name', '') if isinstance(t, dict) else str(t) for t in unit.get('topics', [])])
             for unit in units
         ]).lower()
         
@@ -197,7 +197,8 @@ class AccreditationChecker:
         total_hours = sum(unit.get('hours', 0) for unit in units)
         lab_hours = 0
         for unit in units:
-            unit_text = (unit.get('title', '') + " " + " ".join(unit.get('topics', []))).lower()
+            topics_text = " ".join([t.get('name', '') if isinstance(t, dict) else str(t) for t in unit.get('topics', [])])
+            unit_text = (unit.get('title', '') + " " + topics_text).lower()
             if any(keyword in unit_text for keyword in lab_keywords):
                 lab_hours += unit.get('hours', 0)
                 
@@ -243,7 +244,7 @@ class AccreditationChecker:
         ict_keywords = ['ict', 'technology', 'digital', 'computer', 'software', 'online', 'e-learning']
         
         all_text = " ".join([
-            unit.get('title', '') + " " + " ".join(unit.get('topics', []))
+            unit.get('title', '') + " " + " ".join([t.get('name', '') if isinstance(t, dict) else str(t) for t in unit.get('topics', [])])
             for unit in units
         ]).lower()
         

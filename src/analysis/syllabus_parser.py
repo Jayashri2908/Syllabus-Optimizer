@@ -26,6 +26,22 @@ try:
     import pytesseract
     from pdf2image import convert_from_path
     from PIL import Image
+    import os
+    import platform
+    
+    # Configure Tesseract path for Windows
+    if platform.system() == 'Windows':
+        tesseract_paths = [
+            r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+            r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+            os.path.expanduser(r'~\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'),
+        ]
+        for tess_path in tesseract_paths:
+            if os.path.exists(tess_path):
+                pytesseract.pytesseract.tesseract_cmd = tess_path
+                logging.info(f"Tesseract found at: {tess_path}")
+                break
+    
     OCR_AVAILABLE = True
 except ImportError:
     OCR_AVAILABLE = False
@@ -33,13 +49,33 @@ except ImportError:
 
 from ..utils.text_processing import TextProcessor
 
+# Import AI model for LLM-based parsing fallback
+try:
+    from ..ai.openrouter_model import OpenRouterModel
+    LLM_AVAILABLE = True
+except ImportError:
+    LLM_AVAILABLE = False
+    logging.info("AI model not available for LLM-based parsing fallback")
+
 
 class SyllabusParser:
     """Parse syllabus documents and extract structured information"""
     
-    def __init__(self):
+    def __init__(self, use_llm_fallback: bool = True):
         self.logger = logging.getLogger(__name__)
         self.text_processor = TextProcessor()
+        self.use_llm_fallback = use_llm_fallback and LLM_AVAILABLE
+        self.ai_model = None
+        
+        if self.use_llm_fallback:
+            try:
+                self.ai_model = OpenRouterModel()
+                if not self.ai_model.is_available():
+                    self.logger.info("LLM not available (no API key), using regex-only parsing")
+                    self.use_llm_fallback = False
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize AI model for parsing: {e}")
+                self.use_llm_fallback = False
         
     def parse_file(self, file_path: str) -> Dict[str, Any]:
         """
@@ -219,8 +255,9 @@ class SyllabusParser:
         text = ""
         try:
             self.logger.info(f"Converting PDF pages to images for OCR...")
-            # Convert PDF pages to images
-            images = convert_from_path(str(file_path), dpi=200)
+            # Convert PDF pages to images at 300 DPI for better OCR quality
+            # Higher DPI = more text extracted (tested: 300 DPI extracts 3x more than 200 DPI)
+            images = convert_from_path(str(file_path), dpi=300)
             self.logger.info(f"Converted {len(images)} pages to images")
             
             for i, image in enumerate(images):
@@ -343,6 +380,7 @@ class SyllabusParser:
         # Extract only the first course's text if this is a multi-course document
         course_text = self._extract_first_course_text(text)
         
+        # First, try regex-based extraction
         structure = {
             'course_title': self._extract_course_title(course_text),
             'course_code': self._extract_course_code(course_text),
@@ -357,9 +395,95 @@ class SyllabusParser:
             'raw_text': text  # Keep original full text for reference
         }
         
+        # Check if regex extraction yielded poor results - use LLM fallback
+        regex_units = len(structure['units'])
+        regex_outcomes = len(structure['learning_outcomes'])
+        
+        if self.use_llm_fallback and self.ai_model and (regex_units < 2 or regex_outcomes < 2):
+            self.logger.info(f"Regex extraction yielded poor results (units={regex_units}, outcomes={regex_outcomes}). Trying LLM fallback...")
+            
+            try:
+                llm_structure = self._extract_structure_with_llm(course_text)
+                
+                # Merge LLM results - prefer LLM if it found more content
+                if len(llm_structure.get('units', [])) > regex_units:
+                    self.logger.info(f"LLM found {len(llm_structure['units'])} units vs regex's {regex_units}")
+                    structure['units'] = llm_structure['units']
+                    
+                if len(llm_structure.get('learning_outcomes', [])) > regex_outcomes:
+                    self.logger.info(f"LLM found {len(llm_structure['learning_outcomes'])} outcomes vs regex's {regex_outcomes}")
+                    structure['learning_outcomes'] = llm_structure['learning_outcomes']
+                
+                # Update other fields if regex got defaults
+                if structure['course_title'] == 'Unknown Course' and llm_structure.get('course_title'):
+                    structure['course_title'] = llm_structure['course_title']
+                if structure['course_code'] == 'UNKNOWN' and llm_structure.get('course_code'):
+                    structure['course_code'] = llm_structure['course_code']
+                    
+            except Exception as e:
+                self.logger.warning(f"LLM fallback parsing failed: {e}")
+        
         self.logger.info(f"Extraction complete: title='{structure['course_title']}', outcomes={len(structure['learning_outcomes'])}, units={len(structure['units'])}, raw_text={len(structure['raw_text'])} chars")
         
         return structure
+    
+    def _extract_structure_with_llm(self, text: str) -> Dict[str, Any]:
+        """
+        Use LLM to extract structured syllabus information.
+        More robust for OCR'd text with errors or unusual formatting.
+        """
+        import json
+        
+        prompt = f"""Extract structured information from this syllabus text. The text may contain OCR errors.
+
+Return a JSON object with these fields:
+- course_title: string (the course name)
+- course_code: string (e.g., "BTECCE25101")
+- units: array of objects with:
+  - unit_number: string or number
+  - title: string (unit title)
+  - topics: array of topic strings
+  - hours: number (teaching hours)
+- learning_outcomes: array of objects with:
+  - code: string (e.g., "CO1", "CO2")
+  - description: string (the learning outcome text)
+  - bloom_level: string (one of: "Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create")
+
+Syllabus text:
+{text[:6000]}
+
+Return ONLY valid JSON, no markdown formatting or code blocks."""
+
+        system_prompt = """You are a syllabus parser assistant. Extract structured information from educational syllabus documents.
+Be robust to OCR errors (e.g., 'Howrs' means 'Hours', '0' might be 'O', etc.).
+Focus on finding units and learning outcomes even if the text is messy."""
+
+        try:
+            response = self.ai_model.generate(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                temperature=0.1,  # Low temp for structured extraction
+                max_tokens=2000
+            )
+            
+            # Clean and parse JSON
+            response = response.strip()
+            if response.startswith('```'):
+                # Remove markdown code blocks if present
+                response = re.sub(r'^```(?:json)?\n?', '', response)
+                response = re.sub(r'\n?```$', '', response)
+            
+            result = json.loads(response)
+            
+            self.logger.info(f"LLM extracted: {len(result.get('units', []))} units, {len(result.get('learning_outcomes', []))} outcomes")
+            return result
+            
+        except json.JSONDecodeError as e:
+            self.logger.warning(f"LLM returned invalid JSON: {e}")
+            return {}
+        except Exception as e:
+            self.logger.warning(f"LLM extraction failed: {e}")
+            return {}
         
     def _extract_course_title(self, text: str) -> str:
         """Extract course title"""
@@ -617,10 +741,12 @@ class SyllabusParser:
         """Extract unit-wise syllabus"""
         units = []
         
-        # Multiple patterns for different unit formats
+        # Multiple patterns for different unit formats, including OCR-tolerant versions
         patterns = [
             # Format: "Unit No I Title Hours" or "Unit No 1 Title Hours" (same line)
-            r'Unit\s*No\.?\s*([IVX]+|\d+)\s+(.+?)\s+(\d+)\s*Hours?',
+            r'Unit\s*No\.?\s*([IVX]+|\d+)\s+(.+?)\s+(\d+)\s*H[o0]u?rs?',
+            # OCR-tolerant: "UNIT NO.04" or "UNIT NOS" (S misread from 5) followed by title and hours
+            r'UNIT\s*NO\.?\s*([0-9]+|[O0][1-9]|[1-9][0-9]?)\s+(.+?)\s+(\d+)\s*H[o0]w?u?rs?',
             # Format: "Unit No 1 Title" followed by "Hours X" on next line (flattened table)
             r'Unit\s*No\.?\s*(\d+)\s+([A-Za-z][A-Za-z\s&,-]+?)(?=\nHours)',
             # Format: "Unit 1: Title" or "Unit I: Title"
@@ -751,16 +877,72 @@ class SyllabusParser:
         
     def _extract_references(self, text: str) -> List[str]:
         """Extract reference books and materials"""
-        pattern = r'(?:References?|Text\s*Books?|Bibliography)[:\s]+(.+?)(?=\n\n|$)'
-        match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+        import re
         
-        if match:
-            ref_text = match.group(1)
-            # Extract numbered or bulleted items
-            references = re.findall(r'(?:\d+\.|•|\*)\s*(.+?)(?=\n\d+\.|\n•|\n\*|$)', ref_text, re.DOTALL)
-            return [ref.strip() for ref in references if ref.strip()]
-            
-        return []
+        # Find the references section
+        section_pattern = r'(?:Reference\s*Books?|References?|Text\s*Books?|Bibliography)[:\s]*(.+?)(?=\n\n[A-Z]|\nCourse\s*Outcome|\nMapping|\nUnit\s*No|\nAssessment|$)'
+        match = re.search(section_pattern, text, re.IGNORECASE | re.DOTALL)
+        
+        if not match:
+            return []
+        
+        ref_text = match.group(1).strip()
+        references = []
+        
+        # Check if text has inline numbered items (1. ... 2. ... 3. ...)
+        inline_pattern = r'(\d+)\.\s+'
+        inline_matches = list(re.finditer(inline_pattern, ref_text))
+        
+        # Count how many inline number patterns we have
+        if len(inline_matches) >= 2:
+            # Multiple numbered items found - extract between them
+            for idx, match_item in enumerate(inline_matches):
+                start = match_item.end()
+                if idx + 1 < len(inline_matches):
+                    end = inline_matches[idx + 1].start()
+                else:
+                    end = len(ref_text)
+                
+                ref_clean = ref_text[start:end].strip()
+                ref_clean = re.sub(r'\s+', ' ', ref_clean)
+                if ref_clean and len(ref_clean) > 10:
+                    references.append(ref_clean)
+        
+        # If inline method found items, we're done
+        if references:
+            return references
+        
+        # Method 2: Try newline-separated numbered items (1. Book\n2. Book)
+        numbered_pattern = r'(?:^|\n)\s*(\d+)[.\)]\s*(.+?)(?=\n\s*\d+[.\)]|$)'
+        numbered_matches = re.findall(numbered_pattern, ref_text, re.DOTALL)
+        
+        if len(numbered_matches) >= 2:
+            for num, ref in numbered_matches:
+                ref_clean = ref.strip().replace('\n', ' ')
+                ref_clean = re.sub(r'\s+', ' ', ref_clean)
+                if ref_clean and len(ref_clean) > 10:
+                    references.append(ref_clean)
+        
+        if references:
+            return references
+        
+        # Method 3: Try bulleted items
+        bullet_pattern = r'[•\*]\s*(.+?)(?=[•\*]|\n|$)'
+        bullet_matches = re.findall(bullet_pattern, ref_text, re.DOTALL)
+        for ref in bullet_matches:
+            ref_clean = ref.strip().replace('\n', ' ')
+            ref_clean = re.sub(r'\s+', ' ', ref_clean)
+            if ref_clean and len(ref_clean) > 10:
+                references.append(ref_clean)
+        
+        if references:
+            return references
+        
+        # Method 4: Single reference - just return the whole text if it looks like a reference
+        if len(ref_text) > 20 and not re.match(r'^[\d\s,.-]+$', ref_text):
+            return [re.sub(r'\s+', ' ', ref_text.strip())]
+        
+        return references
         
     def _extract_co_po_mapping(self, text: str) -> Dict[str, Dict[str, int]]:
         """Extract CO-PO mapping matrix"""

@@ -87,7 +87,8 @@ class NEP2020Validator:
         
         for unit in units:
             for topic in unit.get('topics', []):
-                if any(keyword in topic.lower() for keyword in cross_domain_keywords):
+                topic_text = topic.get('name', '') if isinstance(topic, dict) else str(topic)
+                if any(keyword in topic_text.lower() for keyword in cross_domain_keywords):
                     cross_domain_count += 1
                     
         percentage = (cross_domain_count / total_topics * 100) if total_topics > 0 else 0
@@ -135,7 +136,7 @@ class NEP2020Validator:
         # Check units and topics for experiential keywords
         units = syllabus_data.get('units', [])
         all_text = " ".join([
-            unit.get('title', '') + " " + " ".join(unit.get('topics', []))
+            unit.get('title', '') + " " + " ".join([t.get('name', '') if isinstance(t, dict) else str(t) for t in unit.get('topics', [])])
             for unit in units
         ]).lower()
         
@@ -184,7 +185,7 @@ class NEP2020Validator:
         
         units = syllabus_data.get('units', [])
         all_text = " ".join([
-            unit.get('title', '') + " " + " ".join(unit.get('topics', []))
+            unit.get('title', '') + " " + " ".join([t.get('name', '') if isinstance(t, dict) else str(t) for t in unit.get('topics', [])])
             for unit in units
         ]).lower()
         

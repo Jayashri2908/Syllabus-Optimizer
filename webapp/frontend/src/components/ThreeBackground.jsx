@@ -3,7 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, Points, PointMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 
-function KnowledgeNetwork() {
+function KnowledgeNetwork({ pointColor = "#ea580c", lineColor = "#4338ca" }) {
     const pointsRef = useRef();
     const linesRef = useRef();
 
@@ -52,7 +52,7 @@ function KnowledgeNetwork() {
             <Points ref={pointsRef} positions={positions} stride={3}>
                 <PointMaterial
                     transparent
-                    color="#ea580c"
+                    color={pointColor}
                     size={0.4}
                     sizeAttenuation={true}
                     depthWrite={false}
@@ -74,7 +74,7 @@ function KnowledgeNetwork() {
                     />
                 </bufferGeometry>
                 <lineBasicMaterial
-                    color="#4338ca"
+                    color={lineColor}
                     transparent
                     opacity={0.6}
                 />
@@ -83,25 +83,38 @@ function KnowledgeNetwork() {
     );
 }
 
-const ThreeBackground = () => {
+const ThreeBackground = ({ className = "", fullWidth = false, theme = "light" }) => {
+    // Theme colors
+    const colors = {
+        light: { points: "#ea580c", lines: "#4338ca", mask: true },
+        dark: { points: "#fbbf24", lines: "#818cf8", mask: false } // Brighter amber/indigo for dark bg
+    };
+
+    const currentTheme = colors[theme] || colors.light;
+
+    const baseStyle = {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: fullWidth ? '100%' : '60%',
+        height: '100%',
+        zIndex: 0, // Changed to 0 to be controllable by parent z-index if needed, previously -1
+        pointerEvents: 'none',
+        opacity: theme === 'dark' ? 0.4 : 0.7, // Lower opacity for dark mode to be subtle
+    };
+
+    const maskStyle = (currentTheme.mask && !fullWidth) ? {
+        maskImage: 'linear-gradient(to left, rgba(0,0,0,1), rgba(0,0,0,0))',
+        WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1), rgba(0,0,0,0))'
+    } : {};
+
     return (
-        <div style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: '60%',
-            height: '100%',
-            zIndex: -1,
-            pointerEvents: 'none',
-            opacity: 0.7,
-            maskImage: 'linear-gradient(to left, rgba(0,0,0,1), rgba(0,0,0,0))',
-            WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1), rgba(0,0,0,0))'
-        }}>
+        <div style={{ ...baseStyle, ...maskStyle }} className={className}>
             <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
                 <ambientLight intensity={0.5} />
-                <pointLight position={[10, 10, 10]} color="#f97316" intensity={1} />
+                <pointLight position={[10, 10, 10]} color={currentTheme.points} intensity={1} />
                 <Float speed={1} rotationIntensity={0.2} floatIntensity={0.5}>
-                    <KnowledgeNetwork />
+                    <KnowledgeNetwork pointColor={currentTheme.points} lineColor={currentTheme.lines} />
                 </Float>
             </Canvas>
         </div>

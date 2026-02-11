@@ -16,10 +16,18 @@ from .domain_templates import (
     detect_domain, get_domain_context, get_domain_tools,
     get_domain_applications, get_domain_careers, get_domain_prerequisites
 )
-from .bloom_distribution import get_bloom_distribution, format_distribution_for_prompt, get_bloom_verb_list
+from .bloom_distribution import get_bloom_distribution, format_distribution_for_prompt
 from .iterative_refiner import IterativeRefiner
 from .industry_data import format_industry_context, get_industry_skills
 from .rubric_generator import RubricGenerator
+from .section_prompts import SectionPrompts
+from .section_schemas import (
+    OverviewSection,
+    ObjectivesSection,
+    LearningOutcomesSection,
+    UnitsSection,
+    ReferencesSection
+)
 
 
 class SyllabusGenerator:
@@ -321,141 +329,135 @@ class SyllabusGenerator:
         program: str = "",
         year: str = ""
     ) -> str:
-        """Generate course overview using enhanced prompts (4-5 lines)"""
+        """Generate course overview using structured JSON"""
         
-        # Get domain-specific context
-        applications = get_domain_applications(detect_domain(course_title, keywords))
-        careers = get_domain_careers(detect_domain(course_title, keywords))
+        context = {
+            "course_title": course_title,
+            "keywords": keywords,
+            "domain": domain,
+            "program": program,
+            "year": year
+        }
         
-        # Get enhanced prompts from library
-        prompts = self.prompts.get_course_overview_prompt(
-            course_title=course_title,
-            keywords=keywords,
-            domain=domain,
-            applications=applications,
-            careers=careers,
-            program=program,
-            year=year
+        # Get prompt configuration
+        system_prompt, user_prompt, strictness = SectionPrompts.get_prompt_for_section(
+            "overview", context
         )
         
-        # Generate using AI with optimized temperature (reduced tokens for 4-5 lines)
-        return self.ai.generate(
-            prompt=prompts['user'],
-            system_prompt=prompts['system'],
-            task_type='generation',
-            temperature=0.65,
-            max_tokens=350  # Reduced for 4-5 lines
-        )
+        try:
+            result = self.ai.generate_json(
+                prompt=user_prompt,
+                system_prompt=system_prompt,
+                schema=OverviewSection,
+                task_type='generation',
+                temperature=strictness.get('temperature', 0.3),
+                max_tokens=strictness.get('max_tokens', 400)
+            )
+            return result.get('overview_text', '')
+        except Exception as e:
+            self.logger.error(f"Overview generation failed: {e}")
+            # Fallback
+            return f"This course provides a comprehensive introduction to {course_title}. Students will learn key concepts including {', '.join(keywords[:3])}."
         
     def _generate_objectives(
         self,
         course_title: str,
         keywords: List[str],
-        domain: str
+        domain: str,
+        overview: str = ""
     ) -> List[str]:
-        """Generate course objectives using enhanced prompts"""
+        """Generate course objectives using structured JSON"""
         
-        # Get domain context
-        domain_detected = detect_domain(course_title, keywords)
-        tools = get_domain_tools(domain_detected)
-        applications = get_domain_applications(domain_detected)
-        course_level = self._estimate_course_level(course_title)
+        context = {
+            "course_title": course_title,
+            "domain": domain,
+            "keywords": keywords,
+            "overview": overview
+        }
         
-        # Get enhanced prompts
-        prompts = self.prompts.get_objectives_prompt(
-            course_title=course_title,
-            keywords=keywords,
-            domain=domain,
-            course_level=course_level,
-            tools=tools,
-            applications=applications
+        system_prompt, user_prompt, strictness = SectionPrompts.get_prompt_for_section(
+            "objectives", context
         )
         
-        # Generate with AI
-        response = self.ai.generate(
-            prompt=prompts['user'],
-            system_prompt=prompts['system'],
-            task_type='generation',
-            temperature=0.5,
-            max_tokens=200  # Reduced for shorter objectives
-        )
-        
-        # Parse objectives
-        objectives = []
-        for line in response.split('\n'):
-            line = line.strip()
-            if line and (line[0].isdigit() or line.startswith('-') or line.startswith('•')):
-                # Remove numbering/bullets
-                obj = line.lstrip('0123456789.-•) ').strip()
-                if obj and len(obj) > 10:  # Reduced min length for shorter objectives
-                    objectives.append(obj)
-                    
-        return objectives[:6]
+        try:
+            result = self.ai.generate_json(
+                prompt=user_prompt,
+                system_prompt=system_prompt,
+                schema=ObjectivesSection,
+                task_type='generation',
+                temperature=strictness.get('temperature', 0.2),
+                max_tokens=strictness.get('max_tokens', 500)
+            )
+            
+            # Extract text from outcome items
+            objectives_list = result.get('objectives', [])
+            return [obj.get('text', '') if isinstance(obj, dict) else str(obj) for obj in objectives_list]
+            
+        except Exception as e:
+            self.logger.error(f"Objectives generation failed: {e}")
+            # Fallback
+            return [
+                f"Understand the core principles of {course_title}",
+                f"Apply {keywords[0] if keywords else 'key concepts'} to solve problems",
+                f"Analyze real-world applications in the {domain} domain",
+                "Design effective solutions using industry-standard tools",
+                "Evaluate performance and optimize implementations"
+            ]
         
     def _generate_learning_outcomes(
         self,
         course_title: str,
         keywords: List[str],
         program_outcomes: List[str],
-        num_outcomes: int
+        num_outcomes: int,
+        objectives: List[str] = None
     ) -> List[Dict[str, str]]:
-        """Generate course learning outcomes using enhanced prompts"""
+        """Generate learning outcomes using structured JSON"""
         
-        # Get level-appropriate Bloom's distribution
-        course_level = self._estimate_course_level(course_title)
-        bloom_dist = get_bloom_distribution(course_level, num_outcomes)
+        context = {
+            "course_title": course_title,
+            "domain": detect_domain(course_title, keywords),
+            "keywords": keywords,
+            "num_outcomes": num_outcomes,
+            "objectives": objectives or []
+        }
         
-        # Get domain context
-        domain_detected = detect_domain(course_title, keywords)
+        system_prompt, user_prompt, strictness = SectionPrompts.get_prompt_for_section(
+            "outcomes", context
+        )
         
-        # Generate one outcome per Bloom's level according to distribution
-        outcomes = []
-        outcome_num = 1
-        
-        for bloom_level, count in bloom_dist.items():
-            for _ in range(count):
-                if outcome_num > num_outcomes:
-                    break
-                
-                # Get enhanced prompt for this Bloom's level
-                prompts = self.prompts.get_learning_outcome_prompt(
-                    course_title=course_title,
-                    course_level=course_level,
-                    bloom_level=bloom_level,
-                    domain_context=domain_detected,
-                    keywords=keywords
-                )
-                
-                # Generate one outcome
-                outcome_text = self.ai.generate(
-                    prompt=prompts['user'],
-                    system_prompt=prompts['system'],
-                    task_type='generation',
-                    temperature=0.4,  # Lower for more focused outcomes
-                    max_tokens=80  # Reduced for 1-2 line output
-                )
-                
-                # Clean up the outcome text
-                outcome_text = outcome_text.strip().strip('"').strip("'").strip()
-                
-                # Only add if it's a valid outcome (min 15 chars for short outcomes)
-                if outcome_text and len(outcome_text) > 15:
-                    outcomes.append({
-                        'code': f'CO{outcome_num}',
-                        'description': outcome_text,
-                        'bloom_level': bloom_level
-                    })
-                    outcome_num += 1
-        
-        # If we didn't get enough outcomes, pad with the AI model
-        while len(outcomes) < num_outcomes:
-            outcomes.append({
-                'code': f'CO{len(outcomes) + 1}',
-                'description': f"Apply {keywords[len(outcomes) % len(keywords)]} concepts to solve real-world problems effectively",
-                'bloom_level': 'apply'
-            })
-        
-        return outcomes[:num_outcomes]
+        try:
+            result = self.ai.generate_json(
+                prompt=user_prompt,
+                system_prompt=system_prompt,
+                schema=LearningOutcomesSection,
+                task_type='generation',
+                temperature=strictness.get('temperature', 0.2),
+                max_tokens=strictness.get('max_tokens', 700)
+            )
+            
+            # Convert to internal format if needed
+            outcomes = result.get('outcomes', [])
+            return [
+                {
+                    'code': o.get('code'),
+                    'description': o.get('description'),
+                    'bloom_level': o.get('bloom_level')
+                }
+                for o in outcomes
+            ]
+            
+        except Exception as e:
+            self.logger.error(f"Outcomes generation failed: {e}")
+            # Fallback
+            outcomes = []
+            for i in range(num_outcomes):
+                outcomes.append({
+                    'code': f'CO{i+1}',
+                    'description': f"Apply {keywords[i % len(keywords)] if keywords else 'concepts'} to solve problems",
+                    'bloom_level': 'apply'
+                })
+            return outcomes
         
     def _generate_units(
         self,
@@ -465,214 +467,59 @@ class SyllabusGenerator:
         credits: str,
         unit_topics: List[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
-        """Generate unit-wise syllabus using enhanced prompts"""
+        """Generate unit-wise syllabus using structured JSON"""
         
-        # Calculate hours per unit
+        context = {
+            "course_title": course_title,
+            "keywords": keywords,
+            "num_units": num_units,
+            "credits": credits,
+            "unit_topics": unit_topics,
+            "domain": detect_domain(course_title, keywords)
+        }
+        
+        system_prompt, user_prompt, strictness = SectionPrompts.get_prompt_for_section(
+            "units", context
+        )
+        
         try:
-            l, t, p = map(int, credits.split('-'))
-            total_hours = (l + t) * 15  # Assuming 15 weeks
-            hours_per_unit = total_hours // num_units
-        except:
-            hours_per_unit = 10
-        
-        # Get domain context
-        domain_detected = detect_domain(course_title, keywords)
-        domain_tools = get_domain_tools(domain_detected)
-        applications = get_domain_applications(domain_detected)
-        
-        # Build unit_topics lookup for quick access
-        unit_topics_map = {}
-        if unit_topics:
-            for ut in unit_topics:
-                unit_num = ut.get('unit_number', 0)
-                if unit_num:
-                    unit_topics_map[unit_num] = ut.get('topics', [])
-        
-        # Generate units one by one
-        units = []
-        for unit_num in range(1, num_units + 1):
-            # Use unit-specific topics if available, otherwise use general keywords
-            unit_keywords = unit_topics_map.get(unit_num, keywords)
-            
-            # Get enhanced prompt for this unit
-            prompts = self.prompts.get_unit_generation_prompt(
-                course_title=course_title,
-                unit_number=unit_num,
-                total_units=num_units,
-                previous_units=units,
-                keywords=unit_keywords,  # Use unit-specific topics
-                domain_tools=domain_tools,
-                applications=applications,
-                hours_per_unit=hours_per_unit
-            )
-            
-            # Generate unit content
-            response = self.ai.generate(
-                prompt=prompts['user'],
-                system_prompt=prompts['system'],
+            result = self.ai.generate_json(
+                prompt=user_prompt,
+                system_prompt=system_prompt,
+                schema=UnitsSection,
                 task_type='generation',
-                temperature=0.6,
-                max_tokens=1500  # Increased for comprehensive topic descriptions
+                temperature=strictness.get('temperature', 0.4),
+                max_tokens=strictness.get('max_tokens', 6000)
             )
             
-            # Parse unit
-            unit = self._parse_unit_response(response, unit_num, hours_per_unit)
-            if unit:
-                units.append(unit)
-        
-        return units[:num_units]
-    
-    def _parse_unit_response(self, response: str, unit_number: int, hours: int) -> Dict[str, Any]:
-        """Parse AI-generated unit response into structured format with comprehensive topics"""
-        lines = response.split('\n')
-        unit = None
-        current_topics = []
-        current_topic = None
-        overview_lines = []
-        learning_activities = []
-        
-        # State machine for parsing
-        parsing_state = 'searching'  # searching, overview, topic, subtopics, concepts, examples, activities
-        
-        for line in lines:
-            line_stripped = line.strip()
-            if not line_stripped:
-                continue
-            
-            # Look for unit title
-            if ('unit' in line_stripped.lower() and ':' in line_stripped) or \
-               (line_stripped.startswith('**Unit') and ':' in line_stripped):
-                if ':' in line_stripped:
-                    title = line_stripped.split(':', 1)[1].strip().strip('*').strip()
-                else:
-                    title = line_stripped.strip('*').strip()
-                
-                unit = {
-                    'unit_number': unit_number,
-                    'title': title,
-                    'overview': '',
-                    'topics': [],
-                    'learning_activities': [],
-                    'hours': hours
+            # Convert to internal format
+            units = result.get('units', [])
+            return [
+                {
+                    'unit_number': u.get('unit_number'),
+                    'title': u.get('title'),
+                    'overview': u.get('overview', ''),
+                    'topics': [
+                        {
+                            'topic': t.get('topic'),
+                            'description': t.get('description', ''),
+                            'subtopics': t.get('subtopics', []),
+                            'key_concepts': t.get('key_concepts', []),
+                            'practical_examples': t.get('practical_examples', [])
+                        } if isinstance(t, dict) else {'topic': str(t)}
+                        for t in u.get('topics', [])
+                    ],
+                    'learning_activities': u.get('learning_activities', []),
+                    'hours': u.get('hours', 10)
                 }
-                parsing_state = 'overview'
-                continue
+                for u in units
+            ]
             
-            # Look for overview section
-            if 'overview' in line_stripped.lower() and ':' in line_stripped:
-                parsing_state = 'overview'
-                overview_text = line_stripped.split(':', 1)[1].strip() if ':' in line_stripped else ''
-                if overview_text:
-                    overview_lines.append(overview_text)
-                continue
-            
-            # Look for new topic (numbered or bold format)
-            if (line_stripped and (
-                (line_stripped[0].isdigit() and '.' in line_stripped[:3]) or
-                line_stripped.startswith('**') or
-                line_stripped.startswith('- **')
-            )):
-                # Save previous topic if exists
-                if current_topic:
-                    current_topics.append(current_topic)
-                
-                # Extract topic title
-                topic_title = line_stripped.lstrip('0123456789.-) ').strip('*').strip()
-                if ':' in topic_title and len(topic_title.split(':')[0]) < 80:
-                    topic_title = topic_title.split(':')[0].strip()
-                
-                if len(topic_title) > 8:  # Valid topic
-                    current_topic = {
-                        'topic': topic_title,
-                        'description': '',
-                        'subtopics': [],
-                        'key_concepts': [],
-                        'practical_examples': []
-                    }
-                    parsing_state = 'topic'
-                continue
-            
-            # Parse description
-            if current_topic and parsing_state == 'topic':
-                if 'description:' in line_stripped.lower():
-                    desc = line_stripped.split(':', 1)[1].strip() if ':' in line_stripped else ''
-                    current_topic['description'] = desc
-                    continue
-                elif 'subtopic' in line_stripped.lower():
-                    parsing_state = 'subtopics'
-                    subtopics_text = line_stripped.split(':', 1)[1].strip() if ':' in line_stripped else ''
-                    if subtopics_text:
-                        current_topic['subtopics'] = [s.strip() for s in subtopics_text.split(',')]
-                    continue
-                elif 'key concept' in line_stripped.lower() or 'concepts:' in line_stripped.lower():
-                    parsing_state = 'concepts'
-                    concepts_text = line_stripped.split(':', 1)[1].strip() if ':' in line_stripped else ''
-                    if concepts_text:
-                        current_topic['key_concepts'] = [c.strip() for c in concepts_text.split(',')]
-                    continue
-                elif 'practical' in line_stripped.lower() or 'example' in line_stripped.lower():
-                    parsing_state = 'examples'
-                    examples_text = line_stripped.split(':', 1)[1].strip() if ':' in line_stripped else ''
-                    if examples_text:
-                        current_topic['practical_examples'] = [e.strip() for e in examples_text.split(',')]
-                    continue
-                elif not current_topic['description'] and len(line_stripped) > 20:
-                    # This is likely the description
-                    current_topic['description'] = line_stripped
-                    continue
-            
-            # Parse subtopics
-            if parsing_state == 'subtopics' and current_topic:
-                if line_stripped.startswith('-') or line_stripped.startswith('•'):
-                    subtopic = line_stripped.lstrip('-•* ').strip()
-                    if subtopic:
-                        current_topic['subtopics'].append(subtopic)
-                continue
-            
-            # Parse learning activities
-            if 'learning activit' in line_stripped.lower() or 'activities:' in line_stripped.lower():
-                parsing_state = 'activities'
-                continue
-            
-            if parsing_state == 'activities':
-                if line_stripped.startswith('-') or line_stripped.startswith('•') or line_stripped[0].isdigit():
-                    activity = line_stripped.lstrip('0123456789.-•) ').strip()
-                    if activity:
-                        learning_activities.append(activity)
-            
-            # Collect overview text
-            if parsing_state == 'overview' and unit and 'topic' not in line_stripped.lower():
-                if not line_stripped.startswith('**') and not line_stripped[0].isdigit():
-                    overview_lines.append(line_stripped)
-        
-        # Save last topic
-        if current_topic:
-            current_topics.append(current_topic)
-        
-        # Add topics to unit
-        if unit:
-            unit['topics'] = current_topics[:6]  # Max 6 topics
-            unit['overview'] = ' '.join(overview_lines[:4])  # First 4 sentences
-            unit['learning_activities'] = learning_activities[:4]
-        
-        # Fallback if parsing failed
-        if not unit:
-            unit = {
-                'unit_number': unit_number,
-                'title': f"Unit {unit_number}",
-                'overview': f"This unit covers key concepts for unit {unit_number}.",
-                'topics': current_topics[:5] if current_topics else [
-                    {'topic': 'Introduction and Fundamentals', 'description': 'Core concepts and foundational knowledge.', 'subtopics': [], 'key_concepts': [], 'practical_examples': []},
-                    {'topic': 'Key Principles and Theory', 'description': 'Theoretical foundations and principles.', 'subtopics': [], 'key_concepts': [], 'practical_examples': []},
-                    {'topic': 'Practical Applications', 'description': 'Real-world applications and use cases.', 'subtopics': [], 'key_concepts': [], 'practical_examples': []},
-                    {'topic': 'Advanced Techniques', 'description': 'Advanced methods and optimization strategies.', 'subtopics': [], 'key_concepts': [], 'practical_examples': []},
-                    {'topic': 'Integration and Best Practices', 'description': 'Integration approaches and industry standards.', 'subtopics': [], 'key_concepts': [], 'practical_examples': []}
-                ],
-                'learning_activities': learning_activities if learning_activities else [],
-                'hours': hours
-            }
-        
-        return unit
+        except Exception as e:
+            self.logger.error(f"Units generation failed: {e}")
+            return []
+    
+
     
     def _generate_copo_summary(
         self,
@@ -748,77 +595,41 @@ class SyllabusGenerator:
         course_title: str,
         keywords: List[str]
     ) -> Dict[str, List[str]]:
-        """Generate reference materials"""
+        """Generate reference materials using structured JSON"""
         
-        # Get enhanced prompts for references
-        prompts = self.prompts.get_references_prompt(
-            course_title=course_title,
-            keywords=keywords,
-            course_level=self._estimate_course_level(course_title),
-            domain=detect_domain(course_title, keywords)
-        )
-        
-        response = self.ai.generate(
-            prompt=prompts['user'],
-            system_prompt=prompts['system'],
-            task_type='generation',
-            temperature=0.3,
-            max_tokens=600
-        )
-        
-        # Parse the response into categories
-        textbooks = []
-        references = []
-        online_resources = []
-        
-        current_section = None
-        for line in response.split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-            
-            # Detect section headers
-            lower_line = line.lower()
-            if 'textbook' in lower_line or 'text book' in lower_line:
-                current_section = 'textbooks'
-                continue
-            elif 'reference' in lower_line or 'additional' in lower_line:
-                current_section = 'references'
-                continue
-            elif 'online' in lower_line or 'course' in lower_line or 'resource' in lower_line or 'web' in lower_line:
-                current_section = 'online'
-                continue
-            
-            # Parse line items (numbered or bulleted)
-            if line[0].isdigit() or line.startswith('-') or line.startswith('•') or line.startswith('*'):
-                item = line.lstrip('0123456789.-•*) ').strip()
-                if item and len(item) > 10:
-                    if current_section == 'textbooks':
-                        textbooks.append(item)
-                    elif current_section == 'references':
-                        references.append(item)
-                    elif current_section == 'online':
-                        online_resources.append(item)
-                    else:
-                        # Default: add to textbooks if no section detected
-                        textbooks.append(item)
-        
-        # If parsing failed, try to split by common patterns
-        if not textbooks and not references and not online_resources:
-            lines = [l.strip() for l in response.split('\n') if l.strip() and len(l.strip()) > 15]
-            # Distribute evenly
-            for i, line in enumerate(lines[:10]):
-                clean_line = line.lstrip('0123456789.-•*) ').strip()
-                if i < 4:
-                    textbooks.append(clean_line)
-                elif i < 7:
-                    references.append(clean_line)
-                else:
-                    online_resources.append(clean_line)
-        
-        return {
-            'textbooks': textbooks[:4],
-            'references': references[:3],
-            'online_resources': online_resources[:4],
-            'raw_suggestions': response
+        context = {
+            "course_title": course_title,
+            "keywords": keywords,
+            "domain": detect_domain(course_title, keywords)
         }
+        
+        system_prompt, user_prompt, strictness = SectionPrompts.get_prompt_for_section(
+            "references", context
+        )
+        
+        try:
+            result = self.ai.generate_json(
+                prompt=user_prompt,
+                system_prompt=system_prompt,
+                schema=ReferencesSection,
+                task_type='generation',
+                temperature=strictness.get('temperature', 0.1),
+                max_tokens=strictness.get('max_tokens', 600)
+            )
+            
+            return {
+                'textbooks': result.get('textbooks', []),
+                'references': result.get('reference_books', []),
+                'online_resources': result.get('online_resources', []),
+                'raw_suggestions': ''
+            }
+            
+        except Exception as e:
+            self.logger.error(f"References generation failed: {e}")
+            return {
+                'textbooks': ["No textbooks generated"],
+                'references': [],
+                'online_resources': [],
+                'raw_suggestions': ''
+            }
+

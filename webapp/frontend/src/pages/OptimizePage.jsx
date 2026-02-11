@@ -8,6 +8,14 @@ import '../components/Charts.css';
 // Simple markdown to HTML converter for AI-generated content
 const simpleMarkdown = (text) => {
   if (!text) return '';
+
+  // Clean up special Unicode characters that don't render well
+  text = text
+    .replace(/■/g, '•')  // Replace black squares with bullets
+    .replace(/□/g, '○')  // Replace white squares with circles
+    .replace(/▪/g, '•')  // Replace small black squares
+    .replace(/►/g, '→');  // Replace arrows
+
   return text
     // Headers
     .replace(/^### (.+)$/gm, '<h4 class="font-bold text-sm uppercase text-gray-800 mt-4 mb-2">$1</h4>')
@@ -18,6 +26,7 @@ const simpleMarkdown = (text) => {
     // Italic
     .replace(/\*(.+?)\*/g, '<em class="italic text-gray-600">$1</em>')
     // Bullet points
+    .replace(/^[•●○] (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
     .replace(/^\* (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
     .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
     // Numbered lists  
@@ -58,13 +67,10 @@ function OptimizePage() {
       const uploadResponse = await apiService.uploadSyllabus(file);
       const syllabusData = uploadResponse.data || uploadResponse;
 
-      // Get optimization suggestions - returns full response with optimization object
+      // Get optimization suggestions - returns full response with new structure
       const optResponse = await apiService.optimizeSyllabus(syllabusData);
 
-      setOptimizationResults({
-        syllabus: optResponse.syllabus || syllabusData,  // Use backend's syllabus or fallback
-        optimization: optResponse.optimization  // Extract optimization from response
-      });
+      setOptimizationResults(optResponse);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to optimize syllabus');
     } finally {
@@ -75,11 +81,12 @@ function OptimizePage() {
   const handleExport = async (format) => {
     try {
       // Send syllabus data and optimization results separately
-      const response = await fetch(`http://localhost:8000/api/export/${format}`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${API_URL}/api/export/${format}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          syllabus_data: optimizationResults.syllabus,
+          syllabus_data: optimizationResults.optimized_syllabus,
           analysis_data: optimizationResults.optimization  // Pass full optimization as analysis_data
         })
       });
@@ -96,7 +103,7 @@ function OptimizePage() {
       if (format === 'word') ext = 'docx';
       else if (format === 'latex-pdf') ext = 'pdf';
 
-      a.download = `${optimizationResults.syllabus?.course_code || 'syllabus'}_optimized.${ext}`;
+      a.download = `${optimizationResults.optimized_syllabus?.course_code || 'syllabus'}_optimized.${ext}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -120,499 +127,245 @@ function OptimizePage() {
       </div>
 
       {!optimizationResults ? (
-        <div className="max-w-xl mx-auto">
-          <div className="card text-center p-8 hover:shadow-lg transition-shadow border-dashed border-2 border-indigo-100">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full mb-6">
-              <Zap size={40} />
+        <div className="mb-12">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid lg:grid-cols-5 gap-12 items-center">
+              {/* Left Column: Upload Card */}
+              <div className="lg:col-span-3">
+                <div className="card text-center p-10 hover:shadow-xl transition-all duration-300 border-dashed border-2 border-indigo-200/60 bg-white/50 backdrop-blur-sm">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full mb-6">
+                    <Zap size={40} />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Upload Syllabus for Optimization</h3>
+                  <p className="text-gray-500 mb-8 max-w-sm mx-auto">Get comprehensive AI insights, gap analysis, and modernize your curriculum in seconds.</p>
+
+                  <input
+                    type="file"
+                    id="optimize-upload"
+                    accept=".pdf,.docx,.txt"
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                  />
+
+                  <label htmlFor="optimize-upload" className="btn btn-primary btn-lg w-full max-w-xs mx-auto flex items-center justify-center gap-2 cursor-pointer shadow-lg hover:translate-y-[-2px] transition-transform">
+                    {loading ? (
+                      <>
+                        <RefreshCw className="animate-spin" size={20} />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={20} />
+                        Choose Syllabus File
+                      </>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              {/* Right Column: Key Benefits */}
+              <div className="lg:col-span-2 space-y-6">
+                <div>
+                  <h3 className="text-2xl font-extrabold text-primary mb-2">Why Optimize?</h3>
+                  <p className="text-subtle">Engineered to elevate educational standards through intelligent curriculum refinement.</p>
+                </div>
+
+                <div className="space-y-4">
+                  {[
+                    { icon: Target, title: 'Gap Analysis', desc: 'Identify missing core concepts and industry-relevant topics.' },
+                    { icon: Lightbulb, title: 'AI Modernization', desc: 'Update outdated terminology and introduce emerging concepts.' },
+                    { icon: Shield, title: 'Compliance Check', desc: 'Ensure alignment with NEP 2020 and accreditation standards.' }
+                  ].map((feature, idx) => (
+                    <div key={idx} className="flex gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                      <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg shrink-0">
+                        <feature.icon size={20} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-primary text-sm">{feature.title}</h4>
+                        <p className="text-xs text-subtle leading-relaxed">{feature.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-4 rounded-xl bg-indigo-600 text-white shadow-lg overflow-hidden relative">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-x-8 -translate-y-8"></div>
+                  <div className="relative z-10 flex items-center gap-4">
+                    <div className="p-2 bg-white/20 rounded-lg">
+                      <Zap size={20} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider opacity-80">Pro Tip</p>
+                      <p className="text-sm font-medium">Large documents take longer to process but provide deeper insights.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Upload Syllabus for Optimization</h3>
-            <p className="text-gray-500 mb-8 max-w-sm mx-auto">Get comprehensive AI insights, gap analysis, and modernize your curriculum in seconds.</p>
-
-            <input
-              type="file"
-              id="optimize-upload"
-              accept=".pdf,.docx,.txt"
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
-            />
-
-            <label htmlFor="optimize-upload" className="btn btn-primary btn-lg w-full max-w-xs mx-auto flex items-center justify-center gap-2 cursor-pointer shadow-lg hover:translate-y-[-2px] transition-transform">
-              {loading ? (
-                <>
-                  <RefreshCw className="animate-spin" size={20} />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Upload size={20} />
-                  Choose Syllabus File
-                </>
-              )}
-            </label>
           </div>
         </div>
       ) : (
         <div className="space-y-8 animate-bouncy-reveal">
           {/* Export Buttons */}
+          {/* Export Buttons */}
           <div className="flex justify-end gap-3 sticky top-4 z-50">
             <button
               onClick={() => handleExport('pdf')}
-              className="btn btn-white shadow-md text-sm flex items-center gap-2"
+              className="btn bg-white border border-gray-200 text-gray-700 shadow-sm hover:shadow-md hover:border-red-200 hover:text-red-600 transition-all text-sm flex items-center gap-2 rounded-lg px-4 py-2.5"
             >
-              <Download size={16} className="text-red-500" />
+              <Download size={16} className="" />
               Export PDF
             </button>
             <button
               onClick={() => handleExport('word')}
-              className="btn btn-white shadow-md text-sm flex items-center gap-2"
+              className="btn bg-white border border-gray-200 text-gray-700 shadow-sm hover:shadow-md hover:border-blue-200 hover:text-blue-600 transition-all text-sm flex items-center gap-2 rounded-lg px-4 py-2.5"
             >
-              <FileText size={16} className="text-blue-500" />
+              <FileText size={16} className="" />
               Export Word
             </button>
           </div>
 
-          {/* Bloom's Analysis */}
-          {optimizationResults.optimization?.bloom_analysis && (
-            <div className="space-y-6">
-              <div className="card">
-                <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
-                  <PieChart className="text-brand animate-pulse" size={24} />
-                  <h3 className="font-bold text-lg text-gray-800">Bloom's Taxonomy Distribution</h3>
+          {/* Optimization Summary & Rationale */}
+          {/* Optimization Summary & Rationale */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="card bg-white border border-indigo-100 shadow-sm rounded-xl p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full translate-x-8 -translate-y-8 opacity-50"></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                    <Zap size={20} />
+                  </div>
+                  <h3 className="font-bold text-lg text-gray-800">Optimization Rationale</h3>
                 </div>
+                <p className="text-gray-600 leading-relaxed text-sm">
+                  {optimizationResults.optimization?.rationale || "The syllabus has been optimized for better learning outcomes and industry alignment."}
+                </p>
+              </div>
+            </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {Object.entries(optimizationResults.optimization.bloom_analysis.comparison).map(([level, data]) => (
-                    <div key={level} className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-bold capitalize text-primary">{level}</span>
-                        <span className={`badge ${data.status === 'optimal' ? 'badge-success' :
-                          data.status === 'below' ? 'badge-warning' : 'badge-error'
-                          }`}>
-                          {data.status}
-                        </span>
+            <div className="card bg-white border border-emerald-100 shadow-sm rounded-xl p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full translate-x-8 -translate-y-8 opacity-50"></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <CheckCircle size={20} />
+                  </div>
+                  <h3 className="font-bold text-lg text-gray-800">Key Improvements</h3>
+                </div>
+                <ul className="space-y-3">
+                  {optimizationResults.optimization?.changes_summary?.map((change, idx) => (
+                    <li key={idx} className="flex gap-3 text-sm text-gray-700 bg-gray-50/50 p-2 rounded-lg border border-gray-100">
+                      <div className="mt-1 shrink-0">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5"></div>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-500 mt-3">
-                        <div>
-                          <span className="block font-bold text-lg text-gray-800">{data.current.toFixed(1)}%</span>
-                          <span>Current</span>
+                      {typeof change === 'object' ? (
+                        <div className="flex flex-col w-full">
+                          <span className="font-semibold text-gray-900 mb-0.5">{change.aspect}</span>
+                          <span className="text-gray-600 text-xs mb-1.5">{change.impact}</span>
+                          {change.original && change.optimized && (
+                            <div className="grid grid-cols-2 gap-2 text-[10px] items-center bg-white p-1.5 rounded border border-gray-100/50">
+                              <div className="text-red-400 line-through opacity-80 truncate" title={change.original}>{change.original}</div>
+                              <div className="text-emerald-600 font-medium truncate" title={change.optimized}>{change.optimized}</div>
+                            </div>
+                          )}
                         </div>
-                        <div className="text-right">
-                          <span className="block font-bold text-lg text-gray-400">{data.recommended_min}-{data.recommended_max}%</span>
-                          <span>Target</span>
-                        </div>
-                      </div>
-
-                      {/* Progress Bar for visual feedback */}
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                        <div
-                          className={`h-1.5 rounded-full ${data.status === 'optimal' ? 'bg-emerald-500' :
-                            data.status === 'below' ? 'bg-amber-400' : 'bg-red-400'
-                            }`}
-                          style={{ width: `${Math.min(data.current, 100)}%` }}
-                        ></div>
-                      </div>
-                    </div>
+                      ) : (
+                        <span>{change}</span>
+                      )}
+                    </li>
                   ))}
-                </div>
-
-                {/* Visual Charts for Bloom's */}
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div className="h-80">
-                    <BloomDistributionChart bloomAnalysis={optimizationResults.optimization.bloom_analysis} />
-                  </div>
-                  <div className="h-80">
-                    <BloomBalanceChart bloomAnalysis={optimizationResults.optimization.bloom_analysis} />
-                  </div>
-                </div>
+                </ul>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* CO-PO-PSO Mapping Matrix */}
-          {optimizationResults.optimization?.co_po_mapping && (
-            <div className="space-y-6">
-              {/* Visual Heatmap Chart */}
-              <div className="card">
-                <div className="flex items-center gap-2 mb-4">
-                  <Target className="text-brand" size={24} />
-                  <h3 className="font-bold text-lg text-gray-800">CO-PO Mapping Heatmap</h3>
-                </div>
-                <div className="h-96">
-                  <COPOHeatmap mapping={optimizationResults.optimization.co_po_mapping} />
-                </div>
+          {/* Side-by-Side Comparison */}
+          {/* Side-by-Side Comparison */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg">
+                <Layout size={24} />
               </div>
-
-              {/* Original detailed table */}
-              <div className="card overflow-hidden">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <Layers className="text-brand" size={24} />
-                    <h3 className="font-bold text-lg text-gray-800">Detailed Mapping Matrix</h3>
-                  </div>
-                  <p className="text-xs font-medium text-subtle bg-slate-50 px-3 py-1 rounded-full">
-                    Affinity: 1-Slight, 2-Moderate, 3-Substantial
-                  </p>
-                </div>
-
-                <div className="overflow-x-auto text-sm">
-                  <table className="w-full border-collapse border border-slate-200">
-                    <thead>
-                      <tr className="bg-slate-50 text-gray-600">
-                        <th className="border border-slate-200 p-2 text-center" rowSpan="2">CO No</th>
-                        <th className="border border-slate-200 p-2 text-center font-bold text-primary" colSpan="9">Program Outcomes (POs)</th>
-                        <th className="border border-slate-200 p-2 text-center font-bold text-primary" colSpan="4">PSOs</th>
-                        <th className="border border-slate-200 p-2 text-center" rowSpan="2">BTL</th>
-                      </tr>
-                      <tr className="bg-slate-50 text-gray-500 text-xs uppercase cursor-default">
-                        {['PO1', 'PO2', 'PO3', 'PO4', 'PO5', 'PO6', 'PO7', 'PO8', 'PO9',
-                          'PSO1', 'PSO2', 'PSO3', 'PSO4'].map(po => (
-                            <th key={po} className="border border-slate-200 p-2 font-semibold">{po}</th>
-                          ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(optimizationResults.optimization.co_po_mapping).map(([co, poData], idx) => {
-                        // Get Bloom's level from syllabus data
-                        const coIndex = parseInt(co.replace('CO', '')) - 1;
-                        const bloomLevel = optimizationResults.syllabus?.learning_outcomes?.[coIndex]?.bloom_level || 'AP';
-                        const btl = bloomLevel.substring(0, 2).toUpperCase();
-
-                        return (
-                          <tr key={co} className="hover:bg-slate-50 transition-colors">
-                            <td className="border border-slate-200 p-2 font-bold text-primary text-center bg-slate-50/50">{co}</td>
-                            {['PO1', 'PO2', 'PO3', 'PO4', 'PO5', 'PO6', 'PO7', 'PO8', 'PO9',
-                              'PSO1', 'PSO2', 'PSO3', 'PSO4'].map(po => {
-                                const value = poData[po] || 0;
-                                let bgClass = '';
-                                let textClass = 'text-gray-300';
-                                if (value === 1) { bgClass = 'bg-blue-50'; textClass = 'text-blue-600 font-semibold'; }
-                                if (value === 2) { bgClass = 'bg-indigo-50'; textClass = 'text-indigo-600 font-bold'; }
-                                if (value === 3) { bgClass = 'bg-emerald-50'; textClass = 'text-emerald-700 font-extrabold'; }
-
-                                return (
-                                  <td key={po} className={`border border-slate-200 p-2 text-center ${bgClass} ${textClass}`}>
-                                    {value > 0 ? value : '-'}
-                                  </td>
-                                );
-                              })}
-                            <td className="border border-slate-200 p-2 text-center text-xs font-bold text-gray-500 bg-slate-50/50">{btl}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+              <div>
+                <h3 className="font-bold text-xl text-gray-800">Side-by-Side Comparison</h3>
+                <p className="text-sm text-gray-500">Review the transformation from original to optimized curriculum</p>
               </div>
             </div>
-          )}
 
-          {/* Rebalancing Suggestions */}
-          {optimizationResults.optimization?.rebalancing_suggestions && optimizationResults.optimization.rebalancing_suggestions.length > 0 && (
-            <div className="card border-l-4 border-l-amber-400">
-              <div className="flex items-center gap-2 mb-4">
-                <Lightbulb className="text-amber-500" size={24} />
-                <h3 className="font-bold text-lg text-gray-800">Rebalancing Suggestions</h3>
-              </div>
-              <ul className="space-y-3">
-                {optimizationResults.optimization.rebalancing_suggestions.map((suggestion, idx) => (
-                  <li key={idx} className="flex gap-3 text-gray-700 bg-amber-50/50 p-3 rounded-md border border-amber-100/50">
-                    <ArrowRight size={18} className="text-amber-500 mt-0.5 shrink-0" />
-                    <span className="text-sm">{suggestion}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Modern Topics */}
-          {optimizationResults.optimization?.modern_topics && optimizationResults.optimization.modern_topics.length > 0 && (
-            <div className="card bg-gradient-to-br from-indigo-50 to-white">
-              <div className="flex items-center gap-2 mb-4">
-                <Zap className="text-indigo-600" size={24} />
-                <h3 className="font-bold text-lg text-gray-800">Modern Topics to Consider</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {optimizationResults.optimization.modern_topics.map((topic, idx) => (
-                  <span key={idx} className="badge bg-white text-indigo-700 border border-indigo-200 shadow-sm px-3 py-1.5 text-sm">
-                    {topic}
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Original Syllabus */}
+              <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between px-5 py-3 bg-gray-50 rounded-t-xl border-x border-t border-gray-200">
+                  <span className="font-bold text-gray-500 uppercase text-xs tracking-wider flex items-center gap-2">
+                    <Layers size={14} /> Original
                   </span>
-                ))}
+                  <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">Baseline</span>
+                </div>
+                <SyllabusView syllabus={optimizationResults.original_syllabus} />
+              </div>
+
+              {/* Optimized Syllabus */}
+              <div className="flex flex-col h-full relative">
+                <div className="absolute -top-3 -right-3 z-20">
+                  <span className="flex h-6 w-6 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-6 w-6 bg-brand"></span>
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between px-5 py-3 bg-indigo-600 rounded-t-xl border-x border-t border-indigo-600 shadow-md z-10">
+                  <span className="font-bold text-white uppercase text-xs tracking-wider flex items-center gap-2">
+                    <Zap size={14} className="fill-current" /> Optimized
+                  </span>
+                  <span className="bg-white/20 text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide backdrop-blur-sm">AI Enhanced</span>
+                </div>
+                <SyllabusView syllabus={optimizationResults.optimized_syllabus} isOptimized={true} />
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Sequence Optimization */}
-          {optimizationResults.optimization?.sequence_optimization && (
-            <div className="card">
-              <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100">
-                <Layout className="text-brand" size={24} />
-                <h3 className="font-bold text-lg text-gray-800">Unit Sequencing Analysis</h3>
-              </div>
-              <div
-                className="prose prose-sm max-w-none text-gray-600"
-                dangerouslySetInnerHTML={{
-                  __html: simpleMarkdown(optimizationResults.optimization.sequence_optimization.optimization_suggestions)
-                }}
-              />
-            </div>
-          )}
 
-          {/* AI Analysis (shown when structured parsing was incomplete) */}
-          {optimizationResults.optimization?.ai_analysis && (
-            <div className="card border-2 border-indigo-100 bg-indigo-50/30">
-              <div className="flex items-center gap-2 mb-4 pb-4 border-b border-indigo-100">
-                <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
-                  <Zap size={24} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-gray-800">AI-Powered Syllabus Analysis</h3>
-                  <p className="text-xs text-indigo-600 font-medium uppercase tracking-wide">Deep Insight Report</p>
-                </div>
-              </div>
-              <div
-                className="prose prose-sm max-w-none text-gray-700"
-                dangerouslySetInnerHTML={{
-                  __html: simpleMarkdown(optimizationResults.optimization.ai_analysis)
-                }}
-              />
-            </div>
-          )}
 
-          {/* Lesson Plan Analysis */}
-          {optimizationResults.optimization?.lesson_plan_analysis && optimizationResults.optimization.lesson_plan_analysis.total_lessons > 0 && (
-            <div className="card">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="text-brand" size={24} />
-                  <h3 className="font-bold text-lg text-gray-800">Lesson Plan Analysis</h3>
-                </div>
-                <div className="text-sm font-medium text-gray-500">
-                  {optimizationResults.optimization.lesson_plan_analysis.total_lessons} lessons detected
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-6 mb-6">
-                <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-100">
-                  <div className="text-3xl font-bold text-primary">{optimizationResults.optimization.lesson_plan_analysis.total_planned_hours}</div>
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Total Hours</div>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-100">
-                  <div className="text-3xl font-bold text-indigo-600">{optimizationResults.optimization.lesson_plan_analysis.average_hours_per_lesson.toFixed(1)}</div>
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Avg Hrs/Lesson</div>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-100">
-                  {Object.keys(optimizationResults.optimization.lesson_plan_analysis.lesson_distribution?.lessons_per_unit || {}).length > 0 ? (
-                    <div className="text-3xl font-bold text-emerald-600">{Object.keys(optimizationResults.optimization.lesson_plan_analysis.lesson_distribution.lessons_per_unit).length}</div>
-                  ) : (
-                    <div className="text-3xl font-bold text-gray-400">-</div>
-                  )}
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Units Covered</div>
-                </div>
-              </div>
-
-              {optimizationResults.optimization.lesson_plan_analysis.gaps?.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-bold text-sm text-gray-500 uppercase tracking-wider mb-2">Identified Issues</h4>
-                  {optimizationResults.optimization.lesson_plan_analysis.gaps.map((gap, idx) => (
-                    <div key={idx} className={`p-3 rounded-lg flex items-start gap-3 text-sm border-l-4 ${gap.severity === 'high' ? 'bg-red-50 text-red-800 border-red-500' : 'bg-blue-50 text-blue-800 border-blue-500'}`}>
-                      {gap.severity === 'high' ? <AlertTriangle size={18} className="shrink-0 mt-0.5 text-red-600" /> : <div className="mt-0.5 font-bold text-blue-600">i</div>}
-                      <div>
-                        {gap.description}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Redundancy Detection */}
-          {optimizationResults.optimization?.redundancies && optimizationResults.optimization.redundancies.enabled && (
-            <div className="card">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="text-brand" size={24} />
-                  <h3 className="font-bold text-lg text-gray-800">Content Redundancy Check</h3>
-                </div>
-                <div className="text-sm font-medium text-gray-500">
-                  {optimizationResults.optimization.redundancies.total_redundancies} issues found
-                </div>
-              </div>
-
-              {optimizationResults.optimization.redundancies.total_redundancies === 0 ? (
-                <div className="text-center py-12 bg-green-50 rounded-lg border border-green-100">
-                  <CheckCircle className="mx-auto text-green-500 mb-4" size={48} />
-                  <h4 className="font-bold text-green-800 text-lg">No Redundancies Detected</h4>
-                  <p className="text-green-600 text-sm mt-1">Your syllabus content appears efficient and unique.</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {optimizationResults.optimization.redundancies.duplicate_topics?.length > 0 && (
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-500 uppercase tracking-wider mb-3">Duplicate Topics</h4>
-                      <div className="space-y-3">
-                        {optimizationResults.optimization.redundancies.duplicate_topics.map((dup, idx) => (
-                          <div key={idx} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                            <div className="flex items-center justify-between gap-4 mb-2">
-                              <div className="badge badge-warning text-xs">{(dup.similarity * 100).toFixed(0)}% Similarity</div>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm">
-                              <div className="flex-1">
-                                <div className="font-bold text-xs text-gray-500 uppercase mb-1">{dup.unit1}</div>
-                                <div className="font-medium text-gray-800 bg-white p-2 rounded border border-gray-100">{dup.topic1}</div>
-                              </div>
-                              <RefreshCw size={16} className="text-gray-400" />
-                              <div className="flex-1">
-                                <div className="font-bold text-xs text-gray-500 uppercase mb-1">{dup.unit2}</div>
-                                <div className="font-medium text-gray-800 bg-white p-2 rounded border border-gray-100">{dup.topic2}</div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {optimizationResults.optimization.redundancies.similar_outcomes?.length > 0 && (
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-500 uppercase tracking-wider mb-3">Similar Outcomes</h4>
-                      <div className="space-y-3">
-                        {optimizationResults.optimization.redundancies.similar_outcomes.map((sim, idx) => (
-                          <div key={idx} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                            <div className="flex items-center justify-between gap-4 mb-2">
-                              <div className="badge badge-warning text-xs">{(sim.similarity * 100).toFixed(0)}% Similarity</div>
-                            </div>
-                            <div className="flex flex-col gap-3 text-sm">
-                              <div className="bg-white p-3 rounded border border-gray-100">
-                                <span className="font-bold text-indigo-600 text-xs mr-2">{sim.outcome1}</span>
-                                <span className="text-gray-700">{sim.text1}</span>
-                              </div>
-                              <div className="bg-white p-3 rounded border border-gray-100">
-                                <span className="font-bold text-indigo-600 text-xs mr-2">{sim.outcome2}</span>
-                                <span className="text-gray-700">{sim.text2}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Objectives Optimization */}
-          {optimizationResults.optimization?.objectives_optimization?.status === 'success' && (
+          {/* Bloom's Analysis */}
+          {optimizationResults.optimization?.bloom_distribution && (
             <div className="card">
               <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
-                <Target className="text-brand" size={24} />
-                <h3 className="font-bold text-lg text-gray-800">Objectives Enhancement</h3>
+                <PieChart className="text-brand" size={24} />
+                <h3 className="font-bold text-lg text-gray-800">Bloom's Taxonomy Analysis</h3>
               </div>
-              <div className="space-y-4">
-                {optimizationResults.optimization.objectives_optimization.optimized_objectives.map((o, i) => (
-                  <div key={i} className="p-4 bg-slate-50 rounded-lg border border-slate-100 transition-colors hover:border-indigo-100">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-bold text-sm text-indigo-900 uppercase">Objective {i + 1}</span>
-                      <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
-                        <Zap size={10} />
-                        Score: {o.smart_score}/100
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Distribution of cognitive levels in the optimized syllabus:
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {Object.entries(optimizationResults.optimization.bloom_distribution).map(([level, value]) => (
+                      <div key={level} className="p-3 bg-slate-50 rounded border border-slate-100">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase">{level}</div>
+                        <div className="text-lg font-bold text-indigo-600">{value}%</div>
                       </div>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <div className="text-xs font-semibold text-gray-400 mb-1">Original</div>
-                        <p className="text-gray-500 italic">{o.original}</p>
-                      </div>
-                      <div className="bg-white p-3 rounded border border-indigo-50 shadow-sm relative overflow-hidden">
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-400"></div>
-                        <div className="text-xs font-semibold text-indigo-400 mb-1 flex items-center gap-1">
-                          <Zap size={10} /> AI Enhanced
-                        </div>
-                        <p className="text-gray-800 font-medium">{o.optimized}</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+                <div className="h-64">
+                  {/* Simplified chart or message if data is basic */}
+                  <BloomDistributionChart data={optimizationResults.optimization.bloom_distribution} />
+                </div>
               </div>
             </div>
           )}
 
-          {/* Reference Suggestions */}
-          {optimizationResults.optimization?.reference_suggestions?.status === 'success' && (
-            <div className="card">
-              <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
-                <BookOpen className="text-brand" size={24} />
-                <h3 className="font-bold text-lg text-gray-800">Reference Recommendations</h3>
+          {/* CO-PO Mapping */}
+          {optimizationResults.optimization?.co_po_mapping && (
+            <div className="card border border-gray-200 shadow-sm rounded-xl overflow-hidden p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                  <Target size={20} />
+                </div>
+                <h3 className="font-bold text-lg text-gray-800">CO-PO Mapping Matrix (Optimized)</h3>
               </div>
-              <div className="grid md:grid-cols-2 gap-6">
-                {Object.entries(optimizationResults.optimization.reference_suggestions.suggestions || {}).map(([cat, refs]) => (
-                  refs && refs.length > 0 && (
-                    <div key={cat} className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                      <h4 className="font-bold text-sm text-gray-700 capitalize mb-3 pb-2 border-b border-slate-200">{cat.replace(/_/g, ' ')}</h4>
-                      <ul className="space-y-2">
-                        {refs.slice(0, 3).map((r, i) => (
-                          <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                            <span className="text-indigo-400 mt-1.5 text-[8px] shrink-0">●</span>
-                            <div>
-                              <span className="font-medium text-gray-800 block">{r.title}</span>
-                              {r.author && <span className="text-xs text-gray-400">{r.author}</span>}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Compliance Status */}
-          {(optimizationResults.optimization?.nep_2020_compliance || optimizationResults.optimization?.accreditation_compliance) && (
-            <div className="card">
-              <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
-                <Shield className="text-brand" size={24} />
-                <h3 className="font-bold text-lg text-gray-800">Compliance & Accreditation</h3>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {optimizationResults.optimization.nep_2020_compliance?.status === 'success' && (
-                  <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-xl border border-orange-100 text-center relative overflow-hidden group hover:shadow-md transition-shadow">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                      <Shield size={60} className="text-orange-500" />
-                    </div>
-                    <div className="font-bold text-orange-900 mb-2">NEP 2020</div>
-                    <div className="text-4xl font-extrabold text-orange-600 mb-2">
-                      {optimizationResults.optimization.nep_2020_compliance.compliance_percentage}%
-                    </div>
-                    <div className="text-xs font-bold uppercase tracking-wider text-orange-400">{optimizationResults.optimization.nep_2020_compliance.compliance_level}</div>
-                  </div>
-                )}
-                {optimizationResults.optimization.accreditation_compliance?.nba && (
-                  <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100 text-center relative overflow-hidden group hover:shadow-md transition-shadow">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                      <Shield size={60} className="text-blue-500" />
-                    </div>
-                    <div className="font-bold text-blue-900 mb-2">NBA</div>
-                    <div className="text-4xl font-extrabold text-blue-600 mb-2">
-                      {optimizationResults.optimization.accreditation_compliance.nba.compliance_percentage}%
-                    </div>
-                    <div className="text-xs font-bold uppercase tracking-wider text-blue-400">{optimizationResults.optimization.accreditation_compliance.nba.compliance_level}</div>
-                  </div>
-                )}
-                {optimizationResults.optimization.accreditation_compliance?.naac && (
-                  <div className="bg-gradient-to-br from-emerald-50 to-white p-6 rounded-xl border border-emerald-100 text-center relative overflow-hidden group hover:shadow-md transition-shadow">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                      <Shield size={60} className="text-emerald-500" />
-                    </div>
-                    <div className="font-bold text-emerald-900 mb-2">NAAC</div>
-                    <div className="text-4xl font-extrabold text-emerald-600 mb-2">
-                      {optimizationResults.optimization.accreditation_compliance.naac.compliance_percentage}%
-                    </div>
-                    <div className="text-xs font-bold uppercase tracking-wider text-emerald-400">{optimizationResults.optimization.accreditation_compliance.naac.compliance_level}</div>
-                  </div>
-                )}
+              <div className="h-[400px] w-full">
+                <COPOHeatmap mapping={optimizationResults.optimization.co_po_mapping} />
               </div>
             </div>
           )}
@@ -628,5 +381,126 @@ function OptimizePage() {
     </div>
   );
 }
+
+// Helper Components for Side-by-Side Comparison
+const SyllabusView = ({ syllabus, isOptimized = false }) => {
+  if (!syllabus) return <div className="card text-center p-8 text-gray-400">No data available</div>;
+
+  return (
+    <div className={`card ${isOptimized ? 'border-2 border-indigo-500/20 bg-white shadow-xl shadow-indigo-100/50' : 'border border-gray-200 bg-white shadow-sm'} rounded-b-xl rounded-t-none h-[600px] overflow-y-auto custom-scrollbar p-6 transition-all duration-300`}>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="pb-4 border-b border-gray-100">
+          <div className="flex justify-between items-start">
+            <div>
+              <h4 className={`text-xs font-bold uppercase tracking-wider ${isOptimized ? 'text-indigo-600' : 'text-gray-500'} mb-1`}>
+                {syllabus.course_code || "CODE"}
+              </h4>
+              <h2 className="text-xl font-bold text-gray-900 leading-tight">{syllabus.course_title || "Course Title"}</h2>
+            </div>
+            {syllabus.credits && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                Credits: {syllabus.credits}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Outcomes */}
+        <div>
+          <h4 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
+            <Target size={14} /> Learning Outcomes
+          </h4>
+          <div className="space-y-3">
+            {syllabus.learning_outcomes?.map((co, idx) => (
+              <div key={idx} className={`p-3 rounded-lg border text-sm group transition-colors ${isOptimized ? 'bg-indigo-50/30 border-indigo-100 hover:border-indigo-200' : 'bg-gray-50 border-gray-100 hover:border-gray-200'}`}>
+                <div className="flex gap-2">
+                  <span className={`font-bold mt-0.5 text-xs ${isOptimized ? 'text-indigo-600' : 'text-gray-500'}`}>{co.code || `CO${idx + 1}`}</span>
+                  <div className="flex-1">
+                    <p className="text-gray-700 leading-relaxed text-sm">{co.description}</p>
+                    {co.bloom_level && (
+                      <div className="mt-2 text-right">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${isOptimized ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>
+                          {co.bloom_level}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Units */}
+        <div>
+          <h4 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
+            <Layers size={14} /> Course Content
+          </h4>
+          <div className="space-y-4">
+            {syllabus.units?.map((unit, idx) => (
+              <div key={idx} className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
+                <div className="bg-gray-50/80 px-4 py-2 border-b border-gray-100 flex justify-between items-center">
+                  <span className="font-bold text-xs text-gray-500 uppercase tracking-wide">Unit {unit.unit_number || idx + 1}</span>
+                  {unit.hours && <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">{unit.hours} Hours</span>}
+                </div>
+                <div className="p-4">
+                  <h5 className="font-bold text-gray-800 mb-3 text-sm leading-snug">{unit.title}</h5>
+                  <ul className="space-y-2">
+                    {unit.topics?.map((topic, tIdx) => (
+                      <li key={tIdx} className="text-xs text-gray-600 flex items-start gap-2.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5 shrink-0 group-hover:bg-brand transition-colors"></span>
+                        <span className="leading-relaxed">{typeof topic === 'string' ? topic : (topic.name || topic.topic || JSON.stringify(topic))}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+
+          </div>
+
+          {/* Textbooks & References */}
+          {(syllabus.textbooks?.length > 0 || syllabus.references?.length > 0 || syllabus.reference_books?.length > 0) && (
+            <div className="space-y-6 pt-4 border-t border-gray-100">
+              {syllabus.textbooks?.length > 0 && (
+                <div>
+                  <h4 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                    <BookOpen size={14} /> Textbooks
+                  </h4>
+                  <ul className="space-y-2">
+                    {syllabus.textbooks.map((book, idx) => (
+                      <li key={idx} className="bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm text-gray-700 leading-relaxed flex gap-2">
+                        <span className="text-gray-400 font-bold text-xs mt-0.5">{idx + 1}.</span>
+                        <span>{book}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {(syllabus.references?.length > 0 || syllabus.reference_books?.length > 0) && (
+                <div>
+                  <h4 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                    <BookOpen size={14} /> References
+                  </h4>
+                  <ul className="space-y-2">
+                    {(syllabus.references || syllabus.reference_books).map((ref, idx) => (
+                      <li key={idx} className="bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm text-gray-700 leading-relaxed flex gap-2">
+                        <span className="text-gray-400 font-bold text-xs mt-0.5">{idx + 1}.</span>
+                        <span>{ref}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default OptimizePage;

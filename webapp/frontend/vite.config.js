@@ -14,5 +14,18 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['three', '@react-three/fiber', '@react-three/drei']
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom'],
+          'charts': ['recharts'],
+          'three': ['three', '@react-three/fiber', '@react-three/drei'],
+          'ui': ['lucide-react', 'react-hot-toast']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 600
   }
 })

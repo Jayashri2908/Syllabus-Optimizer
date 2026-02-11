@@ -9,7 +9,7 @@ openrouter:
 
 # Google Gemini (FALLBACK 1 - FREE)
 gemini:
-  enabled: false  # Disabled - hit rate limit (you can re-enable)
+  enabled: false  # Disabled - hit rate limit
   model: 'gemini-2.0-flash-exp'
   # Set GEMINI_API_KEY environment variable
 

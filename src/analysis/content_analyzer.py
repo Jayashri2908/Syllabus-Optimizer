@@ -55,6 +55,7 @@ class ContentAnalyzer:
             'hours_distribution': self._analyze_hours_distribution(syllabus_data),
             'learning_progression': self._analyze_learning_progression(syllabus_data),
             'topic_coverage': self._analyze_topic_coverage(syllabus_data),
+            'unit_analysis': self._analyze_units(syllabus_data),
         }
     
     def _calculate_quality_score(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -197,49 +198,82 @@ class ContentAnalyzer:
         }
     
     def _analyze_hours_distribution(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze distribution of hours across units"""
+        """Analyze distribution of hours across units with theory/practical breakdown"""
         units = syllabus_data.get('units', [])
+        
+        if not units:
+            return {
+                'distribution': [],
+                'total_hours': 0,
+                'average_hours': 0,
+                'imbalances': [],
+                'is_balanced': True
+            }
         
         hours_data = []
         total_hours = 0
         
         for unit in units:
             hours = unit.get('hours', 0)
+            # Handle both numeric and string hours
+            if isinstance(hours, str):
+                try:
+                    hours = int(hours.split()[0]) if hours else 0
+                except (ValueError, IndexError):
+                    hours = 0
+            
             total_hours += hours
+            topics = unit.get('topics', [])
+            topic_count = len(topics) if topics else 0
+            
             hours_data.append({
                 'unit_number': unit.get('unit_number', '?'),
-                'title': unit.get('title', 'Untitled')[:30],
-                'hours': hours
+                'title': unit.get('title', 'Untitled')[:40],
+                'hours': hours,
+                'topic_count': topic_count,
+                'hours_per_topic': round(hours / topic_count, 1) if topic_count > 0 else 0
             })
         
-        # Calculate percentages and identify imbalances
+        # Calculate percentages (rounded to 1 decimal)
         for item in hours_data:
-            item['percentage'] = (item['hours'] / total_hours * 100) if total_hours > 0 else 0
+            item['percentage'] = round((item['hours'] / total_hours * 100), 1) if total_hours > 0 else 0
         
-        # Find imbalances
+        # Find imbalances based on expected distribution
         avg_hours = total_hours / len(units) if units else 0
+        expected_percentage = 100 / len(units) if units else 0
         imbalances = []
         
         for item in hours_data:
-            if item['hours'] < avg_hours * 0.5:
+            deviation = abs(item['percentage'] - expected_percentage)
+            if item['hours'] == 0:
                 imbalances.append({
                     'unit': item['unit_number'],
-                    'issue': 'too_few_hours',
+                    'issue': 'no_hours',
                     'hours': item['hours'],
-                    'average': avg_hours
+                    'expected': round(avg_hours, 1),
+                    'description': f"Unit {item['unit_number']} has no hours specified"
                 })
-            elif item['hours'] > avg_hours * 1.5:
+            elif deviation > 15:  # More than 15% deviation from expected
+                issue_type = 'too_few_hours' if item['percentage'] < expected_percentage else 'too_many_hours'
                 imbalances.append({
                     'unit': item['unit_number'],
-                    'issue': 'too_many_hours',
+                    'issue': issue_type,
                     'hours': item['hours'],
-                    'average': avg_hours
+                    'percentage': item['percentage'],
+                    'expected_percentage': round(expected_percentage, 1),
+                    'description': f"Unit {item['unit_number']} has {item['percentage']}% (expected ~{round(expected_percentage)}%)"
                 })
+        
+        # Analyze hours-per-topic ratio
+        hours_per_topic_values = [item['hours_per_topic'] for item in hours_data if item['hours_per_topic'] > 0]
+        avg_hours_per_topic = sum(hours_per_topic_values) / len(hours_per_topic_values) if hours_per_topic_values else 0
         
         return {
             'distribution': hours_data,
             'total_hours': total_hours,
-            'average_hours': avg_hours,
+            'average_hours': round(avg_hours, 1),
+            'expected_per_unit': round(expected_percentage, 1),
+            'average_hours_per_topic': round(avg_hours_per_topic, 1),
             'imbalances': imbalances,
             'is_balanced': len(imbalances) == 0
         }
@@ -351,6 +385,87 @@ class ContentAnalyzer:
                 text_parts.append(str(topic))
         
         return ' '.join(text_parts)
+    
+    def _analyze_units(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze each unit's theory content in detail"""
+        units = syllabus_data.get('units', [])
+        
+        if not units:
+            return {'units': [], 'summary': 'No units found'}
+        
+        # Keywords for theory vs practical content
+        theory_keywords = ['introduction', 'concept', 'principle', 'theory', 'definition', 
+                          'overview', 'fundamental', 'basics', 'understanding', 'types',
+                          'classification', 'properties', 'characteristics', 'architecture']
+        practical_keywords = ['implementation', 'program', 'code', 'lab', 'exercise', 
+                             'practical', 'example', 'application', 'project', 'demo',
+                             'experiment', 'hands-on', 'practice']
+        
+        unit_details = []
+        total_theory_topics = 0
+        total_practical_topics = 0
+        
+        for unit in units:
+            topics = unit.get('topics', [])
+            topics_text = [str(t).lower() for t in topics]
+            
+            # Categorize topics
+            theory_topics = []
+            practical_topics = []
+            uncategorized = []
+            
+            for i, topic_text in enumerate(topics_text):
+                original_topic = str(topics[i]) if i < len(topics) else topic_text
+                is_theory = any(kw in topic_text for kw in theory_keywords)
+                is_practical = any(kw in topic_text for kw in practical_keywords)
+                
+                if is_practical:
+                    practical_topics.append(original_topic[:60])
+                elif is_theory:
+                    theory_topics.append(original_topic[:60])
+                else:
+                    # Default to theory if no clear classification
+                    uncategorized.append(original_topic[:60])
+            
+            # Calculate unit hours
+            hours = unit.get('hours', 0)
+            if isinstance(hours, str):
+                try:
+                    hours = int(hours.split()[0]) if hours else 0
+                except (ValueError, IndexError):
+                    hours = 0
+            
+            total_topics = len(topics)
+            theory_count = len(theory_topics) + len(uncategorized)  # Uncategorized assumed theory
+            practical_count = len(practical_topics)
+            
+            total_theory_topics += theory_count
+            total_practical_topics += practical_count
+            
+            unit_details.append({
+                'unit_number': unit.get('unit_number', '?'),
+                'title': unit.get('title', 'Untitled'),
+                'total_topics': total_topics,
+                'theory_topics': theory_count,
+                'practical_topics': practical_count,
+                'hours': hours,
+                'theory_percentage': round((theory_count / total_topics * 100), 1) if total_topics > 0 else 0,
+                'key_concepts': theory_topics[:3],  # Top 3 theory topics
+                'practical_elements': practical_topics[:2]  # Top 2 practical elements
+            })
+        
+        # Summary statistics
+        total_all_topics = total_theory_topics + total_practical_topics
+        theory_ratio = round((total_theory_topics / total_all_topics * 100), 1) if total_all_topics > 0 else 0
+        
+        return {
+            'units': unit_details,
+            'total_theory_topics': total_theory_topics,
+            'total_practical_topics': total_practical_topics,
+            'theory_ratio': theory_ratio,
+            'practical_ratio': round(100 - theory_ratio, 1),
+            'summary': f"{len(units)} units with {theory_ratio}% theory / {round(100 - theory_ratio, 1)}% practical content"
+        }
 
 
 # Create singleton instance

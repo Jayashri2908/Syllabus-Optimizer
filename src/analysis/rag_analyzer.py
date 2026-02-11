@@ -39,11 +39,9 @@ class RAGAwareAnalyzer(MockGapAnalyzer):
 
     def _get_rag_recommendations(self, syllabus_data: Dict[str, Any]) -> List[str]:
         recommendations = []
+        course_title = syllabus_data.get('course_title', 'this course')
         
-        # Query 1: Check for Program Outcomes specific to the domain
-        # context = self.rag.get_context("What are the mandatory Program Outcomes for Engineering in NBA?")
-        
-        # Query 2: Check assessment guidelines
+        # Query 1: Assessment guidelines
         try:
             results = self.rag.query("What is the recommended weightage for continuous assessment?")
             if results['documents'][0]:
@@ -51,16 +49,36 @@ class RAGAwareAnalyzer(MockGapAnalyzer):
                 source = results['metadatas'][0][0]['source']
                 recommendations.append(f"Consider guideline from {source}: '{doc_snippet}' regarding assessment.")
         except Exception as e:
-            self.logger.error(f"RAG Query failed: {e}")
+            self.logger.error(f"RAG Query (assessment) failed: {e}")
 
-        # Query 3: Check curriculum gaps based on course title
-        course_title = syllabus_data.get('course_title', 'this course')
+        # Query 2: NBA PO requirements  
         try:
-            # Ask what is essential for this course
-            # Note: This works best if the indexed docs actually contain subject specific info. 
-            # If we only have manuals, it might not find much. 
-            pass 
-        except Exception:
-            pass
+            results = self.rag.query("What are the mandatory Program Outcomes for Engineering in NBA?")
+            if results['documents'] and results['documents'][0]:
+                doc_snippet = results['documents'][0][0][:120] + "..."
+                source = results['metadatas'][0][0].get('source', 'NBA Manual')
+                recommendations.append(f"From {source}: Ensure all 12 Program Outcomes are mapped - '{doc_snippet}'")
+        except Exception as e:
+            self.logger.error(f"RAG Query (NBA PO) failed: {e}")
+
+        # Query 3: Higher-order thinking recommendations
+        try:
+            results = self.rag.query("How to assess higher order thinking skills in engineering education?")
+            if results['documents'] and results['documents'][0]:
+                doc_snippet = results['documents'][0][0][:120] + "..."
+                recommendations.append(f"For higher-order outcomes: '{doc_snippet}'")
+        except Exception as e:
+            self.logger.error(f"RAG Query (HOT skills) failed: {e}")
+
+        # Query 4: Course-specific if title available
+        if course_title and course_title != 'this course':
+            try:
+                results = self.rag.query(f"What topics should be included in {course_title}?")
+                if results['documents'] and results['documents'][0]:
+                    doc_snippet = results['documents'][0][0][:120] + "..."
+                    recommendations.append(f"For {course_title}: Consider including '{doc_snippet}'")
+            except Exception:
+                pass  # Course-specific queries may not always find results
 
         return recommendations
+

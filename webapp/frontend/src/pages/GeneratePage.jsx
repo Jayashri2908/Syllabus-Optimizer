@@ -417,7 +417,7 @@ function GeneratePage() {
                                                 <div key={i} className="flex gap-3 items-center">
                                                     <span className="shrink-0 w-8 h-8 rounded bg-primary text-white flex items-center justify-center font-bold text-xs">U{i + 1}</span>
                                                     <input
-                                                        className="flex-1 text-sm"
+                                                        className="flex-1 text-sm form-input"
                                                         type="text"
                                                         placeholder={`Specific topics for Unit ${i + 1}...`}
                                                         value={formData.unit_topics[i]?.topics?.join(', ') || ''}
@@ -509,104 +509,122 @@ function GeneratePage() {
                         )}
 
                         {generatedSyllabus && (
-                            <div className="card p-0 overflow-hidden animate-fade-in shadow-xl border-indigo-100">
-                                <div className="bg-gradient-to-r from-primary to-primary-light p-4 text-white flex justify-between items-center">
-                                    <h2 className="font-bold text-lg">Syllabus Preview</h2>
-                                    <div className="flex gap-2">
-                                        <button onClick={handleExportPDF} className="p-2 bg-white/20 hover:bg-white/30 rounded text-white transition-colors" title="Export PDF">
-                                            <Download size={18} />
-                                        </button>
-                                        <button onClick={handleExportWord} className="p-2 bg-white/20 hover:bg-white/30 rounded text-white transition-colors" title="Export Word">
-                                            <FileEdit size={18} />
-                                        </button>
-                                    </div>
+                            <>
+                                <div className="flex justify-end gap-3 mb-4 animate-fade-in">
+                                    <button
+                                        onClick={handleExportPDF}
+                                        className="btn bg-white border border-gray-200 text-gray-700 shadow-sm hover:shadow-md hover:border-red-200 hover:text-red-600 transition-all text-sm flex items-center gap-2 rounded-lg px-4 py-2.5"
+                                    >
+                                        <Download size={16} />
+                                        Export PDF
+                                    </button>
+                                    <button
+                                        onClick={handleExportWord}
+                                        className="btn bg-white border border-gray-200 text-gray-700 shadow-sm hover:shadow-md hover:border-blue-200 hover:text-blue-600 transition-all text-sm flex items-center gap-2 rounded-lg px-4 py-2.5"
+                                    >
+                                        <FileText size={16} />
+                                        Export Word
+                                    </button>
                                 </div>
-
-                                <div className="p-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
-                                    {/* Header Info */}
-                                    <div className="mb-6 pb-6 border-b border-gray-100">
-                                        <h3 className="text-xl font-bold text-primary mb-2 line-clamp-2">{generatedSyllabus.course_title}</h3>
-                                        <div className="flex flex-wrap gap-2 text-xs font-semibold text-subtle uppercase tracking-wider">
-                                            <span className="bg-slate-100 px-2 py-1 rounded">{generatedSyllabus.course_code}</span>
-                                            <span className="bg-slate-100 px-2 py-1 rounded">{generatedSyllabus.credits} Credits</span>
-                                            <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded">{generatedSyllabus.course_level}</span>
+                                <div className="card p-0 overflow-hidden animate-fade-in shadow-xl border-indigo-100">
+                                    <div className="bg-gradient-to-r from-primary to-primary-light p-4 text-white flex justify-between items-center">
+                                        <h2 className="font-bold text-lg">Syllabus Preview</h2>
+                                        <div className="flex gap-2">
+                                            <button onClick={handleExportPDF} className="p-2 bg-white/20 hover:bg-white/30 rounded text-white transition-colors" title="Export PDF">
+                                                <Download size={18} />
+                                            </button>
+                                            <button onClick={handleExportWord} className="p-2 bg-white/20 hover:bg-white/30 rounded text-white transition-colors" title="Export Word">
+                                                <FileEdit size={18} />
+                                            </button>
                                         </div>
                                     </div>
 
-                                    {/* Description */}
-                                    {generatedSyllabus.overview && (
-                                        <div className="mb-6">
-                                            <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Course Description</h4>
-                                            <p className="text-sm text-gray-600 leading-relaxed">{generatedSyllabus.overview}</p>
-                                        </div>
-                                    )}
-
-                                    {/* Outcomes */}
-                                    {generatedSyllabus.learning_outcomes && (
-                                        <div className="mb-6">
-                                            <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Course Outcomes</h4>
-                                            <div className="space-y-2">
-                                                {generatedSyllabus.learning_outcomes.map((co, idx) => (
-                                                    <div key={idx} className="text-sm border-l-2 border-indigo-200 pl-3 py-1">
-                                                        <span className="font-bold text-indigo-700 mr-2">{co.code}:</span>
-                                                        <span className="text-gray-700">{co.description}</span>
-                                                        <span className="ml-2 text-xs bg-gray-100 px-1 rounded text-gray-500">({co.bloom_level})</span>
-                                                    </div>
-                                                ))}
+                                    <div className="p-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                                        {/* Header Info */}
+                                        <div className="mb-6 pb-6 border-b border-gray-100">
+                                            <h3 className="text-xl font-bold text-primary mb-2 line-clamp-2">{generatedSyllabus.course_title}</h3>
+                                            <div className="flex flex-wrap gap-2 text-xs font-semibold text-subtle uppercase tracking-wider">
+                                                <span className="bg-slate-100 px-2 py-1 rounded">{generatedSyllabus.course_code}</span>
+                                                <span className="bg-slate-100 px-2 py-1 rounded">{generatedSyllabus.credits} Credits</span>
+                                                <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded">{generatedSyllabus.course_level}</span>
                                             </div>
                                         </div>
-                                    )}
 
-                                    {/* Units Content */}
-                                    {generatedSyllabus.units && (
-                                        <div className="mb-6">
-                                            <h4 className="text-sm font-bold text-gray-900 uppercase mb-3">Course Content</h4>
-                                            <div className="space-y-4">
-                                                {generatedSyllabus.units.map((unit, idx) => {
-                                                    // Helper to parse topic strings if needed (same logic as before)
-                                                    let topicsArray = unit.topics || [];
-                                                    if (typeof topicsArray === 'string') {
-                                                        try {
-                                                            topicsArray = JSON.parse(topicsArray.replace(/'/g, '"'));
-                                                        } catch (e) {
-                                                            topicsArray = [{ topic: topicsArray }];
-                                                        }
-                                                    }
+                                        {/* Description */}
+                                        {generatedSyllabus.overview && (
+                                            <div className="mb-6">
+                                                <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Course Description</h4>
+                                                <p className="text-sm text-gray-600 leading-relaxed">{generatedSyllabus.overview}</p>
+                                            </div>
+                                        )}
 
-                                                    return (
-                                                        <div key={idx} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-                                                            <div className="flex justify-between items-start mb-2">
-                                                                <h5 className="font-bold text-sm text-primary">Unit {unit.unit_number}: {unit.title}</h5>
-                                                                <span className="text-xs bg-white px-2 py-0.5 rounded border border-gray-200 whitespace-nowrap">{unit.hours} Hrs</span>
-                                                            </div>
-                                                            <ul className="list-disc list-inside text-xs text-gray-600 space-y-1 ml-1">
-                                                                {Array.isArray(topicsArray) && topicsArray.slice(0, 4).map((t, i) => (
-                                                                    <li key={i} className="line-clamp-1">{typeof t === 'string' ? t : (t.topic || 'Topic')}</li>
-                                                                ))}
-                                                                {Array.isArray(topicsArray) && topicsArray.length > 4 && (
-                                                                    <li className="italic text-gray-400">and {topicsArray.length - 4} more...</li>
-                                                                )}
-                                                            </ul>
+                                        {/* Outcomes */}
+                                        {generatedSyllabus.learning_outcomes && (
+                                            <div className="mb-6">
+                                                <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Course Outcomes</h4>
+                                                <div className="space-y-2">
+                                                    {generatedSyllabus.learning_outcomes.map((co, idx) => (
+                                                        <div key={idx} className="text-sm border-l-2 border-indigo-200 pl-3 py-1">
+                                                            <span className="font-bold text-indigo-700 mr-2">{co.code}:</span>
+                                                            <span className="text-gray-700">{co.description}</span>
+                                                            <span className="ml-2 text-xs bg-gray-100 px-1 rounded text-gray-500">({co.bloom_level})</span>
                                                         </div>
-                                                    );
-                                                })}
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* References */}
-                                    {generatedSyllabus.references?.textbooks && (
-                                        <div className="mb-6">
-                                            <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Textbooks</h4>
-                                            <ul className="text-xs text-gray-600 list-decimal list-inside space-y-1">
-                                                {generatedSyllabus.references.textbooks.slice(0, 3).map((book, i) => (
-                                                    <li key={i}>{book}</li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
+                                        {/* Units Content */}
+                                        {generatedSyllabus.units && (
+                                            <div className="mb-6">
+                                                <h4 className="text-sm font-bold text-gray-900 uppercase mb-3">Course Content</h4>
+                                                <div className="space-y-4">
+                                                    {generatedSyllabus.units.map((unit, idx) => {
+                                                        // Helper to parse topic strings if needed (same logic as before)
+                                                        let topicsArray = unit.topics || [];
+                                                        if (typeof topicsArray === 'string') {
+                                                            try {
+                                                                topicsArray = JSON.parse(topicsArray.replace(/'/g, '"'));
+                                                            } catch (e) {
+                                                                topicsArray = [{ topic: topicsArray }];
+                                                            }
+                                                        }
+
+                                                        return (
+                                                            <div key={idx} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                                                                <div className="flex justify-between items-start mb-2">
+                                                                    <h5 className="font-bold text-sm text-primary">Unit {unit.unit_number}: {unit.title}</h5>
+                                                                    <span className="text-xs bg-white px-2 py-0.5 rounded border border-gray-200 whitespace-nowrap">{unit.hours} Hrs</span>
+                                                                </div>
+                                                                <ul className="list-disc list-inside text-xs text-gray-600 space-y-1 ml-1">
+                                                                    {Array.isArray(topicsArray) && topicsArray.slice(0, 4).map((t, i) => (
+                                                                        <li key={i} className="line-clamp-1">{typeof t === 'string' ? t : (t.topic || 'Topic')}</li>
+                                                                    ))}
+                                                                    {Array.isArray(topicsArray) && topicsArray.length > 4 && (
+                                                                        <li className="italic text-gray-400">and {topicsArray.length - 4} more...</li>
+                                                                    )}
+                                                                </ul>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* References */}
+                                        {generatedSyllabus.references?.textbooks && (
+                                            <div className="mb-6">
+                                                <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Textbooks</h4>
+                                                <ul className="text-xs text-gray-600 list-decimal list-inside space-y-1">
+                                                    {generatedSyllabus.references.textbooks.slice(0, 3).map((book, i) => (
+                                                        <li key={i}>{book}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            </>
                         )}
                     </div>
                 </div>

@@ -115,7 +115,7 @@ class GraniteClient:
             self.logger.info("Using WML instance CRN instead of project ID")
         
         return GraniteConfig(
-            model=granite_config.get('model', 'ibm/granite-3-8b-instruct'),
+            model=granite_config.get('model', 'ibm/granite-4-h-small'),
             max_tokens=granite_config.get('max_tokens', 4096),
             temperature=granite_config.get('temperature', 0.7),
             top_p=granite_config.get('top_p', 1.0),

@@ -1,0 +1,5 @@
+DIFFERENTIAL CALCULUS, PARTIAL DERIVATIVES, ORDINARY DIFFERENTIAL EQUATIONS, MULTIPLE INTEGRATION, FOURIER SERIES AND HARMONIC ANALYSIS
+
+AI- Introduction to AI & Intelligent Agents, Search Strategies & Optimization, Knowledge Representation & Expert Systems, Natural Language Processing (NLP), Generative AI & Ethical Considerations
+
+ML- Introduction, Classification Methods, Clustering Methods, Neural network and Genetic Algorithms, Convolutional Neural Network
