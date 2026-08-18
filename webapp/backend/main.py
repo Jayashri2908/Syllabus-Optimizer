@@ -3,7 +3,7 @@ FastAPI Backend for SCDO
 Main API server for syllabus optimization
 """
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -13,9 +13,13 @@ from pathlib import Path
 import tempfile
 import os
 import re
+import secrets
 
 # Maximum upload file size in bytes (default: 50 MB)
 MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", 50 * 1024 * 1024))
+
+# API key for endpoint protection (set API_KEY env var to enable, leave empty to disable)
+API_KEY = os.getenv("API_KEY", "")
 
 # Force HF to use local files only and skip version checks
 os.environ['HF_HUB_OFFLINE'] = '1'
