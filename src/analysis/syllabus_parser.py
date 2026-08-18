@@ -9,12 +9,12 @@ from pathlib import Path
 import logging
 
 try:
-    import PyPDF2
+    import pypdf
     import pdfplumber
 except ImportError:
-    PyPDF2 = None
+    pypdf = None
     pdfplumber = None
-    logging.warning("PDF libraries not installed. Install with: pip install PyPDF2 pdfplumber")
+    logging.warning("PDF libraries not installed. Install with: pip install pypdf pdfplumber")
 
 try:
     from docx import Document
@@ -109,8 +109,8 @@ class SyllabusParser:
         """Extract text from PDF"""
         text = ""
         
-        if pdfplumber is None and PyPDF2 is None:
-            raise ImportError("PDF libraries not installed. Please install PyPDF2 and pdfplumber.")
+        if pdfplumber is None and pypdf is None:
+            raise ImportError("PDF libraries not installed. Please install pypdf and pdfplumber.")
         
         self.logger.info(f"Parsing PDF: {file_path}")
         
@@ -131,26 +131,26 @@ class SyllabusParser:
                 raise ImportError("pdfplumber not installed")
                 
         except Exception as e:
-            self.logger.warning(f"pdfplumber failed or missing, trying PyPDF2: {e}")
+            self.logger.warning(f"pdfplumber failed or missing, trying pypdf: {e}")
             
-            # Fallback to PyPDF2
-            if PyPDF2:
+            # Fallback to pypdf
+            if pypdf:
                 try:
                     with open(file_path, 'rb') as f:
-                        pdf_reader = PyPDF2.PdfReader(f)
-                        self.logger.info(f"PyPDF2: PDF has {len(pdf_reader.pages)} pages")
+                        pdf_reader = pypdf.PdfReader(f)
+                        self.logger.info(f"pypdf: PDF has {len(pdf_reader.pages)} pages")
                         for i, page in enumerate(pdf_reader.pages):
                             page_text = page.extract_text()
                             if page_text:
                                 text += page_text + "\n"
                                 self.logger.debug(f"Page {i+1}: extracted {len(page_text)} chars")
-                    self.logger.info(f"PyPDF2 extracted total {len(text)} chars")
+                    self.logger.info(f"pypdf extracted total {len(text)} chars")
                 except Exception as e2:
                     self.logger.error(f"PDF parsing failed: {e2}")
                     raise
             else:
                 if not text: # Only raise if we haven't extracted anything yet and both failed/missing
-                     raise ImportError("PyPDF2 not installed and pdfplumber failed") from e
+                     raise ImportError("pypdf not installed and pdfplumber failed") from e
         
         # If no text extracted or very minimal text (likely garbage from scanned PDF), try OCR
         # Using 50 chars as threshold since scanned PDFs often extract some whitespace/garbage
