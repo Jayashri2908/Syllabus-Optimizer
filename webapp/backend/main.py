@@ -86,6 +86,21 @@ logger.info("  SCDO BACKEND SERVER - AI-POWERED ONLY  ")
 logger.info("  IBM Granite Integration Required  ")
 logger.info("="*50)
 
+# Optional API key authentication
+# Set API_KEY env var to enable; leave empty to allow all requests (dev mode)
+async def verify_api_key(request: Request):
+    """Verify API key from X-API-Key header or api_key query param.
+    Skips auth if API_KEY env var is not set (development mode)."""
+    if not API_KEY:
+        return  # Auth disabled in dev mode
+    
+    key = request.headers.get("X-API-Key") or request.query_params.get("api_key")
+    if key != API_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key. Set X-API-Key header or api_key query param."
+        )
+
 # Initialize components
 parser = None
 gap_analyzer = None
@@ -208,7 +223,7 @@ async def health_check():
 
 
 @app.post("/api/upload")
-async def upload_syllabus(file: UploadFile = File(...)):
+async def upload_syllabus(file: UploadFile = File(...), auth=Depends(verify_api_key)):
     """
     Upload and parse syllabus file
     
@@ -272,7 +287,7 @@ async def upload_syllabus(file: UploadFile = File(...)):
 
 
 @app.post("/api/analyze")
-async def analyze_syllabus(syllabus_data: Dict[str, Any]):
+async def analyze_syllabus(syllabus_data: Dict[str, Any], auth=Depends(verify_api_key)):
     """
     Analyze syllabus for gaps and issues
     
@@ -297,7 +312,7 @@ async def analyze_syllabus(syllabus_data: Dict[str, Any]):
 
 
 @app.post("/api/optimize")
-async def optimize_syllabus(request: OptimizeRequest):
+async def optimize_syllabus(request: OptimizeRequest, auth=Depends(verify_api_key)):
     """
     Perform a complete optimization of the syllabus using a unified pipeline.
     Returns: Both original and optimized syllabus for side-by-side comparison.
@@ -395,7 +410,7 @@ async def optimize_syllabus(request: OptimizeRequest):
 
 
 @app.post("/api/generate")
-async def generate_syllabus(request: GenerateRequest):
+async def generate_syllabus(request: GenerateRequest, auth=Depends(verify_api_key)):
     """
     Generate new syllabus from minimal inputs using AI
     
@@ -456,7 +471,7 @@ async def generate_syllabus(request: GenerateRequest):
 
 
 @app.post("/api/map-outcomes")
-async def map_outcomes(request: MapRequest):
+async def map_outcomes(request: MapRequest, auth=Depends(verify_api_key)):
     """
     Perform CO-PO mapping
     
@@ -489,7 +504,7 @@ async def map_outcomes(request: MapRequest):
 
 
 @app.post("/api/export/pdf")
-async def export_pdf(request: OptimizeRequest):
+async def export_pdf(request: OptimizeRequest, auth=Depends(verify_api_key)):
     """
     Export syllabus and analysis to PDF
     
@@ -552,7 +567,7 @@ async def export_pdf(request: OptimizeRequest):
 
 
 @app.post("/api/export/latex-pdf")
-async def export_latex_pdf(request: OptimizeRequest):
+async def export_latex_pdf(request: OptimizeRequest, auth=Depends(verify_api_key)):
     """
     Export syllabus to PDF using LaTeX
     
@@ -612,7 +627,7 @@ async def export_latex_pdf(request: OptimizeRequest):
 
 
 @app.post("/api/extract-outcomes")
-async def extract_outcomes(text: str):
+async def extract_outcomes(text: str, auth=Depends(verify_api_key)):
     """
     Extract learning outcomes from text
     
@@ -632,7 +647,7 @@ async def extract_outcomes(text: str):
 
 
 @app.post("/api/validate-outcome")
-async def validate_outcome(outcome: str):
+async def validate_outcome(outcome: str, auth=Depends(verify_api_key)):
     """
     Validate a learning outcome
     
@@ -652,7 +667,7 @@ async def validate_outcome(outcome: str):
 
 
 @app.post("/api/export/excel")
-async def export_excel(request: OptimizeRequest):
+async def export_excel(request: OptimizeRequest, auth=Depends(verify_api_key)):
     """Export syllabus to Excel"""
     try:
         syllabus_data = request.syllabus_data
@@ -694,7 +709,7 @@ async def export_excel(request: OptimizeRequest):
 
 
 @app.post("/api/export/word")
-async def export_word(request: OptimizeRequest):
+async def export_word(request: OptimizeRequest, auth=Depends(verify_api_key)):
     """Export syllabus to Word document with academic formatting"""
     if not DOCX_AVAILABLE:
         raise HTTPException(
