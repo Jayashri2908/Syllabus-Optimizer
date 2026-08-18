@@ -7,19 +7,26 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(name)s:%(message
 
 from src.analysis.syllabus_parser import SyllabusParser
 
-parser = SyllabusParser()
 
-print("="*60)
-print("Parsing ML.pdf with OCR @ 300 DPI + LLM fallback...")
-print("="*60)
+def test_ml_pdf_parsing():
+    """Test parsing of ML.pdf with OCR @ 300 DPI + LLM fallback"""
+    parser = SyllabusParser()
 
-result = parser.parse_file('ML.pdf')
+    print("="*60)
+    print("Parsing ML.pdf with OCR @ 300 DPI + LLM fallback...")
+    print("="*60)
 
-print(f"\nCourse Title: {result.get('course_title', 'N/A')}")
-print(f"Course Code: {result.get('course_code', 'N/A')}")
-print(f"Learning Outcomes: {len(result.get('learning_outcomes', []))}")
-print(f"Units: {len(result.get('units', []))}")
+    result = parser.parse_file('docs/ML.pdf')
 
-print("\n--- Units ---")
-for unit in result.get('units', []):
-    print(f"  Unit {unit.get('unit_number')}: {unit.get('title')} ({unit.get('hours', 0)} hours)")
+    print(f"\nCourse Title: {result.get('course_title', 'N/A')}")
+    print(f"Course Code: {result.get('course_code', 'N/A')}")
+    print(f"Learning Outcomes: {len(result.get('learning_outcomes', []))}")
+    print(f"Units: {len(result.get('units', []))}")
+
+    print("\n--- Units ---")
+    for unit in result.get('units', []):
+        print(f"  Unit {unit.get('unit_number')}: {unit.get('title')} ({unit.get('hours', 0)} hours)")
+
+
+if __name__ == "__main__":
+    test_ml_pdf_parsing()
