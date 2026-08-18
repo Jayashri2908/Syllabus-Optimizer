@@ -11,11 +11,12 @@ This document provides a **complete** reference of all project files with their 
 | [README.md](file:///d:/Syllabus%20Optimizer/README.md) | Project overview and setup instructions |
 | [CONTRIBUTING.md](file:///d:/Syllabus%20Optimizer/CONTRIBUTING.md) | Contribution guidelines |
 | [requirements.txt](file:///d:/Syllabus%20Optimizer/requirements.txt) | Python dependencies |
-| [Research_Paper.md](file:///d:/Syllabus%20Optimizer/Research_Paper.md) | Research paper draft |
-| [Project_Report_Detailed.md](file:///d:/Syllabus%20Optimizer/Project_Report_Detailed.md) | Detailed project report |
-| [PPT_Presentation_Content.md](file:///d:/Syllabus%20Optimizer/PPT_Presentation_Content.md) | Presentation slides content |
 | [get_openrouter_list.py](file:///d:/Syllabus%20Optimizer/get_openrouter_list.py) | Script to fetch available OpenRouter models |
 | [free_models.json](file:///d:/Syllabus%20Optimizer/free_models.json) | Cached list of free AI models |
+| [test_ml.py](file:///d:/Syllabus%20Optimizer/test_ml.py) | Test script for ML.pdf parsing |
+| [test_validators.py](file:///d:/Syllabus%20Optimizer/test_validators.py) | Test script for NEP/accreditation validators |
+| [test_openrouter_free.py](file:///d:/Syllabus%20Optimizer/test_openrouter_free.py) | Test script for free OpenRouter models |
+| [start_app.bat](file:///d:/Syllabus%20Optimizer/start_app.bat) | Windows startup script for backend + frontend |
 
 ---
 
@@ -127,8 +128,7 @@ This document provides a **complete** reference of all project files with their 
 
 | File | Description | Key Endpoints |
 |------|-------------|---------------|
-| [main.py](file:///d:/Syllabus%20Optimizer/webapp/backend/main.py) | Main FastAPI application | `/api/upload`, `/api/analyze`, `/api/optimize`, `/api/generate`, `/api/mapping` |
-| [export_endpoints.py](file:///d:/Syllabus%20Optimizer/webapp/backend/export_endpoints.py) | Export API endpoints | `/api/export/pdf`, `/api/export/excel`, `/api/export/mapping` |
+| [main.py](file:///d:/Syllabus%20Optimizer/webapp/backend/main.py) | Main FastAPI application with all endpoints | `/api/upload`, `/api/analyze`, `/api/optimize`, `/api/generate`, `/api/map-outcomes`, `/api/export/*` |
 
 ---
 
