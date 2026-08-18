@@ -40,22 +40,25 @@ class LocalStorage:
             directory.mkdir(parents=True, exist_ok=True)
             self.logger.info(f"Storage directory ready: {directory}")
 
-    async def save_upload(self, upload_file) -> str:
+    async def save_upload(self, upload_file, content: bytes = None, filename: str = None) -> str:
         """
         Save FastAPI UploadFile to local storage
         
         Args:
             upload_file: FastAPI UploadFile object
+            content: Pre-read file content (skips reading from upload_file if provided)
+            filename: Override filename (use sanitized name to prevent path traversal)
             
         Returns:
             Path to saved file
         """
         try:
-            filename = upload_file.filename
-            dest_path = self.upload_dir / filename
+            safe_filename = filename if filename else upload_file.filename
+            dest_path = self.upload_dir / safe_filename
             
-            # Read content
-            content = await upload_file.read()
+            # Use pre-read content or read from upload_file
+            if content is None:
+                content = await upload_file.read()
             
             # Write to file
             with open(dest_path, "wb") as f:

@@ -12,6 +12,10 @@ import logging
 from pathlib import Path
 import tempfile
 import os
+import re
+
+# Maximum upload file size in bytes (default: 50 MB)
+MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", 50 * 1024 * 1024))
 
 # Force HF to use local files only and skip version checks
 os.environ['HF_HUB_OFFLINE'] = '1'
@@ -218,15 +222,25 @@ async def upload_syllabus(file: UploadFile = File(...)):
                 detail=f"Unsupported file type. Allowed: {', '.join(allowed_extensions)}"
             )
         
+        # Sanitize filename to prevent path traversal
+        safe_filename = re.sub(r'[^\w\s\-.]', '_', Path(file.filename).stem) + file_ext
+        
+        # Read and validate file size
+        content = await file.read()
+        if len(content) > MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size: {MAX_UPLOAD_SIZE // (1024*1024)} MB"
+            )
+        
         # Save uploaded file temporarily
         if not local_storage:
              # Fallback to temp file if local_storage failed init (though it shouldn't)
              with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
-                content = await file.read()
                 tmp_file.write(content)
                 tmp_path = tmp_file.name
         else:
-             tmp_path = await local_storage.save_upload(file)
+             tmp_path = await local_storage.save_upload(file, content=content, filename=safe_filename)
         
         try:
             # Parse syllabus
