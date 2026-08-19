@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart2, FileText, Zap, ArrowRight, CheckCircle, Shield } from 'lucide-react';
 import { InfoTooltip } from '../components/Tooltip';
 
-import ThreeBackground from '../components/ThreeBackground';
-import SCDOLogo from '../components/SCDOLogo';
+const ThreeBackground = lazy(() => import('../components/ThreeBackground'));
+const SCDOLogo = lazy(() => import('../components/SCDOLogo'));
 
 const FeatureCard = ({ icon: Icon, title, description, link, tooltip, className = "" }) => (
   <Link to={link || '#'} className={`card glass-panel group hover:no-underline relative overflow-hidden ${className}`}>
@@ -37,7 +37,9 @@ const HomePage = () => {
 
       {/* Professional Hero / Dashboard Header */}
       <div className="hero-section relative overflow-hidden min-h-[55vh] flex items-center justify-center">
-        <ThreeBackground />
+        <Suspense fallback={null}>
+          <ThreeBackground />
+        </Suspense>
 
         <div className="hero-content relative z-10 max-w-3xl text-center px-6">
 

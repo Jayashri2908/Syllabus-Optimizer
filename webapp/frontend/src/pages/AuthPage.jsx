@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import ThreeBackground from '../components/ThreeBackground';
+const ThreeBackground = lazy(() => import('../components/ThreeBackground'));
 import { useAuth } from '../context/AuthContext';
 import { ArrowRight, User, Lock, Mail, AlertCircle, CheckCircle } from 'lucide-react';
 
@@ -67,7 +67,9 @@ const AuthPage = () => {
 
             {/* 3D Visual Layer */}
             <div className="absolute inset-0 z-0 opacity-40 pointer-events-none scale-110">
-                <ThreeBackground />
+                <Suspense fallback={null}>
+                    <ThreeBackground />
+                </Suspense>
             </div>
 
             <div className="relative z-10 w-full h-full flex flex-col md:flex-row shadow-2xl">
