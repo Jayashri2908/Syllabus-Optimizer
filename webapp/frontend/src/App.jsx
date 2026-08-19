@@ -32,22 +32,22 @@ const AppContent = () => {
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#ffffff',
-            color: '#0f172a',
-            border: '1px solid #e2e8f0',
+            background: '#faf7f2',
+            color: '#2a1f14',
+            border: '1px solid #d4c8b8',
             borderRadius: '6px',
             fontFamily: 'Inter, sans-serif',
             boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
           },
           success: {
             iconTheme: {
-              primary: '#15803d',
+              primary: '#2e7d32',
               secondary: 'white',
             },
           },
           error: {
             iconTheme: {
-              primary: '#b91c1c',
+              primary: '#c62828',
               secondary: 'white',
             },
           },
@@ -89,8 +89,8 @@ const AppContent = () => {
 
       <style>{`
         .footer {
-          background: white;
-          border-top: 1px solid var(--border);
+          background: #faf7f2;
+          border-top: 1px solid #d4c8b8;
           padding: 2rem 0;
           margin-top: auto;
         }
