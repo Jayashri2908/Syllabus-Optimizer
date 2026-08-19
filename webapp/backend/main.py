@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
+from contextlib import asynccontextmanager
 import logging
 from pathlib import Path
 import tempfile
@@ -65,11 +66,77 @@ from src.utils.logging_utils import setup_logger
 # Setup logging
 logger = setup_logger("scdo_api", log_file="logs/api.log")
 
-# Initialize FastAPI app
+# Module-level component references (populated during lifespan startup)
+parser = None
+gap_analyzer = None
+outcome_extractor = None
+bloom_mapper = None
+content_optimizer = None
+syllabus_generator = None
+co_po_mapper = None
+pdf_exporter = None
+local_storage = None
+objectives_optimizer = None
+reference_suggester = None
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Startup/shutdown lifecycle: initialize heavy components on startup instead of at import time."""
+    global parser, gap_analyzer, outcome_extractor, bloom_mapper, content_optimizer
+    global syllabus_generator, co_po_mapper, pdf_exporter, local_storage
+    global objectives_optimizer, reference_suggester
+
+    # --- Critical components (local, no network) ---
+    try:
+        parser = SyllabusParser()
+        outcome_extractor = OutcomeExtractor()
+        co_po_mapper = COPOMapper()
+        pdf_exporter = PDFExporter()
+        local_storage = LocalStorage()
+        logger.info("Critical components initialized successfully")
+    except Exception as e:
+        logger.error(f"Critical component initialization failed: {e}")
+
+    # --- AI components (may require network / API keys) ---
+    bloom_mapper_initialized = False
+    content_optimizer_initialized = False
+    try:
+        syllabus_generator = SyllabusGenerator()
+        gap_analyzer = GapAnalyzer()
+        bloom_mapper = BloomMapper()
+        content_optimizer = ContentOptimizer()
+        objectives_optimizer = ObjectivesOptimizer()
+        reference_suggester = ReferenceSuggester()
+        bloom_mapper_initialized = True
+        content_optimizer_initialized = True
+        logger.info("[OK] AI components initialized successfully (AI models active)")
+    except Exception as e:
+        logger.error(f"[ERROR] AI component initialization failed: {e}")
+        logger.error("[WARNING] IBM Granite credentials required! Run: python setup_credentials.py")
+
+        try:
+            gap_analyzer = RAGAwareAnalyzer()
+            logger.info("Initialized RAGAwareAnalyzer for analysis")
+        except Exception as rag_err:
+            logger.warning(f"RAG init failed: {rag_err}, using basic mock")
+            gap_analyzer = MockGapAnalyzer()
+
+    if not bloom_mapper_initialized:
+        bloom_mapper = MockBloomMapper()
+    if not content_optimizer_initialized:
+        content_optimizer = MockContentOptimizer()
+
+    yield  # App is running
+
+    # --- Shutdown ---
+    logger.info("Shutdown complete")
+
+# Initialize FastAPI app with lifespan
 app = FastAPI(
     title="Syllabus and Curriculum Design Optimizer API",
     description="AI-powered syllabus analysis, optimization, and generation",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Cors middleware
@@ -100,63 +167,6 @@ async def verify_api_key(request: Request):
             status_code=401,
             detail="Invalid or missing API key. Set X-API-Key header or api_key query param."
         )
-
-# Initialize components
-parser = None
-gap_analyzer = None
-outcome_extractor = None
-bloom_mapper = None
-content_optimizer = None
-syllabus_generator = None
-co_po_mapper = None
-pdf_exporter = None
-local_storage = None
-objectives_optimizer = None # NEW
-reference_suggester = None # NEW
-
-# Initialize critical components (Local)
-try:
-    parser = SyllabusParser()
-    outcome_extractor = OutcomeExtractor()
-    co_po_mapper = COPOMapper()
-    pdf_exporter = PDFExporter()
-    local_storage = LocalStorage()  # FREE local storage instead of cloud
-    logger.info("Critical components initialized successfully")
-except Exception as e:
-    logger.error(f"Critical component initialization failed: {e}")
-    # We continue, but API will likely fail on specific endpoints
-
-# Initialize AI components (IBM Cloud) - AI-ONLY MODE
-bloom_mapper_initialized = False
-content_optimizer_initialized = False
-try:
-    syllabus_generator = SyllabusGenerator()
-    gap_analyzer = GapAnalyzer()
-    bloom_mapper = BloomMapper()  # Initialize real BloomMapper
-    content_optimizer = ContentOptimizer()  # Initialize real ContentOptimizer
-    objectives_optimizer = ObjectivesOptimizer()  # Initialize
-    reference_suggester = ReferenceSuggester()  # Initialize
-    bloom_mapper_initialized = True
-    content_optimizer_initialized = True
-    logger.info("[OK] AI components initialized successfully (AI models active)")
-except Exception as e:
-    logger.error(f"[ERROR] AI component initialization failed: {e}")
-    logger.error("[WARNING] IBM Granite credentials required! Run: python setup_credentials.py")
-    logger.warning("Generation endpoint will return error until credentials are configured.")
-    
-    # Try to initialize RAG analyzer as fallback for analysis
-    try:
-        gap_analyzer = RAGAwareAnalyzer()
-        logger.info("Initialized RAGAwareAnalyzer for analysis")
-    except Exception as rag_err:
-        logger.warning(f"RAG init failed: {rag_err}, using basic mock")
-        gap_analyzer = MockGapAnalyzer()
-
-# Ensure bloom_mapper and content_optimizer are always initialized
-if not bloom_mapper_initialized:
-    bloom_mapper = MockBloomMapper()
-if not content_optimizer_initialized:
-    content_optimizer = MockContentOptimizer()
 
 
 
