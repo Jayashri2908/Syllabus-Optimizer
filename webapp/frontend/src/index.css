@@ -98,6 +98,8 @@
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-body);
+  background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--border) 40%, transparent) 1px, transparent 0);
+  background-size: 40px 40px;
   color: var(--text-primary);
   line-height: 1.5;
 }
@@ -217,15 +219,15 @@ a {
 }
 
 .btn-primary {
-  background-color: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, var(--brand)) 100%);
   color: white;
   box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-light);
+  background: linear-gradient(135deg, var(--primary-light) 0%, color-mix(in srgb, var(--primary-light) 70%, var(--brand)) 100%);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 14px 0 color-mix(in srgb, var(--brand) 40%, transparent);
 }
 
 .btn-primary:active {
@@ -235,15 +237,15 @@ a {
 
 .btn-secondary {
   background-color: white;
-  border-color: var(--border);
+  border: 1px solid var(--border);
   color: var(--text-primary);
+  transition: all var(--transition-base);
 }
 
 .btn-secondary:hover {
-  background-color: var(--bg-surface);
-  border-color: var(--border-focus);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: var(--bg-surface);
+  border-color: var(--brand);
+  color: var(--brand);
 }
 
 .btn-white {
@@ -262,7 +264,7 @@ a {
 /* Component: Cards - Enhanced Depth & Interaction */
 .card {
   background: white;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   padding: var(--space-6);
   box-shadow: var(--shadow-sm);
@@ -273,7 +275,7 @@ a {
 .card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
-  border-color: var(--border-light);
+  border-color: color-mix(in srgb, var(--brand) 20%, var(--border));
 }
 
 .card-interactive {
@@ -297,10 +299,10 @@ a {
 /* --- New Modern Utilities (Edu-SaaS) --- */
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 @keyframes gradient-xy {
@@ -368,10 +370,10 @@ a {
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, var(--primary), var(--brand));
-  background-clip: text;
+  background: linear-gradient(135deg, var(--brand) 0%, #ec4899 50%, var(--primary-light) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* Home Page Specific Styles */
@@ -403,7 +405,7 @@ a {
 
 .hero-title {
   font-size: clamp(2.5rem, 8vw, 4rem);
-  line-height: 1.15;
+  line-height: 1.1;
   margin-bottom: var(--space-6);
   letter-spacing: -0.02em;
   animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
@@ -514,6 +516,10 @@ a {
   background: linear-gradient(135deg, var(--brand-light), var(--brand-subtle));
   color: var(--brand-hover);
   transform: scale(1.05);
+}
+
+.module-card-header:hover .icon-wrapper {
+  box-shadow: 0 0 20px color-mix(in srgb, var(--brand) 15%, transparent);
 }
 
 .module-title {
@@ -809,6 +815,8 @@ a {
 .tab-btn.active {
   background-color: white;
   color: var(--brand);
+  border-bottom: 2px solid var(--brand);
+  font-weight: 600;
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
@@ -827,8 +835,9 @@ a {
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.025em;
   transition: all var(--transition-fast);
+  border: 1px solid transparent;
 }
 
 .badge-primary {
@@ -838,21 +847,21 @@ a {
 }
 
 .badge-success {
-  background-color: var(--success-bg);
+  background: color-mix(in srgb, var(--success) 10%, white);
   color: var(--success);
-  border: 1px solid #bbf7d0;
+  border-color: color-mix(in srgb, var(--success) 20%, transparent);
 }
 
 .badge-warning {
-  background-color: var(--warning-bg);
-  color: var(--warning);
-  border: 1px solid #fde68a;
+  background: color-mix(in srgb, var(--warning) 10%, white);
+  color: #b45309;
+  border-color: color-mix(in srgb, var(--warning) 20%, transparent);
 }
 
 .badge-error {
-  background-color: var(--error-bg);
+  background: color-mix(in srgb, var(--error) 10%, white);
   color: var(--error);
-  border: 1px solid #fecaca;
+  border-color: color-mix(in srgb, var(--error) 20%, transparent);
 }
 
 .badge-neutral {
@@ -864,16 +873,25 @@ a {
 /* Alerts */
 .alert {
   padding: var(--space-4);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   margin-bottom: var(--space-4);
   font-size: 0.9rem;
   border: 1px solid transparent;
+  border-left: 4px solid var(--border);
 }
 
 .alert-error {
   background-color: var(--error-bg);
   border-color: #fecaca;
   color: var(--error);
+  border-left: 4px solid var(--error);
+}
+
+.alert-success {
+  background-color: var(--success-bg);
+  border-color: #bbf7d0;
+  color: var(--success);
+  border-left: 4px solid var(--success);
 }
 
 .alert-info {
@@ -894,9 +912,9 @@ a {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--brand), var(--brand-hover));
+  background: linear-gradient(90deg, var(--primary-light), var(--brand));
   border-radius: var(--radius-full);
-  transition: width var(--duration-slow) var(--ease-out-expo);
+  transition: width 0.6s var(--ease-out-expo);
   position: relative;
   overflow: hidden;
 }
@@ -971,12 +989,12 @@ a {
 
 /* File Upload Area - Enhanced Professional Style */
 .upload-area {
-  border: 2px dashed var(--border);
+  border: 2px dashed color-mix(in srgb, var(--brand) 40%, var(--border));
   border-radius: var(--radius-lg);
   padding: var(--space-12) var(--space-6);
   text-align: center;
   transition: all var(--transition-smooth);
-  background-color: var(--bg-surface);
+  background: linear-gradient(135deg, var(--brand-subtle) 0%, var(--bg-white) 100%);
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -993,8 +1011,8 @@ a {
 
 .upload-area:hover {
   border-color: var(--brand);
-  background-color: var(--brand-subtle);
-  transform: translateY(-2px);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand-light) 80%, white) 0%, var(--bg-white) 100%);
+  transform: scale(1.005);
   box-shadow: var(--shadow-md);
 }
 
