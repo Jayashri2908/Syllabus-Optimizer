@@ -198,8 +198,8 @@ const Navbar = () => {
                                         <User size={18} />
                                     </div>
                                     <div className="flex flex-col flex-1">
-                                        <span className="text-sm font-bold text-slate-700">{user.username}</span>
-                                        <span className="text-[9px] uppercase tracking-[0.15em] font-bold text-slate-400">Admin</span>
+                                        <span className="text-sm font-bold text-[#3d2e1f]">{user.username}</span>
+                                        <span className="text-[9px] uppercase tracking-[0.15em] font-bold text-[#8b7e6f]">Admin</span>
                                     </div>
                                     <button
                                         onClick={logout}

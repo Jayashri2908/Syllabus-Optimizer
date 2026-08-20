@@ -61,7 +61,7 @@ const AuthPage = () => {
     };
 
     return (
-        <div className="h-screen w-full flex relative overflow-hidden bg-slate-50 font-sans">
+        <div className="h-screen w-full flex relative overflow-hidden bg-[#f5efe6] font-sans">
             {/* Background Layers - Warm earthy tones */}
             <div className="absolute inset-0 bg-gradient-to-br from-[#efe8de]/30 via-[#faf7f2] to-[#fbe9e7]/30 animate-gradient-xy"></div>
 
@@ -127,7 +127,7 @@ const AuthPage = () => {
                             <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#e65100]/10 blur-[120px] rounded-full"></div>
 
                             <div className="relative mb-12">
-                                <h2 className="text-5xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight mb-4 font-serif">
+                                <h2 className="text-5xl sm:text-5xl md:text-6xl font-black text-[#2a1f14] tracking-tight mb-4 font-serif">
                                     {isLogin ? 'Welcome Back' : 'Create Account'}
                                 </h2>
                                 <p className="text-[#5c5446] font-semibold text-lg md:text-xl leading-relaxed">
@@ -159,7 +159,7 @@ const AuthPage = () => {
                                             value={formData.username}
                                             onChange={handleChange}
                                             placeholder={isLogin ? "Username or email" : "Choose username"}
-                                            className="form-input !pl-20 !py-6 !text-lg !rounded-2xl !bg-white/40 !border-slate-200/80 focus:!bg-white focus:!border-[#d32f2f] focus:!ring-[#d32f2f]/10 text-lg font-bold"
+                                            className="form-input !pl-20 !py-6 !text-lg !rounded-2xl !bg-white/40 !border-[#d4c8b8]/80 focus:!bg-white focus:!border-[#d32f2f] focus:!ring-[#d32f2f]/10 text-lg font-bold"
                                             required
                                         />
                                     </div>
@@ -180,7 +180,7 @@ const AuthPage = () => {
                                                 value={formData.email}
                                                 onChange={handleChange}
                                                 placeholder="email@university.edu"
-                                                className="form-input !pl-20 !py-6 !text-lg !rounded-2xl !bg-white/40 !border-slate-200/80 focus:!bg-white focus:!border-[#d32f2f] focus:!ring-[#d32f2f]/10 text-lg font-bold"
+                                                className="form-input !pl-20 !py-6 !text-lg !rounded-2xl !bg-white/40 !border-[#d4c8b8]/80 focus:!bg-white focus:!border-[#d32f2f] focus:!ring-[#d32f2f]/10 text-lg font-bold"
                                                 required
                                             />
                                         </div>
@@ -208,7 +208,7 @@ const AuthPage = () => {
                                             value={formData.password}
                                             onChange={handleChange}
                                             placeholder="••••••••"
-                                            className="form-input !pl-20 !py-6 !text-lg !rounded-2xl !bg-white/40 !border-slate-200/80 focus:!bg-white focus:!border-[#d32f2f] focus:!ring-[#d32f2f]/10 text-lg font-bold"
+                                            className="form-input !pl-20 !py-6 !text-lg !rounded-2xl !bg-white/40 !border-[#d4c8b8]/80 focus:!bg-white focus:!border-[#d32f2f] focus:!ring-[#d32f2f]/10 text-lg font-bold"
                                             required
                                         />
                                     </div>

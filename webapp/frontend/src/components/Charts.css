@@ -24,7 +24,7 @@
 /* Heatmap Styles */
 .heatmap-container {
     overflow-x: auto;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--space-6);
 }
 
 .heatmap-table {
@@ -35,20 +35,20 @@
 
 .heatmap-table th,
 .heatmap-table td {
-    padding: var(--spacing-sm);
+    padding: var(--space-2);
     text-align: center;
     border: 1px solid var(--border);
 }
 
 .heatmap-table th {
-    background: var(--bg-secondary);
+    background: var(--bg-surface);
     font-weight: 700;
     color: var(--text-primary);
 }
 
 .heatmap-label {
     font-weight: 700;
-    background: var(--bg-secondary);
+    background: var(--bg-surface);
     color: var(--primary);
 }
 
@@ -106,7 +106,7 @@
 
 .heatmap-legend {
     display: flex;
-    gap: var(--spacing-lg);
+    gap: var(--space-6);
     justify-content: center;
     font-size: 0.875rem;
     color: var(--text-secondary);
@@ -117,7 +117,7 @@
     width: 16px;
     height: 16px;
     border-radius: var(--radius-sm);
-    margin-right: var(--spacing-xs);
+    margin-right: var(--space-1);
     border: 1px solid var(--border);
 }
 

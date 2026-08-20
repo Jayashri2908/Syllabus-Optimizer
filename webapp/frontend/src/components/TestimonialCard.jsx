@@ -15,11 +15,11 @@ const TestimonialCard = ({ quote, author, role, image }) => {
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-50 pointer-events-none"></div>
 
                 <div className="relative z-10 space-y-4">
-                    <div className="inline-flex p-2 rounded-lg bg-indigo-500/20 text-indigo-300 mb-2">
+                    <div className="inline-flex p-2 rounded-lg bg-[#d32f2f]/20 text-[#d32f2f] mb-2">
                         <Quote size={20} fill="currentColor" className="opacity-80" />
                     </div>
 
-                    <p className="text-lg text-slate-200 font-light leading-relaxed italic">
+                    <p className="text-lg text-[#efe8de] font-light leading-relaxed italic">
                         "{quote}"
                     </p>
 
@@ -27,13 +27,13 @@ const TestimonialCard = ({ quote, author, role, image }) => {
                         {image ? (
                             <img src={image} alt={author} className="w-10 h-10 rounded-full object-cover border-2 border-white/30" />
                         ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-cyan-400 flex items-center justify-center text-white font-bold text-sm shadow-inner">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#d32f2f] to-[#e65100] flex items-center justify-center text-white font-bold text-sm shadow-inner">
                                 {author.charAt(0)}
                             </div>
                         )}
                         <div>
                             <div className="text-white font-semibold">{author}</div>
-                            <div className="text-slate-400 text-xs uppercase tracking-wider">{role}</div>
+                            <div className="text-[#8b7e6f] text-xs uppercase tracking-wider">{role}</div>
                         </div>
                     </div>
                 </div>

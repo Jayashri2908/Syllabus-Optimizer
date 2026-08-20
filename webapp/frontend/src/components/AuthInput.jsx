@@ -35,7 +35,7 @@ const AuthInput = ({
                     htmlFor={name}
                     className={clsx(
                         "text-sm font-semibold transition-colors duration-200 tracking-wide",
-                        error ? "text-red-500" : isFocused ? "text-[var(--brand)]" : "text-slate-600"
+                        error ? "text-red-500" : isFocused ? "text-[var(--brand)]" : "text-[#5c5446]"
                     )}
                 >
                     {label} {required && <span className="text-[var(--brand)]/70">*</span>}
@@ -57,7 +57,7 @@ const AuthInput = ({
                             ? '#fef2f2'
                             : isFocused
                                 ? '#fff'
-                                : '#f8fafc', // slate-50
+                                : '#faf7f2', // warm cream
                         boxShadow: error
                             ? '0 0 0 4px rgba(239, 68, 68, 0.05)'
                             : isFocused
@@ -67,7 +67,7 @@ const AuthInput = ({
                     transition={{ duration: 0.2, ease: "easeOut" }}
                     className={clsx(
                         "absolute inset-0 rounded-2xl border transition-all duration-300",
-                        !isFocused && !error ? "border-slate-200 hover:border-slate-300 hover:bg-white" : ""
+                        !isFocused && !error ? "border-[#d4c8b8] hover:border-[#8b7e6f] hover:bg-[#faf7f2]" : ""
                     )}
                 />
 
@@ -80,7 +80,7 @@ const AuthInput = ({
                                 strokeWidth={2}
                                 className={clsx(
                                     "transition-colors duration-300",
-                                    error ? "text-red-400" : isFocused ? "text-[var(--brand)]" : "text-slate-400"
+                                    error ? "text-red-400" : isFocused ? "text-[var(--brand)]" : "text-[#8b7e6f]"
                                 )}
                             />
                         </div>
@@ -96,7 +96,7 @@ const AuthInput = ({
                         onBlur={() => setIsFocused(false)}
                         placeholder={placeholder}
                         className={clsx(
-                            "w-full bg-transparent py-4 outline-none text-slate-700 font-medium placeholder:text-slate-400 relative z-10",
+                            "w-full bg-transparent py-4 outline-none text-[#3d2e1f] font-medium placeholder:text-[#8b7e6f] relative z-10",
                             "text-base transition-all duration-200",
                             Icon ? "pl-12" : "pl-5", // Adjust padding for icon
                             isPassword ? "pr-12" : "pr-5"
@@ -107,7 +107,7 @@ const AuthInput = ({
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:text-[var(--brand)] outline-none transition-colors z-20 p-1 rounded-md hover:bg-slate-100"
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8b7e6f] hover:text-[#5c5446] focus:text-[var(--brand)] outline-none transition-colors z-20 p-1 rounded-md hover:bg-[#efe8de]"
                         >
                             {showPassword ? <EyeOff size={18} strokeWidth={2} /> : <Eye size={18} strokeWidth={2} />}
                         </button>
