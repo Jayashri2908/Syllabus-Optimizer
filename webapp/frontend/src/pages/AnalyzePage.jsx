@@ -87,11 +87,11 @@ function AnalyzePage() {
   return (
     <div className="container animate-fade-in">
       <div className="page-header">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold mb-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#fbe9e7] text-[#d32f2f] rounded-full text-xs font-semibold mb-4">
           <BarChart2 size={14} />
           <span>Deep Content Analysis</span>
         </div>
-        <h1 className="page-title">Analyze Syllabus</h1>
+        <h1 className="page-title font-serif">Analyze Syllabus</h1>
         <p className="page-subtitle">
           Comprehensive syllabus evaluation with actionable insights
         </p>
@@ -166,7 +166,7 @@ function AnalyzePage() {
 
           {/* Quality Score Dashboard */}
           {qualityScore && (
-            <div className="card mb-6 bg-slate-50 border-slate-200">
+            <div className="card mb-6 bg-[#efe8de]/30 border-[#d4c8b8]">
               <div className="flex flex-col md:flex-row items-center gap-8 p-4">
                 <div className="relative flex items-center justify-center h-32 w-32 rounded-full border-8 bg-white" style={{ borderColor: getScoreColor(qualityScore.total_score) }}>
                   <div className="text-center">
@@ -185,8 +185,8 @@ function AnalyzePage() {
                     {Object.entries(qualityScore.breakdown || {}).map(([key, value]) => (
                       <div key={key} className="flex items-center gap-3 text-sm">
                         <span className="w-32 capitalize font-medium text-subtle">{key.replace(/_/g, ' ')}</span>
-                        <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${(value / 25) * 100}%` }}></div>
+                        <div className="flex-1 h-2 bg-[#d4c8b8] rounded-full overflow-hidden">
+                          <div className="h-full bg-[#5c4033] rounded-full" style={{ width: `${(value / 25) * 100}%` }}></div>
                         </div>
                         <span className="font-bold w-8 text-right">{value}</span>
                       </div>
@@ -216,7 +216,7 @@ function AnalyzePage() {
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Bloom's Coverage */}
                 <div className="card h-full">
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#d4c8b8]">
                     <h3 className="font-bold text-lg flex items-center gap-2">
                       <PieChart size={20} className="text-brand" />
                       Bloom's Taxonomy Coverage
@@ -240,7 +240,7 @@ function AnalyzePage() {
 
                 {/* CO-PO Mapping */}
                 <div className="card h-full">
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#d4c8b8]">
                     <h3 className="font-bold text-lg flex items-center gap-2">
                       <Layers size={20} className="text-brand" />
                       CO-PO Mapping Status
@@ -248,27 +248,27 @@ function AnalyzePage() {
                     <InfoTooltip text="Alignment of Course Outcomes with Program Outcomes." />
                   </div>
                   <div className="grid grid-cols-3 gap-4 py-4 text-center">
-                    <div className="p-4 bg-slate-50 rounded-lg">
+                    <div className="p-4 bg-[#efe8de]/30 rounded-lg">
                       <div className="text-2xl font-bold text-primary mb-1">{analysis.co_po_mapping_gaps?.total_cos || 0}</div>
                       <div className="text-xs font-semibold text-subtle uppercase">Total COs</div>
                     </div>
-                    <div className="p-4 bg-slate-50 rounded-lg">
-                      <div className="text-2xl font-bold text-indigo-600 mb-1">{analysis.co_po_mapping_gaps?.mapped_cos || 0}</div>
+                    <div className="p-4 bg-[#efe8de]/30 rounded-lg">
+                      <div className="text-2xl font-bold text-[#d32f2f] mb-1">{analysis.co_po_mapping_gaps?.mapped_cos || 0}</div>
                       <div className="text-xs font-semibold text-subtle uppercase">Mapped</div>
                     </div>
-                    <div className="p-4 bg-slate-50 rounded-lg">
-                      <div className="text-2xl font-bold text-emerald-600 mb-1">{(analysis.co_po_mapping_gaps?.coverage_percentage || 0).toFixed(0)}%</div>
+                    <div className="p-4 bg-[#efe8de]/30 rounded-lg">
+                      <div className="text-2xl font-bold text-[#2e7d32] mb-1">{(analysis.co_po_mapping_gaps?.coverage_percentage || 0).toFixed(0)}%</div>
                       <div className="text-xs font-semibold text-subtle uppercase">Coverage</div>
                     </div>
                   </div>
 
                   {/* Modern Topics */}
                   {analysis.content_quality?.modern_topics && (
-                    <div className="mt-6 pt-6 border-t border-gray-100">
+                    <div className="mt-6 pt-6 border-t border-[#d4c8b8]">
                       <h4 className="font-bold text-sm mb-3 text-subtle uppercase tracking-wider">Modern Topics Detection</h4>
                       <div className="flex flex-wrap gap-2">
                         {analysis.content_quality.modern_topics.detected?.map((topic, idx) => (
-                          <span key={idx} className="badge badge-success bg-emerald-50 text-emerald-700 border border-emerald-100">
+                          <span key={idx} className="badge badge-success bg-[#e8f5e9] text-[#2e7d32] border border-[#a5d6a7]">
                             {topic.category}
                           </span>
                         ))}
@@ -287,18 +287,18 @@ function AnalyzePage() {
                 {/* Content Depth */}
                 {analysis.content_quality?.content_depth && (
                   <div className="card">
-                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#d4c8b8]">
                       <h3 className="font-bold text-lg flex items-center gap-2">
                         <FileText size={20} className="text-brand" />
                         Content Depth Analysis
                       </h3>
-                      <div className="text-sm text-subtle font-medium bg-slate-50 px-3 py-1 rounded-full">
+                      <div className="text-sm text-subtle font-medium bg-[#efe8de]/30 px-3 py-1 rounded-full">
                         Total Topics: {analysis.content_quality.content_depth.total_topics}
                       </div>
                     </div>
                     <div className="grid md:grid-cols-4 gap-4">
                       {Object.entries(analysis.content_quality.content_depth.depth_distribution || {}).map(([level, count]) => (
-                        <div key={level} className="p-4 rounded-lg bg-slate-50 border border-slate-100 text-center">
+                        <div key={level} className="p-4 rounded-lg bg-[#efe8de]/30 border border-[#d4c8b8] text-center">
                           <div className="uppercase text-xs font-bold text-subtle mb-2 tracking-wider">{level}</div>
                           <div className="text-2xl font-bold text-primary">{count}</div>
                           <div className="text-xs text-subtle mt-1">units</div>
@@ -311,7 +311,7 @@ function AnalyzePage() {
                 {/* Hours Distribution */}
                 {analysis.content_quality?.hours_distribution && (
                   <div className="card">
-                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#d4c8b8]">
                       <h3 className="font-bold text-lg flex items-center gap-2">
                         <Clock size={20} className="text-brand" />
                         Hours Distribution
@@ -325,8 +325,8 @@ function AnalyzePage() {
                       {analysis.content_quality.hours_distribution.distribution?.map((item, idx) => (
                         <div key={idx} className="flex items-center gap-4">
                           <div className="w-16 font-bold text-sm text-subtle">Unit {item.unit_number}</div>
-                          <div className="flex-1 bg-slate-100 h-8 rounded-md overflow-hidden relative group">
-                            <div className="absolute inset-y-0 left-0 bg-indigo-500 rounded-md flex items-center px-2 text-xs font-bold text-white transition-all group-hover:bg-indigo-600" style={{ width: `${Math.max(item.percentage, 5)}%` }}>
+                          <div className="flex-1 bg-[#efe8de] h-8 rounded-md overflow-hidden relative group">
+                            <div className="absolute inset-y-0 left-0 bg-[#5c4033] rounded-md flex items-center px-2 text-xs font-bold text-white transition-all group-hover:bg-[#3d2e1f]" style={{ width: `${Math.max(item.percentage, 5)}%` }}>
                               {item.hours}h
                             </div>
                           </div>
@@ -339,7 +339,7 @@ function AnalyzePage() {
                         </div>
                       ))}
                     </div>
-                    <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between text-sm text-subtle">
+                    <div className="mt-6 pt-4 border-t border-[#d4c8b8] flex justify-between text-sm text-subtle">
                       <span>Total: <span className="font-bold text-primary">{analysis.content_quality.hours_distribution.total_hours}h</span></span>
                       <span>Avg: <span className="font-bold text-primary">{analysis.content_quality.hours_distribution.average_hours}h/unit</span></span>
                       {analysis.content_quality.hours_distribution.average_hours_per_topic !== undefined && (
@@ -352,37 +352,37 @@ function AnalyzePage() {
                 {/* Unit Theory Analysis */}
                 {analysis.content_quality?.unit_analysis && (
                   <div className="card">
-                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#d4c8b8]">
                       <h3 className="font-bold text-lg flex items-center gap-2">
                         <Layers size={20} className="text-brand" />
                         Unit Content Analysis
                       </h3>
-                      <div className="text-sm text-subtle bg-slate-50 px-3 py-1 rounded-full">
+                      <div className="text-sm text-subtle bg-[#efe8de]/30 px-3 py-1 rounded-full">
                         {analysis.content_quality.unit_analysis.summary}
                       </div>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-4 mb-4">
-                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 text-center">
-                        <div className="text-2xl font-bold text-blue-700">{analysis.content_quality.unit_analysis.theory_ratio}%</div>
-                        <div className="text-xs font-semibold text-blue-600 uppercase">Theory Content</div>
+                      <div className="p-4 bg-[#fbe9e7] rounded-lg border border-[#d32f2f]/20 text-center">
+                        <div className="text-2xl font-bold text-[#d32f2f]">{analysis.content_quality.unit_analysis.theory_ratio}%</div>
+                        <div className="text-xs font-semibold text-[#d32f2f] uppercase">Theory Content</div>
                       </div>
-                      <div className="p-4 bg-green-50 rounded-lg border border-green-100 text-center">
-                        <div className="text-2xl font-bold text-green-700">{analysis.content_quality.unit_analysis.practical_ratio}%</div>
-                        <div className="text-xs font-semibold text-green-600 uppercase">Practical Content</div>
+                      <div className="p-4 bg-[#e8f5e9] rounded-lg border border-[#a5d6a7] text-center">
+                        <div className="text-2xl font-bold text-[#2e7d32]">{analysis.content_quality.unit_analysis.practical_ratio}%</div>
+                        <div className="text-xs font-semibold text-[#2e7d32] uppercase">Practical Content</div>
                       </div>
                     </div>
 
                     <div className="space-y-3">
                       {analysis.content_quality.unit_analysis.units?.map((unit, idx) => (
-                        <div key={idx} className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                        <div key={idx} className="p-4 bg-[#efe8de]/30 rounded-lg border border-[#d4c8b8]">
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-semibold">Unit {unit.unit_number}: {unit.title}</span>
                             <span className="text-sm text-subtle">{unit.hours}h | {unit.total_topics} topics</span>
                           </div>
                           <div className="flex items-center gap-2 mb-2">
-                            <div className="flex-1 bg-slate-200 h-2 rounded-full overflow-hidden">
-                              <div className="h-full bg-blue-500" style={{ width: `${unit.theory_percentage}%` }}></div>
+                            <div className="flex-1 bg-[#d4c8b8] h-2 rounded-full overflow-hidden">
+                              <div className="h-full bg-[#d32f2f]" style={{ width: `${unit.theory_percentage}%` }}></div>
                             </div>
                             <span className="text-xs text-subtle w-16">{unit.theory_percentage}% theory</span>
                           </div>
@@ -399,20 +399,20 @@ function AnalyzePage() {
 
                 {/* Redundancies */}
                 {analysis.redundancies?.redundant_topics?.length > 0 && (
-                  <div className="card border-orange-100">
-                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-orange-100">
-                      <h3 className="font-bold text-lg flex items-center gap-2 text-orange-700">
+                  <div className="card border-[#d32f2f]/20">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#d32f2f]/20">
+                      <h3 className="font-bold text-lg flex items-center gap-2 text-[#d32f2f]">
                         <AlertTriangle size={20} />
                         Redundancies Detected
                       </h3>
                     </div>
                     <div className="grid gap-3">
                       {analysis.redundancies.redundant_topics.slice(0, 5).map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100 text-sm">
+                        <div key={idx} className="flex items-center justify-between p-3 bg-[#fbe9e7] rounded-lg border border-[#d32f2f]/20 text-sm">
                           <div className="flex items-center gap-3">
-                            <span className="font-semibold text-orange-800">{item.topic1?.substring(0, 30)}...</span>
-                            <span className="text-orange-400">↔</span>
-                            <span className="font-semibold text-orange-800">{item.topic2?.substring(0, 30)}...</span>
+                            <span className="font-semibold text-[#3d2e1f]">{item.topic1?.substring(0, 30)}...</span>
+                            <span className="text-[#8b7e6f]">↔</span>
+                            <span className="font-semibold text-[#3d2e1f]">{item.topic2?.substring(0, 30)}...</span>
                           </div>
                           <span className="badge badge-warning text-xs">{(item.similarity * 100).toFixed(0)}% Match</span>
                         </div>
@@ -425,7 +425,7 @@ function AnalyzePage() {
 
             {activeTab === 'structure' && (
               <div className="card">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#d4c8b8]">
                   <h3 className="font-bold text-lg flex items-center gap-2">
                     <Shield size={20} className="text-brand" />
                     Structural Integrity
@@ -433,15 +433,15 @@ function AnalyzePage() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-6 mb-8 text-center text-sm">
-                  <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg">
+                  <div className="p-4 bg-[#efe8de]/30 border border-[#d4c8b8] rounded-lg">
                     <div className="font-bold text-3xl text-primary mb-1">{analysis.content_gaps?.total_units || 0}</div>
                     <div className="uppercase tracking-wider text-xs text-subtle font-semibold">Units Found</div>
                   </div>
-                  <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg">
+                  <div className="p-4 bg-[#efe8de]/30 border border-[#d4c8b8] rounded-lg">
                     <div className="font-bold text-3xl text-primary mb-1">{analysis.content_gaps?.total_hours || 0}</div>
                     <div className="uppercase tracking-wider text-xs text-subtle font-semibold">Total Hours</div>
                   </div>
-                  <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg">
+                  <div className="p-4 bg-[#efe8de]/30 border border-[#d4c8b8] rounded-lg">
                     <div className="font-bold text-3xl text-primary mb-1">{analysis.content_gaps?.reference_count || 0}</div>
                     <div className="uppercase tracking-wider text-xs text-subtle font-semibold">References</div>
                   </div>
@@ -451,7 +451,7 @@ function AnalyzePage() {
                   <div className="space-y-3">
                     <h4 className="font-bold text-sm text-subtle uppercase tracking-wider mb-2">Identified Issues</h4>
                     {analysis.structural_issues.map((issue, idx) => (
-                      <div key={idx} className={`p-4 rounded-lg flex items-start gap-3 text-sm ${issue.severity === 'high' ? 'bg-red-50 text-red-800 border-red-100' : 'bg-yellow-50 text-yellow-800 border-yellow-100'} border`}>
+                      <div key={idx} className={`p-4 rounded-lg flex items-start gap-3 text-sm ${issue.severity === 'high' ? 'bg-[#fbe9e7] text-[#c62828] border-[#d32f2f]/20' : 'bg-[#fff3e0] text-[#e65100] border-[#e65100]/20'} border`}>
                         {issue.severity === 'high' ? <AlertTriangle size={18} className="shrink-0 mt-0.5" /> : <InfoTooltip size={18} className="shrink-0 mt-0.5" />}
                         <div>
                           <span className="font-bold uppercase text-xs block mb-1 opacity-75">{issue.severity} Severity</span>
@@ -461,8 +461,8 @@ function AnalyzePage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-8 text-center bg-green-50 rounded-lg border border-green-100 text-green-800">
-                    <CheckCircle size={32} className="mx-auto mb-3 text-green-600" />
+                  <div className="p-8 text-center bg-[#e8f5e9] rounded-lg border border-[#a5d6a7] text-[#2e7d32]">
+                    <CheckCircle size={32} className="mx-auto mb-3 text-[#2e7d32]" />
                     <h4 className="font-bold text-lg">No Structural Issues Found</h4>
                     <p className="text-sm opacity-80">The syllabus structure appears to be sound and compliant.</p>
                   </div>
@@ -474,7 +474,7 @@ function AnalyzePage() {
               <div className="grid gap-6">
                 {/* NEP 2020 Compliance */}
                 <div className="card">
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#d4c8b8]">
                     <h3 className="font-bold text-lg flex items-center gap-2">
                       <Shield size={20} className="text-brand" />
                       NEP 2020 Compliance
@@ -489,13 +489,13 @@ function AnalyzePage() {
                   {analysis.nep_2020_compliance?.checks && (
                     <div className="space-y-3">
                       {Object.entries(analysis.nep_2020_compliance.checks).map(([key, check]) => (
-                        <div key={key} className={`p-4 rounded-lg border ${check.passed ? 'bg-green-50 border-green-100' : 'bg-yellow-50 border-yellow-100'}`}>
+                        <div key={key} className={`p-4 rounded-lg border ${check.passed ? 'bg-[#e8f5e9] border-[#a5d6a7]' : 'bg-[#fff3e0] border-[#e65100]/20'}`}>
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-medium capitalize">{key.replace(/_/g, ' ')}</span>
                             {check.passed ? (
-                              <CheckCircle size={16} className="text-green-600" />
+                              <CheckCircle size={16} className="text-[#2e7d32]" />
                             ) : (
-                              <AlertTriangle size={16} className="text-yellow-600" />
+                              <AlertTriangle size={16} className="text-[#e65100]" />
                             )}
                           </div>
                           {check.details && <p className="text-sm text-subtle">{check.details}</p>}
@@ -505,7 +505,7 @@ function AnalyzePage() {
                   )}
 
                   {analysis.nep_2020_compliance?.recommendations?.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-100">
+                    <div className="mt-4 pt-4 border-t border-[#d4c8b8]">
                       <h4 className="font-semibold text-sm mb-2 text-subtle">NEP 2020 Recommendations</h4>
                       <ul className="list-disc ml-5 space-y-1 text-sm">
                         {analysis.nep_2020_compliance.recommendations.slice(0, 5).map((rec, idx) => (
@@ -520,7 +520,7 @@ function AnalyzePage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* NBA Compliance */}
                   <div className="card">
-                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#d4c8b8]">
                       <h3 className="font-bold text-lg">NBA Compliance</h3>
                       {analysis.accreditation_compliance?.nba?.compliance_score !== undefined && (
                         <span className={`badge ${analysis.accreditation_compliance.nba.compliance_score >= 70 ? 'badge-success' : 'badge-warning'}`}>
@@ -530,12 +530,12 @@ function AnalyzePage() {
                     </div>
                     <div className="space-y-2 text-sm">
                       {analysis.accreditation_compliance?.nba?.checks && Object.entries(analysis.accreditation_compliance.nba.checks).slice(0, 4).map(([key, check]) => (
-                        <div key={key} className="flex items-center justify-between py-2 border-b border-gray-50">
+                        <div key={key} className="flex items-center justify-between py-2 border-b border-[#d4c8b8]/50">
                           <span className="capitalize">{key.replace(/_/g, ' ')}</span>
                           {check.passed ? (
-                            <CheckCircle size={14} className="text-green-600" />
+                            <CheckCircle size={14} className="text-[#2e7d32]" />
                           ) : (
-                            <AlertTriangle size={14} className="text-yellow-600" />
+                            <AlertTriangle size={14} className="text-[#e65100]" />
                           )}
                         </div>
                       ))}
@@ -544,7 +544,7 @@ function AnalyzePage() {
 
                   {/* NAAC Compliance */}
                   <div className="card">
-                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#d4c8b8]">
                       <h3 className="font-bold text-lg">NAAC Compliance</h3>
                       {analysis.accreditation_compliance?.naac?.compliance_score !== undefined && (
                         <span className={`badge ${analysis.accreditation_compliance.naac.compliance_score >= 70 ? 'badge-success' : 'badge-warning'}`}>
@@ -554,12 +554,12 @@ function AnalyzePage() {
                     </div>
                     <div className="space-y-2 text-sm">
                       {analysis.accreditation_compliance?.naac?.checks && Object.entries(analysis.accreditation_compliance.naac.checks).slice(0, 4).map(([key, check]) => (
-                        <div key={key} className="flex items-center justify-between py-2 border-b border-gray-50">
+                        <div key={key} className="flex items-center justify-between py-2 border-b border-[#d4c8b8]/50">
                           <span className="capitalize">{key.replace(/_/g, ' ')}</span>
                           {check.passed ? (
-                            <CheckCircle size={14} className="text-green-600" />
+                            <CheckCircle size={14} className="text-[#2e7d32]" />
                           ) : (
-                            <AlertTriangle size={14} className="text-yellow-600" />
+                            <AlertTriangle size={14} className="text-[#e65100]" />
                           )}
                         </div>
                       ))}
@@ -571,7 +571,7 @@ function AnalyzePage() {
 
             {activeTab === 'recommendations' && (
               <div className="card">
-                <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#d4c8b8]">
                   <h3 className="font-bold text-lg flex items-center gap-2">
                     <CheckCircle size={20} className="text-brand" />
                     AI Recommendations
@@ -586,13 +586,13 @@ function AnalyzePage() {
                     const text = typeof rec === 'string' ? rec : rec.text;
                     const priority = typeof rec === 'object' ? rec.priority : null;
                     const priorityColors = {
-                      high: 'bg-red-100 text-red-700 border-red-200',
-                      medium: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-                      low: 'bg-blue-100 text-blue-700 border-blue-200'
+                      high: 'bg-[#fbe9e7] text-[#c62828] border-[#d32f2f]/20',
+                      medium: 'bg-[#fff3e0] text-[#e65100] border-[#e65100]/20',
+                      low: 'bg-[#fbe9e7] text-[#d32f2f] border-[#d4c8b8]'
                     };
 
                     return (
-                      <li key={idx} className="flex gap-4 p-4 rounded-lg bg-slate-50 border border-slate-100 group hover:border-brand-light hover:bg-white hover:shadow-sm transition-all">
+                      <li key={idx} className="flex gap-4 p-4 rounded-lg bg-[#efe8de]/30 border border-[#d4c8b8] group hover:border-brand-light hover:bg-white hover:shadow-sm transition-all">
                         <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-light text-brand flex items-center justify-center font-bold text-xs mt-0.5">{idx + 1}</span>
                         <div className="flex-1">
                           <span className="text-sm text-primary leading-relaxed">{text}</span>
