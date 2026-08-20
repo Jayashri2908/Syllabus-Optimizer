@@ -1,13 +1,11 @@
-import React, { lazy, Suspense } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   BarChart2, FileText, Zap, ArrowRight, CheckCircle, Shield,
   Download, Upload, Layers
 } from 'lucide-react';
 import { InfoTooltip } from '../components/Tooltip';
-
-const ThreeBackground = lazy(() => import('../components/ThreeBackground'));
-const SCDOLogo = lazy(() => import('../components/SCDOLogo'));
+import InteractiveTextCurtain from '../components/InteractiveTextCurtain';
 
 /* ─── Enhanced Feature Card ─── */
 const FeatureCard = ({
@@ -21,28 +19,28 @@ const FeatureCard = ({
 }) => {
   const tintMap = {
     indigo: {
-      gradient: 'from-indigo-50/60 via-white to-indigo-100/40',
-      iconBg: 'bg-indigo-100',
-      iconColor: 'text-indigo-600',
-      accent: 'text-indigo-600',
+      gradient: 'from-[#efe8de]/60 via-[#faf7f2] to-[#efe8de]/40',
+      iconBg: 'bg-[#efe8de]',
+      iconColor: 'text-[#3d2e1f]',
+      accent: 'text-[#3d2e1f]',
     },
     orange: {
-      gradient: 'from-orange-50/60 via-white to-amber-50/40',
-      iconBg: 'bg-orange-100',
-      iconColor: 'text-orange-600',
-      accent: 'text-orange-600',
+      gradient: 'from-[#fbe9e7]/60 via-[#faf7f2] to-[#fff3e0]/40',
+      iconBg: 'bg-[#fbe9e7]',
+      iconColor: 'text-[#d32f2f]',
+      accent: 'text-[#d32f2f]',
     },
     emerald: {
-      gradient: 'from-emerald-50/60 via-white to-teal-50/40',
-      iconBg: 'bg-emerald-100',
-      iconColor: 'text-emerald-600',
-      accent: 'text-emerald-600',
+      gradient: 'from-[#f1f8e9]/60 via-[#faf7f2] to-[#e8f5e9]/40',
+      iconBg: 'bg-[#e8f5e9]',
+      iconColor: 'text-[#2e7d32]',
+      accent: 'text-[#2e7d32]',
     },
     violet: {
-      gradient: 'from-violet-50/60 via-white to-purple-50/40',
-      iconBg: 'bg-violet-100',
-      iconColor: 'text-violet-600',
-      accent: 'text-violet-600',
+      gradient: 'from-[#efe8de]/60 via-[#faf7f2] to-[#fbe9e7]/40',
+      iconBg: 'bg-[#efe8de]',
+      iconColor: 'text-[#5c4033]',
+      accent: 'text-[#5c4033]',
     },
   };
   const t = tintMap[tint] || tintMap.indigo;
@@ -105,28 +103,33 @@ const HomePage = () => {
     <div className="container animate-fade-in relative z-10">
       {/* ═══════════════════ HERO ═══════════════════ */}
       <div className="hero-section relative overflow-hidden min-h-[60vh] flex items-center justify-center">
-        <Suspense fallback={null}>
-          <ThreeBackground />
-        </Suspense>
+        <InteractiveTextCurtain 
+          characters="SYLLABUS CURRICULUM OPTIMIZE ANALYZE GENERATE OUTCOMES BLOOM MAPPING COMPLIANCE NEP 2020 ACCREDITATION COURSE PROGRAM LEARNING ASSESSMENT"
+          opacity={0.25}
+          color="#8b7e6f"
+          fontSize={13}
+          spacingX={20}
+          spacingY={20}
+        />
 
         <div className="hero-content relative z-10 max-w-3xl text-center px-6">
           {/* Floating stat badges */}
           <div className="flex flex-wrap justify-center gap-3 mb-8">
             <StatBadge>
-              <Shield size={14} className="text-orange-500" />
+              <Shield size={14} className="text-[#d32f2f]" />
               50+ Accreditation Standards
             </StatBadge>
             <StatBadge>
-              <Zap size={14} className="text-amber-500" />
+              <Zap size={14} className="text-[#e65100]" />
               AI-Powered Analysis
             </StatBadge>
             <StatBadge>
-              <CheckCircle size={14} className="text-emerald-500" />
+              <CheckCircle size={14} className="text-[#2e7d32]" />
               NEP 2020 Compliant
             </StatBadge>
           </div>
 
-          <h1 className="hero-title tracking-tight mb-6 text-5xl sm:text-6xl lg:text-7xl">
+          <h1 className="hero-title tracking-tight mb-6 text-5xl sm:text-6xl lg:text-7xl font-serif">
             Syllabus <span className="text-gradient">&amp;</span> Curriculum
             <br />
             <span className="text-gradient">Optimization</span>
@@ -156,7 +159,7 @@ const HomePage = () => {
       <div className="modules-section pb-16">
         <div className="section-header mb-8">
           <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
-            <Zap className="text-brand" size={24} />
+            <Zap className="text-[#d32f2f]" size={24} />
             Core Modules
           </h2>
         </div>
@@ -203,7 +206,7 @@ const HomePage = () => {
 
       {/* ═══════════════════ TRUST / STATS STRIP ═══════════════════ */}
       <section className="pb-20">
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-0 py-8 px-4 rounded-2xl bg-gradient-to-r from-slate-50 via-white to-slate-50 border border-slate-100 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-0 py-8 px-4 rounded-2xl bg-gradient-to-r from-[#efe8de]/30 via-[#faf7f2] to-[#efe8de]/30 border border-[#d4c8b8] shadow-sm">
           {[
             { icon: Shield, label: 'NBA & NAAC Compliant' },
             { icon: CheckCircle, label: 'NEP 2020 Ready' },
@@ -211,12 +214,12 @@ const HomePage = () => {
             { icon: FileText, label: 'Instant Reports' },
           ].map(({ icon: I, label }, i, arr) => (
             <React.Fragment key={label}>
-              <div className="flex items-center gap-2.5 text-sm font-medium text-slate-500">
-                <I size={18} className="text-slate-400" />
+              <div className="flex items-center gap-2.5 text-sm font-medium text-[#5c5446]">
+                <I size={18} className="text-[#8b7e6f]" />
                 {label}
               </div>
               {i < arr.length - 1 && (
-                <span className="hidden sm:block h-5 w-px bg-slate-200 mx-6" />
+                <span className="hidden sm:block h-5 w-px bg-[#d4c8b8] mx-6" />
               )}
             </React.Fragment>
           ))}
@@ -242,11 +245,11 @@ const HomePage = () => {
               <div className="flex flex-col items-center text-center w-64 px-4">
                 {/* Numbered circle */}
                 <div className="relative mb-4">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-500 shadow-lg flex items-center justify-center text-white font-bold text-lg">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#3d2e1f] to-[#5c4033] shadow-lg flex items-center justify-center text-white font-bold text-lg">
                     {step.num}
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white shadow flex items-center justify-center">
-                    <step.icon size={16} className="text-brand" />
+                    <step.icon size={16} className="text-[#d32f2f]" />
                   </div>
                 </div>
                 <h3 className="font-bold text-primary mb-1">{step.title}</h3>
@@ -255,14 +258,14 @@ const HomePage = () => {
               {/* Connector line */}
               {i < arr.length - 1 && (
                 <div className="hidden md:flex items-center w-16 -mt-6">
-                  <div className="w-full h-px bg-gradient-to-r from-indigo-300 to-indigo-200" />
-                  <ArrowRight size={14} className="text-indigo-300 -ml-1" />
+                  <div className="w-full h-px bg-gradient-to-r from-[#8b7e6f] to-[#d4c8b8]" />
+                  <ArrowRight size={14} className="text-[#8b7e6f] -ml-1" />
                 </div>
               )}
               {/* Mobile down arrow */}
               {i < arr.length - 1 && (
                 <div className="flex md:hidden my-3">
-                  <ArrowRight size={18} className="text-indigo-300 rotate-90" />
+                  <ArrowRight size={18} className="text-[#8b7e6f] rotate-90" />
                 </div>
               )}
             </React.Fragment>
@@ -275,7 +278,7 @@ const HomePage = () => {
         <div
           className="relative overflow-hidden rounded-2xl px-8 py-14 text-center"
           style={{
-            background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #f97316 100%)',
+            background: 'linear-gradient(135deg, #3d2e1f 0%, #5c4033 40%, #d32f2f 100%)',
           }}
         >
           {/* Decorative circles */}
@@ -285,12 +288,12 @@ const HomePage = () => {
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3 relative z-10">
             Ready to optimize your curriculum?
           </h2>
-          <p className="text-indigo-200 mb-8 max-w-lg mx-auto relative z-10">
+          <p className="text-[#efe8de] mb-8 max-w-lg mx-auto relative z-10">
             Join institutions already using SCDO to streamline accreditation, map outcomes, and build better syllabi — powered by AI.
           </p>
           <Link
             to="/analyze"
-            className="btn inline-flex items-center gap-2 px-10 py-4 text-lg font-semibold rounded-xl bg-white text-indigo-900 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all relative z-10"
+            className="btn inline-flex items-center gap-2 px-10 py-4 text-lg font-semibold rounded-xl bg-white text-[#3d2e1f] shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all relative z-10"
           >
             Get Started
             <ArrowRight size={20} />
