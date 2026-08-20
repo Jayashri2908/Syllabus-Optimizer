@@ -18,13 +18,13 @@ const simpleMarkdown = (text) => {
 
   return text
     // Headers
-    .replace(/^### (.+)$/gm, '<h4 class="font-bold text-sm uppercase text-gray-800 mt-4 mb-2">$1</h4>')
+    .replace(/^### (.+)$/gm, '<h4 class="font-bold text-sm uppercase text-[#2a1f14] mt-4 mb-2">$1</h4>')
     .replace(/^## (.+)$/gm, '<h3 class="font-bold text-base text-primary mt-6 mb-3">$1</h3>')
     .replace(/^# (.+)$/gm, '<h2 class="font-bold text-lg text-primary mt-8 mb-4">$1</h2>')
     // Bold
     .replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-primary">$1</strong>')
     // Italic
-    .replace(/\*(.+?)\*/g, '<em class="italic text-gray-600">$1</em>')
+    .replace(/\*(.+?)\*/g, '<em class="italic text-[#5c5446]">$1</em>')
     // Bullet points
     .replace(/^[•●○] (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
     .replace(/^\* (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')

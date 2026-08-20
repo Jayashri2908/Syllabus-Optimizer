@@ -5,14 +5,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-2xl);
+    padding: var(--space-16);
     text-align: center;
     min-height: 400px;
 }
 
 .empty-icon {
     color: var(--text-tertiary);
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--space-6);
     animation: float 3s ease-in-out infinite;
 }
 
@@ -28,14 +28,14 @@
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--space-2);
 }
 
 .empty-description {
     font-size: 1rem;
     color: var(--text-secondary);
     max-width: 400px;
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: var(--space-8);
 }
 
 @keyframes float {
