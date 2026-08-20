@@ -134,27 +134,27 @@ function GeneratePage() {
 
     const SectionHeader = ({ title, section, icon: Icon }) => (
         <div
-            className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors border-b border-gray-100"
+            className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#efe8de]/30 transition-colors border-b border-[#d4c8b8]"
             onClick={() => toggleSection(section)}
         >
             <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-50 text-brand rounded-lg">
+                <div className="p-2 bg-[#fbe9e7] text-[#d32f2f] rounded-lg">
                     <Icon size={20} />
                 </div>
-                <h3 className="font-bold text-gray-800">{title}</h3>
+                <h3 className="font-bold text-[#2a1f14]">{title}</h3>
             </div>
-            {expandedSections[section] ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+            {expandedSections[section] ? <ChevronUp size={20} className="text-[#8b7e6f]" /> : <ChevronDown size={20} className="text-[#8b7e6f]" />}
         </div>
     );
 
     return (
         <div className="container py-8 animate-fade-in">
             <div className="page-header">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#fbe9e7] text-[#d32f2f] rounded-full text-xs font-semibold mb-4">
                     <Wand2 size={14} />
                     <span>AI Content Generation</span>
                 </div>
-                <h1 className="page-title">Generate Syllabus</h1>
+                <h1 className="page-title font-serif">Generate Syllabus</h1>
                 <p className="page-subtitle">
                     Create a professional academic syllabus using AI
                 </p>
@@ -292,7 +292,7 @@ function GeneratePage() {
                                         </div>
                                     </div>
 
-                                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div className="p-4 bg-[#efe8de]/30 rounded-lg border border-[#d4c8b8]">
                                         <h4 className="text-xs font-bold uppercase text-subtle mb-3">Credits Structure (L-T-P)</h4>
                                         <div className="grid grid-cols-3 gap-4">
                                             <div className="form-group">
@@ -351,7 +351,7 @@ function GeneratePage() {
                                         </div>
                                         <div className="form-group">
                                             <label>Total Marks</label>
-                                            <div className="p-3 bg-slate-100 rounded-md text-center font-bold text-primary border border-slate-200">
+                                            <div className="p-3 bg-[#efe8de] rounded-md text-center font-bold text-primary border border-[#d4c8b8]">
                                                 {parseInt(formData.cie_marks || 0) + parseInt(formData.ese_marks || 0)}
                                             </div>
                                         </div>
@@ -410,8 +410,8 @@ function GeneratePage() {
                                         </div>
                                     </div>
 
-                                    <div className="border-t border-gray-100 pt-4 mt-4">
-                                        <label className="block text-sm font-bold text-gray-700 mb-3">Unit-wise Topics (Optional Customization)</label>
+                                    <div className="border-t border-[#d4c8b8] pt-4 mt-4">
+                                        <label className="block text-sm font-bold text-[#2a1f14] mb-3">Unit-wise Topics (Optional Customization)</label>
                                         <div className="space-y-3">
                                             {Array.from({ length: formData.num_units }, (_, i) => (
                                                 <div key={i} className="flex gap-3 items-center">
@@ -441,7 +441,7 @@ function GeneratePage() {
                             <SectionHeader title="References & Textbooks" section="references" icon={BookOpen} />
                             {expandedSections.references && (
                                 <div className="p-6 space-y-4">
-                                    <div className="bg-yellow-50 p-3 rounded-md border border-yellow-100 text-sm text-yellow-800 mb-2">
+                                    <div className="bg-[#fff3e0] p-3 rounded-md border border-[#e65100]/20 text-sm text-[#e65100] mb-2">
                                         Leave these fields empty to let AI suggest the best books and resources.
                                     </div>
                                     <div className="form-group">
@@ -499,10 +499,10 @@ function GeneratePage() {
                         )}
 
                         {!generatedSyllabus && !error && (
-                            <div className="card p-8 text-center bg-slate-50 border-dashed border-2">
-                                <FileText size={48} className="mx-auto text-slate-300 mb-4" />
-                                <h3 className="text-lg font-bold text-gray-500 mb-2">Ready to Generate</h3>
-                                <p className="text-sm text-gray-400">
+                            <div className="card p-8 text-center bg-[#efe8de]/30 border-dashed border-2 border-[#d4c8b8]">
+                                <FileText size={48} className="mx-auto text-[#8b7e6f] mb-4" />
+                                <h3 className="text-lg font-bold text-[#5c5446] mb-2">Ready to Generate</h3>
+                                <p className="text-sm text-[#8b7e6f]">
                                     Fill in the details on the left and click "Generate" to see your AI-crafted syllabus here.
                                 </p>
                             </div>
@@ -513,20 +513,20 @@ function GeneratePage() {
                                 <div className="flex justify-end gap-3 mb-4 animate-fade-in">
                                     <button
                                         onClick={handleExportPDF}
-                                        className="btn bg-white border border-gray-200 text-gray-700 shadow-sm hover:shadow-md hover:border-red-200 hover:text-red-600 transition-all text-sm flex items-center gap-2 rounded-lg px-4 py-2.5"
+                                        className="btn bg-white border border-[#d4c8b8] text-[#3d2e1f] shadow-sm hover:shadow-md hover:border-[#d32f2f]/40 hover:text-[#d32f2f] transition-all text-sm flex items-center gap-2 rounded-lg px-4 py-2.5"
                                     >
                                         <Download size={16} />
                                         Export PDF
                                     </button>
                                     <button
                                         onClick={handleExportWord}
-                                        className="btn bg-white border border-gray-200 text-gray-700 shadow-sm hover:shadow-md hover:border-blue-200 hover:text-blue-600 transition-all text-sm flex items-center gap-2 rounded-lg px-4 py-2.5"
+                                        className="btn bg-white border border-[#d4c8b8] text-[#3d2e1f] shadow-sm hover:shadow-md hover:border-[#5c4033]/40 hover:text-[#5c4033] transition-all text-sm flex items-center gap-2 rounded-lg px-4 py-2.5"
                                     >
                                         <FileText size={16} />
                                         Export Word
                                     </button>
                                 </div>
-                                <div className="card p-0 overflow-hidden animate-fade-in shadow-xl border-indigo-100">
+                                <div className="card p-0 overflow-hidden animate-fade-in shadow-xl border-[#d4c8b8]">
                                     <div className="bg-gradient-to-r from-primary to-primary-light p-4 text-white flex justify-between items-center">
                                         <h2 className="font-bold text-lg">Syllabus Preview</h2>
                                         <div className="flex gap-2">
@@ -541,33 +541,33 @@ function GeneratePage() {
 
                                     <div className="p-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
                                         {/* Header Info */}
-                                        <div className="mb-6 pb-6 border-b border-gray-100">
+                                        <div className="mb-6 pb-6 border-b border-[#d4c8b8]">
                                             <h3 className="text-xl font-bold text-primary mb-2 line-clamp-2">{generatedSyllabus.course_title}</h3>
                                             <div className="flex flex-wrap gap-2 text-xs font-semibold text-subtle uppercase tracking-wider">
-                                                <span className="bg-slate-100 px-2 py-1 rounded">{generatedSyllabus.course_code}</span>
-                                                <span className="bg-slate-100 px-2 py-1 rounded">{generatedSyllabus.credits} Credits</span>
-                                                <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded">{generatedSyllabus.course_level}</span>
+                                                <span className="bg-[#efe8de] px-2 py-1 rounded">{generatedSyllabus.course_code}</span>
+                                                <span className="bg-[#efe8de] px-2 py-1 rounded">{generatedSyllabus.credits} Credits</span>
+                                                <span className="bg-[#fbe9e7] text-[#d32f2f] px-2 py-1 rounded">{generatedSyllabus.course_level}</span>
                                             </div>
                                         </div>
 
                                         {/* Description */}
                                         {generatedSyllabus.overview && (
                                             <div className="mb-6">
-                                                <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Course Description</h4>
-                                                <p className="text-sm text-gray-600 leading-relaxed">{generatedSyllabus.overview}</p>
+                                                <h4 className="text-sm font-bold text-[#2a1f14] uppercase mb-2">Course Description</h4>
+                                                <p className="text-sm text-[#5c5446] leading-relaxed">{generatedSyllabus.overview}</p>
                                             </div>
                                         )}
 
                                         {/* Outcomes */}
                                         {generatedSyllabus.learning_outcomes && (
                                             <div className="mb-6">
-                                                <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Course Outcomes</h4>
+                                                <h4 className="text-sm font-bold text-[#2a1f14] uppercase mb-2">Course Outcomes</h4>
                                                 <div className="space-y-2">
                                                     {generatedSyllabus.learning_outcomes.map((co, idx) => (
-                                                        <div key={idx} className="text-sm border-l-2 border-indigo-200 pl-3 py-1">
-                                                            <span className="font-bold text-indigo-700 mr-2">{co.code}:</span>
-                                                            <span className="text-gray-700">{co.description}</span>
-                                                            <span className="ml-2 text-xs bg-gray-100 px-1 rounded text-gray-500">({co.bloom_level})</span>
+                                                        <div key={idx} className="text-sm border-l-2 border-[#d32f2f]/20 pl-3 py-1">
+                                                            <span className="font-bold text-[#d32f2f] mr-2">{co.code}:</span>
+                                                            <span className="text-[#5c5446]">{co.description}</span>
+                                                            <span className="ml-2 text-xs bg-[#efe8de] px-1 rounded text-[#8b7e6f]">({co.bloom_level})</span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -577,7 +577,7 @@ function GeneratePage() {
                                         {/* Units Content */}
                                         {generatedSyllabus.units && (
                                             <div className="mb-6">
-                                                <h4 className="text-sm font-bold text-gray-900 uppercase mb-3">Course Content</h4>
+                                                <h4 className="text-sm font-bold text-[#2a1f14] uppercase mb-3">Course Content</h4>
                                                 <div className="space-y-4">
                                                     {generatedSyllabus.units.map((unit, idx) => {
                                                         // Helper to parse topic strings if needed (same logic as before)
@@ -591,17 +591,17 @@ function GeneratePage() {
                                                         }
 
                                                         return (
-                                                            <div key={idx} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                                                            <div key={idx} className="bg-[#efe8de]/30 rounded-lg p-3 border border-[#d4c8b8]">
                                                                 <div className="flex justify-between items-start mb-2">
                                                                     <h5 className="font-bold text-sm text-primary">Unit {unit.unit_number}: {unit.title}</h5>
-                                                                    <span className="text-xs bg-white px-2 py-0.5 rounded border border-gray-200 whitespace-nowrap">{unit.hours} Hrs</span>
+                                                                    <span className="text-xs bg-[#faf7f2] px-2 py-0.5 rounded border border-[#d4c8b8] whitespace-nowrap">{unit.hours} Hrs</span>
                                                                 </div>
-                                                                <ul className="list-disc list-inside text-xs text-gray-600 space-y-1 ml-1">
+                                                                <ul className="list-disc list-inside text-xs text-[#5c5446] space-y-1 ml-1">
                                                                     {Array.isArray(topicsArray) && topicsArray.slice(0, 4).map((t, i) => (
                                                                         <li key={i} className="line-clamp-1">{typeof t === 'string' ? t : (t.topic || 'Topic')}</li>
                                                                     ))}
                                                                     {Array.isArray(topicsArray) && topicsArray.length > 4 && (
-                                                                        <li className="italic text-gray-400">and {topicsArray.length - 4} more...</li>
+                                                                        <li className="italic text-[#8b7e6f]">and {topicsArray.length - 4} more...</li>
                                                                     )}
                                                                 </ul>
                                                             </div>
@@ -614,8 +614,8 @@ function GeneratePage() {
                                         {/* References */}
                                         {generatedSyllabus.references?.textbooks && (
                                             <div className="mb-6">
-                                                <h4 className="text-sm font-bold text-gray-900 uppercase mb-2">Textbooks</h4>
-                                                <ul className="text-xs text-gray-600 list-decimal list-inside space-y-1">
+                                                <h4 className="text-sm font-bold text-[#2a1f14] uppercase mb-2">Textbooks</h4>
+                                                <ul className="text-xs text-[#5c5446] list-decimal list-inside space-y-1">
                                                     {generatedSyllabus.references.textbooks.slice(0, 3).map((book, i) => (
                                                         <li key={i}>{book}</li>
                                                     ))}
