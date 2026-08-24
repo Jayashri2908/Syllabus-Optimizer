@@ -1,0 +1,74 @@
+.file-uploader {
+  border: 2px dashed var(--border-subtle);
+  border-radius: 1rem;
+  background-color: var(--surface-glass);
+  padding: 4rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.file-uploader:hover, .file-uploader.active {
+  border-color: var(--accent-indigo);
+  background-color: rgba(67, 56, 202, 0.02);
+}
+
+.file-uploader.loading {
+  cursor: default;
+  border-style: solid;
+  border-color: var(--accent-indigo-light);
+}
+
+.uploader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.upload-icon {
+  color: var(--accent-indigo);
+  margin-bottom: 0.5rem;
+}
+
+.file-uploader h3 {
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.file-uploader p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.upload-btn {
+  margin-top: 1rem;
+  padding: 0.5rem 1.25rem;
+  background-color: var(--text-primary);
+  color: white;
+  border-radius: 2rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.file-uploader:hover .upload-btn {
+  background-color: var(--accent-indigo);
+}
+
+/* Spinner */
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(67, 56, 202, 0.1);
+  border-left-color: var(--accent-indigo);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

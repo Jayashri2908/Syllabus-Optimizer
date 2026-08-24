@@ -54,10 +54,19 @@ temp/
 # Configuration (contains sensitive data)
 configs/ibm_config.yaml
 .env
-.env.ibm
+.env.*
+!.env.example
 
 # Keep example configs
 !configs/ibm_config.yaml.example
+
+# Secret keys & certificates
+*.pem
+*.key
+*.p12
+
+# Cache
+cache/
 
 # Database
 *.db

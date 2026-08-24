@@ -1,0 +1,123 @@
+.generate-wizard {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2.5rem;
+}
+
+.wizard-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3rem;
+  padding: 0 1rem;
+}
+
+.progress-step {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  position: relative;
+}
+
+.progress-step.active {
+  color: var(--accent-indigo);
+  font-weight: 600;
+}
+
+.progress-line {
+  flex-grow: 1;
+  height: 2px;
+  background-color: var(--border-subtle);
+  margin: 0 1rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-group input, 
+.form-group select,
+.form-group textarea {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.6);
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.form-group input:focus, 
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--accent-indigo);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.1);
+}
+
+/* Inline Editing Inputs */
+.inline-input {
+  border: 1px dashed var(--accent-indigo-light);
+  background: rgba(255,255,255,0.7);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  outline: none;
+}
+.inline-input:focus {
+  border: 1px solid var(--accent-indigo);
+  background: #fff;
+}
+.font-bold { font-weight: 700; }
+.font-serif { font-family: var(--font-serif); }
+.text-2xl { font-size: 1.5rem; margin-bottom: 0.5rem; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.gap-2 { gap: 0.5rem; }
+.flex-1 { flex: 1; }
+.w-full { width: 100%; }
+
+.wizard-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.wizard-actions.between {
+  justify-content: space-between;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.syllabus-preview h3 {
+  border-bottom: 2px solid var(--text-primary);
+  padding-bottom: 0.5rem;
+}

@@ -1,0 +1,116 @@
+.rag-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: rgba(67, 56, 202, 0.05);
+  border: 1px solid rgba(67, 56, 202, 0.15);
+  border-radius: 0.5rem;
+  color: var(--accent-indigo);
+  font-size: 0.9rem;
+}
+
+.comparison-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.split-view {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.syllabus-column {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.border-indigo {
+  border: 2px solid rgba(67, 56, 202, 0.3);
+  box-shadow: 0 10px 25px rgba(67, 56, 202, 0.1);
+}
+
+.col-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 1rem;
+}
+
+.divider {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+}
+
+.badge-gray {
+  background-color: rgba(0,0,0,0.05);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.badge-green {
+  background-color: rgba(5, 150, 105, 0.1);
+  color: var(--accent-emerald);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.outcomes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.co-item {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.co-item.bg-gray {
+  background-color: rgba(0,0,0,0.03);
+  border: 1px dashed var(--border-subtle);
+}
+
+.co-item.bg-indigo-light {
+  background-color: #fff;
+  border: 1px solid rgba(67, 56, 202, 0.2);
+  border-left: 3px solid var(--accent-indigo);
+  position: relative;
+}
+
+.co-meta {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 968px) {
+  .split-view {
+    flex-direction: column;
+  }
+  .divider {
+    flex-direction: row;
+    height: 40px;
+    width: 100%;
+  }
+  .divider svg {
+    transform: rotate(90deg);
+  }
+}

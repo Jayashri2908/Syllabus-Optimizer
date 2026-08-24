@@ -1,146 +1,76 @@
-/* Chart Components - Professional 2025 Corporate Design */
-
-.chart-container {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-xl);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.chart-container:hover {
-    box-shadow: var(--shadow-md);
-}
-
-.chart-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-    color: var(--primary);
-}
-
-/* Heatmap Styles */
 .heatmap-container {
-    overflow-x: auto;
-    margin-bottom: var(--space-6);
+  overflow-x: auto;
+  padding: 1rem 0;
 }
 
-.heatmap-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.875rem;
-}
-
-.heatmap-table th,
-.heatmap-table td {
-    padding: var(--space-2);
-    text-align: center;
-    border: 1px solid var(--border);
-}
-
-.heatmap-table th {
-    background: var(--bg-surface);
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.heatmap-label {
-    font-weight: 700;
-    background: var(--bg-surface);
-    color: var(--primary);
+.heatmap-grid {
+  display: grid;
+  gap: 2px;
+  min-width: 600px;
 }
 
 .heatmap-cell {
-    font-weight: 600;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  min-height: 40px;
+  border-radius: 4px;
 }
 
-.heatmap-cell:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(15, 23, 42, 0.15);
-    z-index: 10;
-    position: relative;
+.heatmap-cell.header {
+  background-color: rgba(0,0,0,0.03);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-weight: 600;
 }
 
-.heatmap-cell.level-3 {
-    background: #dcfce7;
-    color: #15803d;
-    border: 1px solid #bbf7d0;
+.heatmap-cell.avg {
+  background-color: rgba(67, 56, 202, 0.05);
+  color: var(--accent-indigo);
+  font-weight: 600;
 }
 
-.heatmap-cell.level-2 {
-    background: #fef3c7;
-    color: #b45309;
-    border: 1px solid #fde68a;
+.heatmap-cell.value {
+  color: #fff;
+  transition: transform 0.1s;
+  cursor: default;
 }
 
-.heatmap-cell.level-1 {
-    background: #fee2e2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
+.heatmap-cell.value:hover {
+  transform: scale(1.1);
+  z-index: 10;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border-radius: 6px;
 }
 
-.heatmap-cell.level-0 {
-    background: #f1f5f9;
-    color: #94a3b8;
-    border: 1px solid #e2e8f0;
-}
-
-[data-theme="dark"] .heatmap-cell.level-3 {
-    background: hsl(142, 71%, 25%);
-    color: hsl(142, 71%, 85%);
-}
-
-[data-theme="dark"] .heatmap-cell.level-2 {
-    background: hsl(45, 100%, 25%);
-    color: hsl(45, 100%, 85%);
-}
-
-[data-theme="dark"] .heatmap-cell.level-1 {
-    background: hsl(28, 100%, 25%);
-    color: hsl(28, 100%, 85%);
-}
+/* Colors based on intensity */
+.bg-empty { background-color: rgba(0,0,0,0.02); color: transparent !important; }
+.bg-level-1 { background-color: #93c5fd; } /* Blue 300 */
+.bg-level-2 { background-color: #3b82f6; } /* Blue 500 */
+.bg-level-3 { background-color: #1e3a8a; } /* Blue 900 */
+.bg-level-3, .bg-level-2 { color: white; }
+.bg-level-1 { color: #1e3a8a; }
 
 .heatmap-legend {
-    display: flex;
-    gap: var(--space-6);
-    justify-content: center;
-    font-size: 0.875rem;
-    color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
 }
 
-.legend-box {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border-radius: var(--radius-sm);
-    margin-right: var(--space-1);
-    border: 1px solid var(--border);
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.legend-box.level-3 {
-    background: hsl(142, 71%, 85%);
-}
-
-.legend-box.level-2 {
-    background: hsl(45, 100%, 85%);
-}
-
-.legend-box.level-1 {
-    background: hsl(28, 100%, 85%);
-}
-
-[data-theme="dark"] .legend-box.level-3 {
-    background: hsl(142, 71%, 25%);
-}
-
-[data-theme="dark"] .legend-box.level-2 {
-    background: hsl(45, 100%, 25%);
-}
-
-[data-theme="dark"] .legend-box.level-1 {
-    background: hsl(28, 100%, 25%);
+.color-box {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
 }

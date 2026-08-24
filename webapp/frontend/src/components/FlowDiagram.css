@@ -1,0 +1,145 @@
+.svg-diagram-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.diagram-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: var(--surface-glass);
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.control-group strong {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.control-group button {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.control-group button:hover {
+  background: rgba(67, 56, 202, 0.1);
+  border-color: var(--accent-indigo-light);
+}
+
+.control-group button.active {
+  background: var(--accent-indigo);
+  color: white;
+  border-color: var(--accent-indigo);
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3);
+}
+
+/* SVG Bounds */
+.svg-canvas-container {
+  width: 100%;
+  border-radius: 1rem;
+  background: var(--surface-glass);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+  overflow: hidden;
+  transition: all 0.4s ease;
+}
+
+.svg-canvas-container.schematic {
+  background: #f1f5f9;
+  border: 2px dashed #cbd5e1;
+}
+
+.main-svg {
+  width: 100%;
+  max-width: 1000px;
+  height: auto;
+  overflow: visible; /* Prevent bounds clipping on hover shadows */
+}
+
+/* Connection Lines */
+.connection-track {
+  fill: none;
+  stroke: var(--border-subtle);
+  stroke-width: 4px;
+  stroke-linecap: round;
+}
+
+.connection-flow {
+  fill: none;
+  stroke: var(--accent-indigo);
+  stroke-width: 4px;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.6));
+}
+
+.schematic .connection-track {
+  stroke: #cbd5e1;
+  stroke-width: 2px;
+}
+.schematic .connection-flow {
+  stroke: #0f172a;
+  stroke-width: 2px;
+  filter: none;
+}
+
+/* Nodes */
+.svg-node {
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.svg-node:hover {
+  transform: translateY(-5px);
+}
+
+/* HTML Wrapper inside SVG */
+.node-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--text-primary);
+  /* Make sure foreignObject HTML inherits cursor */
+  pointer-events: none; 
+}
+
+.schematic .node-content {
+  font-family: var(--font-mono);
+  color: #0f172a;
+}
+
+.node-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Responsive Overrides */
+@media (max-width: 768px) {
+  .diagram-controls {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+}

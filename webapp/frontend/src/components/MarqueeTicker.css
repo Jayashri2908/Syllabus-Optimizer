@@ -1,0 +1,37 @@
+.marquee-container {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  background: var(--surface-glass);
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 1rem 0;
+  margin: 3rem 0;
+  display: flex;
+  white-space: nowrap;
+}
+
+.marquee-content {
+  display: flex;
+  animation: scroll 30s linear infinite;
+}
+
+.marquee-group {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+.marquee-item {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 3rem;
+}
+
+@keyframes scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.33%); } /* Shift over exactly one group width assuming 3 groups */
+}
