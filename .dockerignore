@@ -1,45 +1,63 @@
+# =============================================================================
+# Docker Build Context Exclusions
+# =============================================================================
+
+# Secrets — never bake into image
+.env
+.env.*
+!.env.example
+configs/ibm_config.yaml
+
 # Version control
 .git
-.gitignore
+.github
 
-# Python
-venv/
-__pycache__/
+# Python artifacts
+__pycache__
 *.pyc
 *.pyo
-.pytest_cache/
-.coverage
-htmlcov/
+*.pyd
+.Python
+venv/
+.venv/
 *.egg-info/
+.pytest_cache/
+.mypy_cache/
 
-# Node
+# Node artifacts
 node_modules/
 webapp/frontend/node_modules/
+webapp/node_modules/
 
-# IDE
+# IDE and editor
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Logs & temp
-logs/
-*.log
-tmp/
-temp/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Docs (not needed in container)
-docs/
-*.pdf
-*.docx
-*.pptx
-
-# Cache
+# Data & runtime (mounted as volumes at runtime)
+data/
 cache/
+logs/
+uploads/
+output/
 
-# CI
-.github/
+# Large docs
+docs/*.pdf
+docs/*.docx
+docs/*.pptx
+
+# Test files
+tests/
+test_*.py
+
+# Misc
+*.db
+*.sqlite3
+*.log
+*.bat
+.ai_studio_code.html
+components.html
+free_models.json
+free_models.txt
+DIRECTORY_MAP.md

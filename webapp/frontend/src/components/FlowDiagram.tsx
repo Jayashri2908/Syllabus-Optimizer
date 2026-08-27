@@ -33,7 +33,7 @@ const FlowDiagram = () => {
      },
      llm: { 
         id: 'llm', 
-        label: 'IBM Granite',
+         label: 'OpenRouter AI',
         icon: <Cpu size={24} />,
         x: 600, 
         y: 300 

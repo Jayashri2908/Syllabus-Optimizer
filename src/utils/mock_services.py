@@ -15,6 +15,20 @@ class MockContentOptimizer:
             "Industry 4.0 applications",
             "Ethics and Compliance"
         ]
+    
+    def optimize_full_syllabus(self, syllabus_data: Dict) -> Dict:
+        """Mock full syllabus optimization for when AI models are unavailable"""
+        return {
+            'optimized_syllabus': syllabus_data,
+            'changes_summary': ['AI optimization unavailable — using mock fallback. Set OPENROUTER_API_KEY or GEMINI_API_KEY for real optimization.'],
+            'bloom_distribution': {
+                'Remember': 20, 'Understand': 30, 'Apply': 25,
+                'Analyze': 15, 'Evaluate': 5, 'Create': 5
+            },
+            'rationale': 'Mock optimization applied. No AI model was available for intelligent refinement.',
+            'industry_relevance_score': 50,
+            'prerequisite_rationale': 'Prerequisites unchanged (mock mode).'
+        }
 
 class MockBloomMapper:
     def analyze_distribution(self, outcomes: List[str]) -> Dict[str, Any]:

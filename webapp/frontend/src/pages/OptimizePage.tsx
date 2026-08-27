@@ -136,7 +136,7 @@ const OptimizePage: React.FC = () => {
                     <strong>Refactored Course Outcomes</strong>
                     <div className="outcomes-list mt-2">
                        {optimizedSyllabus?.learning_outcomes?.map((co, i) => (
-                         <div key={i} className="co-item bg-indigo-light">
+                         <div key={i} className="co-item opt-bg-indigo-light">
                            <div className="co-text">{co.description}</div>
                            <div className="co-meta">
                              <span className="mono-tag" style={{backgroundColor: '#fff'}}>{co.bloom_level}</span>

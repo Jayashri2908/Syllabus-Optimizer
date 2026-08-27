@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import os
 
@@ -34,7 +35,8 @@ async def lifespan(application: FastAPI):
         comps.local_storage = LocalStorage()
         logger.info("Critical components initialized successfully")
     except Exception as e:
-        logger.error(f"Critical component initialization failed: {e}")
+        logger.critical(f"Critical component initialization failed: {e}")
+        raise RuntimeError(f"Cannot start server — critical component failed: {e}") from e
 
     bloom_mapper_initialized = False
     content_optimizer_initialized = False
@@ -47,10 +49,10 @@ async def lifespan(application: FastAPI):
         comps.reference_suggester = ReferenceSuggester()
         bloom_mapper_initialized = True
         content_optimizer_initialized = True
-        logger.info("[OK] AI components initialized successfully (AI models active)")
+        logger.info("AI components initialized successfully (AI models active)")
     except Exception as e:
-        logger.error(f"[ERROR] AI component initialization failed: {e}")
-        logger.error("[WARNING] IBM Granite credentials required! Run: python setup_credentials.py")
+        logger.error(f"AI component initialization failed: {e}")
+        logger.error("Set OPENROUTER_API_KEY or GEMINI_API_KEY for AI features")
 
         try:
             comps.gap_analyzer = RAGAwareAnalyzer()
@@ -75,18 +77,27 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch-all handler — prevents leaking internal details to clients."""
+    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}")
+    import traceback
+    logger.error(traceback.format_exc())
+    return JSONResponse(status_code=500, content={"detail": "Internal server error."})
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization", "X-API-Key"],
 )
 
-logger.info("="*50)
-logger.info("  SCDO BACKEND SERVER - AI-POWERED ONLY  ")
-logger.info("  IBM Granite Integration Required  ")
-logger.info("="*50)
+logger.info("=" * 50)
+logger.info("  SCDO BACKEND SERVER  ")
+logger.info("  OpenRouter + Gemini  ")
+logger.info("=" * 50)
 
 # Include routers
 app.include_router(system.router)

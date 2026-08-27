@@ -51,4 +51,4 @@ async def generate_syllabus(request: GenerateRequest, comps=Depends(get_componen
         
     except Exception as e:
         logger.error(f"Generation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Syllabus generation failed. Check API configurations.")

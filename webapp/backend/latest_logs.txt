@@ -1,0 +1,200 @@
+2026-02-05 13:46:50 - scdo_api - INFO - DEBUG: First topic type: <class 'dict'>
+2026-02-05 13:46:50 - scdo_api - INFO - DEBUG: First topic value: {'topic': 'Definition and scope of machine learning', 'description': None, 'subtopics': [], 'key_concepts': [], 'practical_examples': []}
+2026-02-05 13:47:11 - scdo_api - INFO - Exporting PDF for course: Machine Learning
+2026-02-05 13:47:11 - scdo_api - INFO - No analysis_data provided
+2026-02-05 13:48:24 - scdo_api - INFO - Successfully parsed syllabus: LAS Syllabus.docx (5 units, 5 outcomes)
+2026-02-05 13:48:24 - scdo_api - INFO - Starting unified optimization for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-05 13:48:24 - scdo_api - INFO - Calling LLM for optimization of 'LINEAR ALGEBRA AND STATISTICS'...
+2026-02-05 13:49:24 - scdo_api - INFO - LLM optimization complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 13:49:24 - scdo_api - INFO - Running post-processing compliance checks for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 13:49:24 - scdo_api - INFO - NEP 2020 validation complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 13:49:24 - scdo_api - INFO - Accreditation checks complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 13:49:25 - scdo_api - INFO - Performing CO-PO mapping for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 13:49:25 - scdo_api - INFO - CO-PO mapping complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 13:49:25 - scdo_api - INFO - Optimization pipeline successfully finished for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 13:53:45 - scdo_api - INFO - Exporting Word for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-05 13:53:46 - scdo_api - ERROR - Word export failed: "no style with name 'Grid Table 4 Accent 1'"
+2026-02-05 13:53:46 - scdo_api - ERROR - Traceback (most recent call last):
+  File "D:\Syllabus Optimizer\webapp\backend\main.py", line 797, in export_word
+    table.style = 'Grid Table 4 Accent 1' # Built-in style
+    ^^^^^^^^^^^
+  File "D:\Syllabus Optimizer\venv\Lib\site-packages\docx\table.py", line 137, in style
+    style_id = self.part.get_style_id(style_or_name, WD_STYLE_TYPE.TABLE)
+  File "D:\Syllabus Optimizer\venv\Lib\site-packages\docx\parts\document.py", line 87, in get_style_id
+    return self.styles.get_style_id(style_or_name, style_type)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Syllabus Optimizer\venv\Lib\site-packages\docx\styles\styles.py", line 98, in get_style_id
+    return self._get_style_id_from_name(style_or_name, style_type)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Syllabus Optimizer\venv\Lib\site-packages\docx\styles\styles.py", line 125, in _get_style_id_from_name
+    return self._get_style_id_from_style(self[style_name], style_type)
+                                         ~~~~^^^^^^^^^^^^
+  File "D:\Syllabus Optimizer\venv\Lib\site-packages\docx\styles\styles.py", line 47, in __getitem__
+    raise KeyError("no style with name '%s'" % key)
+KeyError: "no style with name 'Grid Table 4 Accent 1'"
+
+2026-02-05 13:54:37 - scdo_api - INFO - ==================================================
+2026-02-05 13:54:37 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-02-05 13:54:37 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-02-05 13:54:37 - scdo_api - INFO - ==================================================
+2026-02-05 13:54:37 - scdo_api - INFO - Critical components initialized successfully
+2026-02-05 13:54:58 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-02-05 13:55:17 - scdo_api - INFO - Successfully parsed syllabus: LAS Syllabus.docx (5 units, 5 outcomes)
+2026-02-05 13:55:17 - scdo_api - INFO - Analyzing syllabus for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-05 13:55:19 - scdo_api - INFO - Analysis complete for LINEAR ALGEBRA AND STATISTICS
+2026-02-05 13:58:14 - scdo_api - INFO - DEBUG: Unit type: <class 'dict'>
+2026-02-05 13:58:14 - scdo_api - INFO - DEBUG: Topics type: <class 'list'>
+2026-02-05 13:58:14 - scdo_api - INFO - DEBUG: First topic type: <class 'dict'>
+2026-02-05 13:58:14 - scdo_api - INFO - DEBUG: First topic value: {'topic': 'Introduction to machine learning concepts', 'description': None, 'subtopics': [], 'key_concepts': [], 'practical_examples': []}
+2026-02-05 13:58:25 - scdo_api - INFO - Exporting PDF for course: Machine Learning
+2026-02-05 13:58:25 - scdo_api - INFO - No analysis_data provided
+2026-02-05 14:03:44 - scdo_api - INFO - ==================================================
+2026-02-05 14:03:44 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-02-05 14:03:44 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-02-05 14:03:44 - scdo_api - INFO - ==================================================
+2026-02-05 14:03:45 - scdo_api - INFO - Critical components initialized successfully
+2026-02-05 14:03:57 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-02-05 14:04:54 - scdo_api - INFO - Exporting PDF for course: Machine Learning
+2026-02-05 14:04:54 - scdo_api - INFO - No analysis_data provided
+2026-02-05 14:11:36 - scdo_api - INFO - ==================================================
+2026-02-05 14:11:36 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-02-05 14:11:36 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-02-05 14:11:36 - scdo_api - INFO - ==================================================
+2026-02-05 14:11:36 - scdo_api - INFO - Critical components initialized successfully
+2026-02-05 14:11:50 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-02-05 14:13:31 - scdo_api - INFO - DEBUG: Unit type: <class 'dict'>
+2026-02-05 14:13:31 - scdo_api - INFO - DEBUG: Topics type: <class 'list'>
+2026-02-05 14:13:31 - scdo_api - INFO - DEBUG: First topic type: <class 'dict'>
+2026-02-05 14:13:31 - scdo_api - INFO - DEBUG: First topic value: {'topic': 'Machine learning definition', 'description': None, 'subtopics': [], 'key_concepts': [], 'practical_examples': []}
+2026-02-05 14:13:40 - scdo_api - INFO - Exporting PDF for course: Machine Learning
+2026-02-05 14:13:40 - scdo_api - INFO - No analysis_data provided
+2026-02-05 14:14:34 - scdo_api - INFO - Successfully parsed syllabus: LAS Syllabus.docx (5 units, 5 outcomes)
+2026-02-05 14:14:34 - scdo_api - INFO - Starting unified optimization for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-05 14:14:34 - scdo_api - INFO - Calling LLM for optimization of 'LINEAR ALGEBRA AND STATISTICS'...
+2026-02-05 14:15:46 - scdo_api - INFO - LLM optimization complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 14:15:46 - scdo_api - INFO - Running post-processing compliance checks for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 14:15:46 - scdo_api - INFO - NEP 2020 validation complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 14:15:46 - scdo_api - INFO - Accreditation checks complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 14:15:46 - scdo_api - INFO - Performing CO-PO mapping for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 14:15:46 - scdo_api - INFO - CO-PO mapping complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 14:15:46 - scdo_api - INFO - Optimization pipeline successfully finished for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-05 14:43:39 - scdo_api - INFO - Successfully parsed syllabus: OS.pdf (5 units, 5 outcomes)
+2026-02-05 14:43:39 - scdo_api - INFO - Analyzing syllabus for course: : Operating Systems
+2026-02-05 14:43:39 - scdo_api - INFO - Analysis complete for : Operating Systems
+2026-02-05 14:44:17 - scdo_api - INFO - Exporting PDF for course: : Operating Systems
+2026-02-05 14:44:17 - scdo_api - INFO - Analysis data keys: ['bloom_coverage', 'co_po_mapping_gaps', 'assessment_gaps', 'content_gaps', 'structural_issues', 'lesson_plan_analysis', 'redundancies', 'content_quality', 'nep_2020_compliance', 'accreditation_compliance', 'recommendations']
+2026-02-06 11:35:50 - scdo_api - INFO - ==================================================
+2026-02-06 11:35:50 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-02-06 11:35:50 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-02-06 11:35:50 - scdo_api - INFO - ==================================================
+2026-02-06 11:35:50 - scdo_api - INFO - Critical components initialized successfully
+2026-02-06 11:36:05 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-02-06 11:36:41 - scdo_api - INFO - Successfully parsed syllabus: LAS Syllabus.pdf (5 units, 5 outcomes)
+2026-02-06 11:36:41 - scdo_api - INFO - Analyzing syllabus for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 11:36:42 - scdo_api - INFO - Analysis complete for LINEAR ALGEBRA AND STATISTICS
+2026-02-06 11:39:14 - scdo_api - INFO - DEBUG: Unit type: <class 'dict'>
+2026-02-06 11:39:14 - scdo_api - INFO - DEBUG: Topics type: <class 'list'>
+2026-02-06 11:39:14 - scdo_api - INFO - DEBUG: First topic type: <class 'dict'>
+2026-02-06 11:39:14 - scdo_api - INFO - DEBUG: First topic value: {'topic': 'Course objectives and outcomes', 'description': None, 'subtopics': [], 'key_concepts': [], 'practical_examples': []}
+2026-02-06 11:39:33 - scdo_api - INFO - Exporting PDF for course: Machine Learning
+2026-02-06 11:39:33 - scdo_api - INFO - No analysis_data provided
+2026-02-06 11:41:14 - scdo_api - INFO - Successfully parsed syllabus: OS.pdf (5 units, 5 outcomes)
+2026-02-06 11:41:14 - scdo_api - INFO - Starting unified optimization for course: : Operating Systems
+2026-02-06 11:41:14 - scdo_api - INFO - Calling LLM for optimization of ': Operating Systems'...
+2026-02-06 11:42:16 - scdo_api - INFO - LLM optimization complete for ': Operating Systems'
+2026-02-06 11:42:16 - scdo_api - INFO - Running post-processing compliance checks for ': Operating Systems'
+2026-02-06 11:42:16 - scdo_api - INFO - NEP 2020 validation complete for ': Operating Systems'
+2026-02-06 11:42:16 - scdo_api - INFO - Accreditation checks complete for ': Operating Systems'
+2026-02-06 11:42:16 - scdo_api - INFO - Performing CO-PO mapping for ': Operating Systems'
+2026-02-06 11:42:16 - scdo_api - INFO - CO-PO mapping complete for ': Operating Systems'
+2026-02-06 11:42:16 - scdo_api - INFO - Optimization pipeline successfully finished for ': Operating Systems'
+2026-02-06 11:43:08 - scdo_api - INFO - Successfully parsed syllabus: LAS Syllabus.docx (5 units, 5 outcomes)
+2026-02-06 11:43:08 - scdo_api - INFO - Starting unified optimization for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 11:43:08 - scdo_api - INFO - Calling LLM for optimization of 'LINEAR ALGEBRA AND STATISTICS'...
+2026-02-06 11:43:40 - scdo_api - INFO - LLM optimization complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 11:43:40 - scdo_api - INFO - Running post-processing compliance checks for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 11:43:40 - scdo_api - INFO - NEP 2020 validation complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 11:43:40 - scdo_api - INFO - Accreditation checks complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 11:43:40 - scdo_api - INFO - Performing CO-PO mapping for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 11:43:40 - scdo_api - INFO - CO-PO mapping complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 11:43:40 - scdo_api - INFO - Optimization pipeline successfully finished for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 11:43:59 - scdo_api - INFO - Exporting PDF for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 11:43:59 - scdo_api - INFO - Analysis data keys: ['changes_summary', 'bloom_distribution', 'rationale', 'industry_relevance_score', 'prerequisite_rationale', 'nep_2020_compliance', 'accreditation_compliance', 'co_po_mapping']
+2026-02-06 11:54:30 - scdo_api - INFO - Exporting PDF for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 11:54:30 - scdo_api - INFO - Analysis data keys: ['changes_summary', 'bloom_distribution', 'rationale', 'industry_relevance_score', 'prerequisite_rationale', 'nep_2020_compliance', 'accreditation_compliance', 'co_po_mapping']
+2026-02-06 12:03:48 - scdo_api - INFO - Successfully parsed syllabus: LAS Syllabus.docx (5 units, 5 outcomes)
+2026-02-06 12:03:48 - scdo_api - INFO - Starting unified optimization for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 12:03:48 - scdo_api - INFO - Calling LLM for optimization of 'LINEAR ALGEBRA AND STATISTICS'...
+2026-02-06 12:04:43 - scdo_api - INFO - LLM optimization complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 12:04:43 - scdo_api - INFO - Running post-processing compliance checks for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 12:04:43 - scdo_api - INFO - NEP 2020 validation complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 12:04:43 - scdo_api - INFO - Accreditation checks complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 12:04:43 - scdo_api - INFO - Performing CO-PO mapping for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 12:04:44 - scdo_api - INFO - CO-PO mapping complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 12:04:44 - scdo_api - INFO - Optimization pipeline successfully finished for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 12:05:23 - scdo_api - INFO - Exporting PDF for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 12:05:23 - scdo_api - INFO - Analysis data keys: ['changes_summary', 'bloom_distribution', 'rationale', 'industry_relevance_score', 'prerequisite_rationale', 'nep_2020_compliance', 'accreditation_compliance', 'co_po_mapping']
+2026-02-06 13:38:50 - scdo_api - INFO - ==================================================
+2026-02-06 13:38:50 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-02-06 13:38:50 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-02-06 13:38:50 - scdo_api - INFO - ==================================================
+2026-02-06 13:38:50 - scdo_api - INFO - Critical components initialized successfully
+2026-02-06 13:39:04 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-02-06 13:40:26 - scdo_api - INFO - Successfully parsed syllabus: LAS Syllabus.docx (5 units, 5 outcomes)
+2026-02-06 13:40:26 - scdo_api - INFO - Starting unified optimization for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 13:40:26 - scdo_api - INFO - Calling LLM for optimization of 'LINEAR ALGEBRA AND STATISTICS'...
+2026-02-06 13:41:35 - scdo_api - INFO - LLM optimization complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:41:35 - scdo_api - INFO - Running post-processing compliance checks for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:41:35 - scdo_api - INFO - NEP 2020 validation complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:41:35 - scdo_api - INFO - Accreditation checks complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:41:35 - scdo_api - INFO - Performing CO-PO mapping for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:41:35 - scdo_api - INFO - CO-PO mapping complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:41:35 - scdo_api - INFO - Optimization pipeline successfully finished for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:41:46 - scdo_api - INFO - Successfully parsed syllabus: LAS Syllabus.docx (5 units, 5 outcomes)
+2026-02-06 13:41:46 - scdo_api - INFO - Starting unified optimization for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 13:41:46 - scdo_api - INFO - Calling LLM for optimization of 'LINEAR ALGEBRA AND STATISTICS'...
+2026-02-06 13:42:32 - scdo_api - INFO - LLM optimization complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:42:32 - scdo_api - INFO - Running post-processing compliance checks for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:42:32 - scdo_api - INFO - NEP 2020 validation complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:42:32 - scdo_api - INFO - Accreditation checks complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:42:32 - scdo_api - INFO - Performing CO-PO mapping for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:42:32 - scdo_api - INFO - CO-PO mapping complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:42:32 - scdo_api - INFO - Optimization pipeline successfully finished for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:44:39 - scdo_api - INFO - Exporting PDF for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 13:44:39 - scdo_api - INFO - Analysis data keys: ['changes_summary', 'bloom_distribution', 'rationale', 'industry_relevance_score', 'prerequisite_rationale', 'nep_2020_compliance', 'accreditation_compliance', 'co_po_mapping']
+2026-02-06 14:17:35 - scdo_api - INFO - DEBUG: Unit type: <class 'dict'>
+2026-02-06 14:17:35 - scdo_api - INFO - DEBUG: Topics type: <class 'list'>
+2026-02-06 14:17:35 - scdo_api - INFO - DEBUG: First topic type: <class 'dict'>
+2026-02-06 14:17:35 - scdo_api - INFO - DEBUG: First topic value: {'topic': 'Machine learning definitions and scope', 'description': None, 'subtopics': [], 'key_concepts': [], 'practical_examples': []}
+2026-02-06 14:17:45 - scdo_api - INFO - Exporting PDF for course: Machine Learning
+2026-02-06 14:17:46 - scdo_api - INFO - No analysis_data provided
+2026-02-06 14:19:17 - scdo_api - INFO - Exporting PDF for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 14:19:17 - scdo_api - INFO - Analysis data keys: ['changes_summary', 'bloom_distribution', 'rationale', 'industry_relevance_score', 'prerequisite_rationale', 'nep_2020_compliance', 'accreditation_compliance', 'co_po_mapping']
+2026-08-19 22:29:09 - scdo_api - INFO - ==================================================
+2026-08-19 22:29:09 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-19 22:29:09 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-19 22:29:09 - scdo_api - INFO - ==================================================
+2026-08-19 22:29:10 - scdo_api - INFO - Critical components initialized successfully
+2026-08-19 22:29:29 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-08-21 11:13:43 - scdo_api - INFO - ==================================================
+2026-08-21 11:13:43 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-21 11:13:43 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-21 11:13:43 - scdo_api - INFO - ==================================================
+2026-08-21 11:13:45 - scdo_api - INFO - Critical components initialized successfully
+2026-08-21 11:14:44 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-08-22 01:16:59 - scdo_api - INFO - ==================================================
+2026-08-22 01:16:59 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-22 01:16:59 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-22 01:16:59 - scdo_api - INFO - ==================================================
+2026-08-22 01:17:00 - scdo_api - INFO - Critical components initialized successfully
+2026-08-22 01:17:32 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-08-22 02:30:14 - scdo_api - ERROR - Upload failed: PDF libraries not installed. Please install pypdf and pdfplumber.
+2026-08-24 11:41:34 - scdo_api - INFO - ==================================================
+2026-08-24 11:41:34 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-24 11:41:34 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-24 11:41:34 - scdo_api - INFO - ==================================================
+2026-08-24 11:41:35 - scdo_api - INFO - Critical components initialized successfully
+2026-08-24 11:41:52 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-08-24 12:34:44 - scdo_api - ERROR - Upload failed: PDF libraries not installed. Please install pypdf and pdfplumber.
+2026-08-24 12:35:17 - scdo_api - ERROR - Upload failed: PDF libraries not installed. Please install pypdf and pdfplumber.
+2026-08-24 12:39:02 - scdo_api - INFO - Successfully parsed syllabus: test.txt (0 units, 0 outcomes)

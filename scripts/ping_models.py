@@ -38,7 +38,7 @@ def ping_models():
     # The manager initializes models it can. Let's see what's available.
     available_models = manager.models
     
-    models_to_test = ['openrouter', 'gemini', 'granite']
+    models_to_test = ['openrouter', 'gemini']
     
     results = []
 

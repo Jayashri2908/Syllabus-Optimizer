@@ -41,7 +41,7 @@ async def analyze_syllabus(syllabus_data: Dict[str, Any], comps=Depends(get_comp
         }
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Analysis failed. Please try again.")
 
 
 @router.post("/api/optimize")
@@ -126,4 +126,4 @@ async def optimize_syllabus(request: OptimizeRequest, comps=Depends(get_componen
         logger.error(f"Optimization pipeline failed: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Optimization failed. Please try again.")

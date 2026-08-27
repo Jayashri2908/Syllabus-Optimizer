@@ -29,6 +29,8 @@ const SpecsPage = () => {
   }, []);
 
   const isOnline = healthData.status === 'healthy';
+  const chromaOnline = healthData.chromadb === 'connected';
+  const llmActive = healthData.llm && healthData.llm.includes('active');
 
   return (
     <div className="page-container animate-fade-in" style={{ maxWidth: '1200px' }}>
@@ -61,23 +63,25 @@ const SpecsPage = () => {
           </div>
         </div>
 
-        {/* Vector DB (Inferred from health or static as part of the unified backend) */}
+        {/* Vector DB — real status from health endpoint */}
         <div className="kpi-card glass-card">
-          <div className="kpi-icon"><Database size={24} className="text-indigo" /></div>
+          <div className="kpi-icon"><Database size={24} className={chromaOnline ? 'text-indigo' : 'text-amber'} /></div>
           <div className="kpi-content">
             <span className="kpi-label">Vector Store (ChromaDB)</span>
-            <div className={`status-indicator ${isOnline ? 'online' : 'offline'}`}>
-               <span className="dot"></span> {isOnline ? 'Active' : 'Unreachable'}
+            <div className={`status-indicator ${chromaOnline ? 'online' : 'offline'}`}>
+               <span className="dot"></span> {chromaOnline ? `Active (${healthData.chromadb_documents ?? 0} docs)` : 'Unreachable'}
             </div>
           </div>
         </div>
         
-        {/* LLM Engine */}
+        {/* LLM Engine — real status from health endpoint */}
         <div className="kpi-card glass-card">
-          <div className="kpi-icon"><Cpu size={24} className="text-amber" /></div>
+          <div className="kpi-icon"><Cpu size={24} className={llmActive ? 'text-amber' : 'text-secondary'} /></div>
           <div className="kpi-content">
-            <span className="kpi-label">Primary LLM</span>
-            <div className="kpi-value small">IBM Granite via OpenRouter</div>
+            <span className="kpi-label">AI Engine</span>
+            <div className={`status-indicator ${llmActive ? 'online' : 'offline'}`}>
+               <span className="dot"></span> {llmActive ? (healthData.llm?.split('/')[0] ?? 'Unknown') : 'No models configured'}
+            </div>
           </div>
         </div>
       </div>

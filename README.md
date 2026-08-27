@@ -1,6 +1,6 @@
 # SCDO - Syllabus and Curriculum Design Optimizer
 
-An AI-powered system for analyzing, optimizing, and generating academic syllabi using **MiMo** (Xiaomi), **Gemini** (Google), and **Granite** (IBM watsonx.ai).
+An AI-powered system for analyzing, optimizing, and generating academic syllabi using **OpenRouter** (Nvidia Nemotron) and **Google Gemini** — both free.
 
 ## Features
 
@@ -21,8 +21,8 @@ d:/Syllabus Optimizer/
 │   ├── generation/        # Syllabus generator
 │   ├── mapping/           # CO-PO mapping utilities
 │   ├── export/            # PDF/Excel exporters
-│   ├── ibm/              # IBM Cloud integration
-│   └── utils/            # Utilities and helpers
+│   ├── rag/               # Vector store and RAG retrieval
+│   └── utils/             # Utilities and helpers
 ├── webapp/
 │   └── backend/          # FastAPI server
 ├── configs/              # Configuration files
@@ -86,25 +86,6 @@ cp .env.example .env
 Open `.env` and populate the following keys:
 - `OPENROUTER_API_KEY`: Required for primary AI features (get from [openrouter.ai](https://openrouter.ai))
 - `GEMINI_API_KEY`: Optional fallback (get from [Google AI Studio](https://makersuite.google.com/app/apikey))
-- IBM credentials if using IBM Granite models (see below)
-
-### IBM Cloud Setup (Optional)
-
-If you plan to use IBM Granite models, you also need to configure the IBM specific settings.
-
-1. Create a **free** IBM Cloud account at https://cloud.ibm.com/
-2. Set up watsonx.ai (free tier available)
-3. Copy the example config:
-   ```bash
-   cp configs/ibm_config.yaml.example configs/ibm_config.yaml
-   ```
-4. Update `configs/ibm_config.yaml` with your API key and Project ID.
-   Alternatively, you can set these in your `.env` file as shown in `.env.example`.
-
-**Free Tier Limits:**
-- IBM Granite API: Limited requests per month (sufficient for development/testing)
-- No Cloud Object Storage needed - files stored locally
-- No additional costs
 
 ## Usage
 
@@ -194,7 +175,8 @@ This project is developed for academic purposes.
 
 ## Acknowledgments
 
-- IBM watsonx.ai and IBM Granite for AI capabilities
+- OpenRouter and Nvidia Nemotron for free AI capabilities
+- Google Gemini for fallback AI capabilities
 - Bloom's Taxonomy framework for learning outcome classification
 - NBA, NAAC, and NEP 2020 for accreditation standards
 

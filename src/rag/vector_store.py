@@ -2,10 +2,11 @@ import chromadb
 from chromadb.utils import embedding_functions
 import os
 from typing import List, Dict, Any
+from pathlib import Path
 
 class VectorStore:
-    def __init__(self, persist_directory: str = "d:/Syllabus Optimizer/data/chroma_db"):
-        self.persist_directory = persist_directory
+    def __init__(self, persist_directory: str = None):
+        self.persist_directory = persist_directory or str(Path(os.getcwd()) / "data" / "chroma_db")
         # Ensure directory exists
         os.makedirs(persist_directory, exist_ok=True)
         

@@ -26,6 +26,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user
+RUN adduser --disabled-password --gecos '' appuser
+
 WORKDIR /app
 
 # Install Python deps first (layer caching)
@@ -41,13 +44,16 @@ COPY scripts/ ./scripts/
 # Copy built frontend assets
 COPY --from=frontend-build /app/frontend/dist ./webapp/frontend/dist
 
-# Create required directories
-RUN mkdir -p logs uploads output cache
+# Create required directories with correct ownership
+RUN mkdir -p logs uploads output cache data && chown -R appuser:appuser /app
 
 # Environment defaults
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 ENV MAX_UPLOAD_SIZE=52428800
+
+# Switch to non-root user
+USER appuser
 
 EXPOSE 8000
 

@@ -22,7 +22,7 @@ class OpenRouterModel(BaseAIModel):
         super().__init__(config)
         self.api_key = os.getenv('OPENROUTER_API_KEY', self.config.get('api_key'))
         # Default to Nvidia Nemotron (Free)
-        self.model_name = self.config.get('model', 'arcee-ai/trinity-large-preview:free')
+        self.model_name = self.config.get('model', 'nvidia/nemotron-3.5-lightning:free')
         self.client = None
         
         if self.api_key and OPENAI_AVAILABLE:

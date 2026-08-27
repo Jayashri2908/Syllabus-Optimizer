@@ -41,7 +41,7 @@ jobs:
         run: pytest tests/ -v --tb=short
 
   # --------------------------------------------------------------------------
-  # Frontend: build (includes tsc type-check)
+  # Frontend: lint + build
   # --------------------------------------------------------------------------
   frontend:
     name: Frontend (TypeScript + Vite)
@@ -63,6 +63,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Lint
+        run: npx oxlint src/
 
       - name: Type-check & Build
         run: npm run build

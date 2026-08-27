@@ -1,6 +1,6 @@
 """
 AI Model Manager for SCDO
-Simplified: Gemini (primary) + Granite (fallback)
+OpenRouter (primary) + Gemini (fallback)
 With structured JSON output support for staggered LLM chaining
 """
 
@@ -10,20 +10,19 @@ import re
 from typing import Optional, List, Dict, Any, Type
 from pydantic import BaseModel as PydanticBaseModel, ValidationError
 from .base_model import BaseAIModel
-from .granite_model import GraniteModel
 from .gemini_model import GeminiModel
 from .openrouter_model import OpenRouterModel
 
 
 class ModelManager:
-    """Manages Gemini and Granite models with automatic fallback"""
+    """Manages OpenRouter and Gemini models with automatic fallback"""
     
-    # Priority: OpenRouter/MiMo first, Gemini second, Granite as fallback
+    # Priority: OpenRouter first, Gemini fallback
     TASK_MODEL_PRIORITY = {
-        'generation': ['openrouter', 'gemini', 'granite'],
-        'analysis': ['openrouter', 'gemini', 'granite'],
-        'optimization': ['openrouter', 'gemini', 'granite'],
-        'validation': ['openrouter', 'gemini', 'granite'],
+        'generation': ['openrouter', 'gemini'],
+        'analysis': ['openrouter', 'gemini'],
+        'optimization': ['openrouter', 'gemini'],
+        'validation': ['openrouter', 'gemini'],
     }
     
     def __init__(self, config: Dict = None):
@@ -33,9 +32,9 @@ class ModelManager:
         self._initialize_models()
     
     def _initialize_models(self):
-        """Initialize OpenRouter (MiMo), Gemini, and Granite models"""
+        """Initialize OpenRouter (primary) and Gemini (fallback) models"""
         
-        # Try OpenRouter/MiMo first (FREE - recommended)
+        # Try OpenRouter first (FREE - recommended)
         try:
             openrouter_config = self.config.get('openrouter', {})
             openrouter = OpenRouterModel(openrouter_config)
@@ -43,13 +42,13 @@ class ModelManager:
             if openrouter.is_available():
                 self.models['openrouter'] = openrouter
                 info = openrouter.get_model_info()
-                self.logger.info(f"✓ OPENROUTER available: {info.get('model', 'unknown')}")
+                self.logger.info(f"OPENROUTER available: {info.get('model', 'unknown')}")
             else:
-                self.logger.debug("✗ OPENROUTER not available (API key not set)")
+                self.logger.debug("OPENROUTER not available (API key not set)")
         except Exception as e:
             self.logger.debug(f"Could not initialize OpenRouter: {e}")
         
-        # Try Gemini as second option
+        # Try Gemini as fallback
         try:
             gemini_config = self.config.get('gemini', {})
             gemini = GeminiModel(gemini_config)
@@ -57,31 +56,18 @@ class ModelManager:
             if gemini.is_available():
                 self.models['gemini'] = gemini
                 info = gemini.get_model_info()
-                self.logger.info(f"✓ GEMINI available: {info.get('model', 'unknown')}")
+                self.logger.info(f"GEMINI available: {info.get('model', 'unknown')}")
             else:
-                self.logger.debug("✗ GEMINI not available (API key not set)")
+                self.logger.debug("GEMINI not available (API key not set)")
         except Exception as e:
             self.logger.debug(f"Could not initialize Gemini: {e}")
         
-        # Try Granite as fallback
-        try:
-            granite_config = self.config.get('granite', {})
-            granite = GraniteModel(granite_config)
-            
-            if granite.is_available():
-                self.models['granite'] = granite
-                info = granite.get_model_info()
-                self.logger.info(f"✓ GRANITE available: {info.get('model', 'unknown')}")
-            else:
-                self.logger.debug("✗ GRANITE not available")
-        except Exception as e:
-            self.logger.debug(f"Could not initialize Granite: {e}")
-        
         # Warn if no models available
         if not self.models:
-            self.logger.error("❌ No AI models available!")
-            self.logger.error("Please set GEMINI_API_KEY environment variable")
-            self.logger.error("Get free API key: https://makersuite.google.com/app/apikey")
+            self.logger.error("No AI models available!")
+            self.logger.error("Set one of these environment variables:")
+            self.logger.error("  OPENROUTER_API_KEY (recommended, free): https://openrouter.ai")
+            self.logger.error("  GEMINI_API_KEY (free): https://makersuite.google.com/app/apikey")
     
     def get_model(self, task_type: str = 'generation', preferred_model: Optional[str] = None) -> BaseAIModel:
         """
@@ -99,8 +85,8 @@ class ModelManager:
         if preferred_model and preferred_model in self.models:
             return self.models[preferred_model]
         
-        # Get priority list for this task (OpenRouter first, Gemini second, Granite fallback)
-        priority = self.TASK_MODEL_PRIORITY.get(task_type, ['openrouter', 'gemini', 'granite'])
+        # Get priority list for this task (OpenRouter first, Gemini fallback)
+        priority = self.TASK_MODEL_PRIORITY.get(task_type, ['openrouter', 'gemini'])
         
         # Return first available model in priority order
         for model_name in priority:
@@ -109,7 +95,7 @@ class ModelManager:
                 return self.models[model_name]
         
         raise RuntimeError(
-            "No AI models available! Please set one of these API keys:\n"
+            "No AI models available! Set one of these API keys:\n"
             "  - OPENROUTER_API_KEY (recommended, free): https://openrouter.ai\n"
             "  - GEMINI_API_KEY (free): https://makersuite.google.com/app/apikey"
         )
@@ -309,14 +295,14 @@ Please respond with ONLY a valid JSON object.
         print("="*60)
         
         if not self.models:
-            print("\n❌ No models available!")
-            print("\n🎯 Quick Setup (Choose one):")
-            print("\n📌 Option 1: OpenRouter + MiMo (RECOMMENDED - FREE)")
+            print("\nNo models available!")
+            print("\nQuick Setup (Choose one):")
+            print("\nOption 1: OpenRouter (RECOMMENDED - FREE)")
             print("   Visit: https://openrouter.ai")
             print("   Get your key in 2 minutes (no credit card)")
             print("   PowerShell: $env:OPENROUTER_API_KEY='your_key'")
             print("   CMD:        set OPENROUTER_API_KEY=your_key")
-            print("\n📌 Option 2: Google Gemini (FREE)")
+            print("\nOption 2: Google Gemini (FREE)")
             print("   Visit: https://makersuite.google.com/app/apikey")
             print("   PowerShell: $env:GEMINI_API_KEY='your_key'")
             print("   CMD:        set GEMINI_API_KEY=your_key")
@@ -324,7 +310,7 @@ Please respond with ONLY a valid JSON object.
         else:
             for name, model in self.models.items():
                 info = model.get_model_info()
-                print(f"\n✓ {info['name']} ({info['provider']})")
+                print(f"\n  {info['name']} ({info['provider']})")
                 print(f"  Model: {info.get('model', 'N/A')}")
                 print(f"  Cost: {info['cost']}")
                 if 'strengths' in info:

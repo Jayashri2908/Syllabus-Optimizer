@@ -27,4 +27,4 @@ async def map_outcomes(request: MapRequest, comps=Depends(get_components)):
         }
     except Exception as e:
         logger.error(f"Mapping failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="CO-PO mapping failed. Please try again.")

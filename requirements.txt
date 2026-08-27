@@ -1,114 +1,91 @@
 # =============================================================================
-# SYLLABUS OPTIMIZER - DEPENDENCIES (FREE AI)
+# SYLLABUS OPTIMIZER - DEPENDENCIES
+# AI: OpenRouter (primary) + Gemini (fallback) — both FREE
 # =============================================================================
 
 # -----------------------------------------------------------------------------
 # AI Models (FREE)
 # -----------------------------------------------------------------------------
-google-generativeai>=0.3.2  # Google Gemini (FREE - RECOMMENDED)
-ibm-watsonx-ai>=1.0.0       # IBM Granite (fallback)
-ibm-cloud-sdk-core>=3.18.2
+openai>=1.0.0,<2.0.0                 # OpenRouter via OpenAI SDK (PRIMARY)
+google-genai>=1.0.0,<2.0.0            # Google Gemini (FALLBACK) — replaces deprecated google-generativeai
 
 # -----------------------------------------------------------------------------
 # NLP & Text Processing
 # -----------------------------------------------------------------------------
-spacy>=3.7.0
-nltk>=3.8.1
-sentence-transformers>=2.2.2  # For semantic CO-PO mapping
-transformers>=4.35.0
+spacy>=3.7.0,<4.0.0
+nltk>=3.8.1,<4.0.0
+sentence-transformers>=2.2.2,<3.0.0  # For semantic CO-PO mapping
+transformers>=4.35.0,<5.0.0
 
 # -----------------------------------------------------------------------------
 # RAG & Vector Database
 # -----------------------------------------------------------------------------
-langchain>=0.0.200
-langchain-text-splitters>=0.0.1
-chromadb>=0.4.15
+langchain>=0.1.0,<1.0.0
+langchain-text-splitters>=0.0.1,<1.0.0
+chromadb>=0.4.15,<1.0.0
 
 # -----------------------------------------------------------------------------
 # Document Processing
 # -----------------------------------------------------------------------------
-pypdf>=3.0.0
-python-docx>=1.1.0
-pdfplumber>=0.10.0
-python-pptx>=0.6.23
+pypdf>=3.0.0,<5.0.0
+python-docx>=1.1.0,<2.0.0
+pdfplumber>=0.10.0,<1.0.0
+python-pptx>=0.6.23,<1.0.0
 
 # OCR for scanned PDFs (Tesseract binary also required)
-pytesseract>=0.3.10
-pdf2image>=1.16.0
+pytesseract>=0.3.10,<1.0.0
+pdf2image>=1.16.0,<2.0.0
 
 # -----------------------------------------------------------------------------
 # Data Processing & Analysis
 # -----------------------------------------------------------------------------
-pandas>=2.1.0
-numpy>=1.24.0
-openpyxl>=3.1.2
+pandas>=2.1.0,<3.0.0
+numpy>=1.24.0,<2.0.0
+openpyxl>=3.1.2,<4.0.0
 
 # -----------------------------------------------------------------------------
 # Web Framework (FastAPI Backend)
 # -----------------------------------------------------------------------------
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-python-multipart>=0.0.6
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
+fastapi>=0.104.0,<1.0.0
+uvicorn[standard]>=0.24.0,<1.0.0
+python-multipart>=0.0.6,<1.0.0
+pydantic>=2.5.0,<3.0.0
+pydantic-settings>=2.1.0,<3.0.0
 
 # -----------------------------------------------------------------------------
 # PDF/Document Export & Visualization
 # -----------------------------------------------------------------------------
-reportlab>=4.0.0
-fpdf2>=2.7.6
-Pillow>=10.1.0
-matplotlib>=3.8.2  # For charts in PDFs
-seaborn>=0.13.0
+reportlab>=4.0.0,<5.0.0
+fpdf2>=2.7.6,<3.0.0
+Pillow>=10.1.0,<12.0.0
+matplotlib>=3.8.2,<4.0.0
+seaborn>=0.13.0,<1.0.0
 
 # -----------------------------------------------------------------------------
 # Configuration & Environment
 # -----------------------------------------------------------------------------
-pyyaml>=6.0.1
-python-dotenv>=1.0.0
-aiofiles>=23.2.1
+pyyaml>=6.0.1,<7.0.0
+python-dotenv>=1.0.0,<2.0.0
+aiofiles>=23.2.1,<25.0.0
 
 # -----------------------------------------------------------------------------
 # HTTP & API Clients
 # -----------------------------------------------------------------------------
-httpx>=0.25.0
-requests>=2.31.0
+httpx>=0.25.0,<1.0.0
+requests>=2.31.0,<3.0.0
 
 # -----------------------------------------------------------------------------
-# Testing & Quality Assurance
-# -----------------------------------------------------------------------------
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
-pytest-cov>=4.1.0
-pytest-mock>=3.12.0
-
-# -----------------------------------------------------------------------------
-# Code Quality Tools
-# -----------------------------------------------------------------------------
-black>=23.11.0
-flake8>=6.1.0
-mypy>=1.7.0
-
 # Caching & Performance
 # -----------------------------------------------------------------------------
-diskcache>=5.6.3
-
-# Logging & Monitoring
-# -----------------------------------------------------------------------------
-# Standard logging used
+diskcache>=5.6.3,<6.0.0
 
 # -----------------------------------------------------------------------------
-# Database (Optional)
-# -----------------------------------------------------------------------------
-# No database required for current implementation
-
 # Security & Authentication
 # -----------------------------------------------------------------------------
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
-# CORS handled by fastapi.middleware.cors
+python-jose[cryptography]>=3.3.0,<4.0.0
+passlib[bcrypt]>=1.7.4,<2.0.0
 
 # -----------------------------------------------------------------------------
 # Progress Tracking
 # -----------------------------------------------------------------------------
-tqdm>=4.66.1
+tqdm>=4.66.0,<5.0.0

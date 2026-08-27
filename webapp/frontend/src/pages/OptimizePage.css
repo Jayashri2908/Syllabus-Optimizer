@@ -86,8 +86,8 @@
   border: 1px dashed var(--border-subtle);
 }
 
-.co-item.bg-indigo-light {
-  background-color: #fff;
+.co-item.opt-bg-indigo-light {
+  background: #fff;
   border: 1px solid rgba(67, 56, 202, 0.2);
   border-left: 3px solid var(--accent-indigo);
   position: relative;

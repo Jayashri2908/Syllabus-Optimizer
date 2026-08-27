@@ -39,6 +39,13 @@ const LandingPage = () => {
       return;
     }
 
+    // Client-side file size check (50 MB)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      toast.error(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum: 50 MB.`);
+      return;
+    }
+
     setIsUploading(true);
     const t = toast.loading('Initiating Fast-Track analysis...');
     
@@ -46,16 +53,20 @@ const LandingPage = () => {
       const uploadRes = await uploadSyllabus(file);
       setCurrentSyllabus(uploadRes.data);
       toast.success('Document uploaded!', { id: t });
-      
-      // Navigate to Analyze Page to watch the rest of the parsing
+
+      // Complete analysis BEFORE navigating so the Analyze page has data ready
+      const analysisLoading = toast.loading('Running gap analysis...');
+      try {
+        const analysisRes = await analyzeSyllabus(uploadRes.data);
+        setAnalysisResult(analysisRes.analysis);
+        toast.success('Analysis complete!', { id: analysisLoading });
+      } catch {
+        toast.error('Analysis failed — you can retry on the Analyze page.', { id: analysisLoading });
+      }
+
       navigate('/analyze');
-      
-      // Kick off analysis async so the page can handle loading state
-      const analysisRes = await analyzeSyllabus(uploadRes.data);
-      setAnalysisResult(analysisRes.analysis);
-      
-    } catch (err) {
-      toast.error("Upload failed.", { id: t });
+    } catch {
+      toast.error('Upload failed. Please try again.', { id: t });
       setIsUploading(false);
     }
   };
@@ -204,7 +215,7 @@ const LandingPage = () => {
            {[
              { step: "01", title: "Ingestion", desc: "Drag & Drop your legacy PDF or DOCX syllabus. Our engine extracts the raw text natively." },
              { step: "02", title: "Gap Analysis", desc: "The platform evaluates your cognitive levels, mapping semantic gaps across Bloom's Taxonomy." },
-             { step: "03", title: "RAG Generation", desc: "Using ChromaDB and IBM Granite, missing topics and outcomes are generated to meet standards." },
+              { step: "03", title: "RAG Generation", desc: "Using ChromaDB and OpenRouter AI, missing topics and outcomes are generated to meet standards." },
              { step: "04", title: "Refactoring", desc: "Export a finalized, beautifully formatted syllabus document, complete with CO-PO matrices." }
            ].map((item, i) => (
              <motion.div 
@@ -241,7 +252,7 @@ const LandingPage = () => {
       </section>
 
       <footer className="landing-footer" style={{ position: 'relative', zIndex: 10, marginTop: '2rem' }}>
-        <p>Powered by IBM Granite, Google Gemini, and OpenRouter</p>
+        <p>Powered by OpenRouter and Google Gemini</p>
       </footer>
     </div>
   );

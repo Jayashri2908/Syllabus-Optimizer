@@ -1,0 +1,100 @@
+2026-02-06 13:42:32 - scdo_api - INFO - Accreditation checks complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:42:32 - scdo_api - INFO - Performing CO-PO mapping for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:42:32 - scdo_api - INFO - CO-PO mapping complete for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:42:32 - scdo_api - INFO - Optimization pipeline successfully finished for 'LINEAR ALGEBRA AND STATISTICS'
+2026-02-06 13:44:39 - scdo_api - INFO - Exporting PDF for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 13:44:39 - scdo_api - INFO - Analysis data keys: ['changes_summary', 'bloom_distribution', 'rationale', 'industry_relevance_score', 'prerequisite_rationale', 'nep_2020_compliance', 'accreditation_compliance', 'co_po_mapping']
+2026-02-06 14:17:35 - scdo_api - INFO - DEBUG: Unit type: <class 'dict'>
+2026-02-06 14:17:35 - scdo_api - INFO - DEBUG: Topics type: <class 'list'>
+2026-02-06 14:17:35 - scdo_api - INFO - DEBUG: First topic type: <class 'dict'>
+2026-02-06 14:17:35 - scdo_api - INFO - DEBUG: First topic value: {'topic': 'Machine learning definitions and scope', 'description': None, 'subtopics': [], 'key_concepts': [], 'practical_examples': []}
+2026-02-06 14:17:45 - scdo_api - INFO - Exporting PDF for course: Machine Learning
+2026-02-06 14:17:46 - scdo_api - INFO - No analysis_data provided
+2026-02-06 14:19:17 - scdo_api - INFO - Exporting PDF for course: LINEAR ALGEBRA AND STATISTICS
+2026-02-06 14:19:17 - scdo_api - INFO - Analysis data keys: ['changes_summary', 'bloom_distribution', 'rationale', 'industry_relevance_score', 'prerequisite_rationale', 'nep_2020_compliance', 'accreditation_compliance', 'co_po_mapping']
+2026-08-19 22:29:09 - scdo_api - INFO - ==================================================
+2026-08-19 22:29:09 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-19 22:29:09 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-19 22:29:09 - scdo_api - INFO - ==================================================
+2026-08-19 22:29:10 - scdo_api - INFO - Critical components initialized successfully
+2026-08-19 22:29:29 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-08-21 11:13:43 - scdo_api - INFO - ==================================================
+2026-08-21 11:13:43 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-21 11:13:43 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-21 11:13:43 - scdo_api - INFO - ==================================================
+2026-08-21 11:13:45 - scdo_api - INFO - Critical components initialized successfully
+2026-08-21 11:14:44 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-08-22 01:16:59 - scdo_api - INFO - ==================================================
+2026-08-22 01:16:59 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-22 01:16:59 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-22 01:16:59 - scdo_api - INFO - ==================================================
+2026-08-22 01:17:00 - scdo_api - INFO - Critical components initialized successfully
+2026-08-22 01:17:32 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-08-22 02:30:14 - scdo_api - ERROR - Upload failed: PDF libraries not installed. Please install pypdf and pdfplumber.
+2026-08-24 11:41:34 - scdo_api - INFO - ==================================================
+2026-08-24 11:41:34 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-24 11:41:34 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-24 11:41:34 - scdo_api - INFO - ==================================================
+2026-08-24 11:41:35 - scdo_api - INFO - Critical components initialized successfully
+2026-08-24 11:41:52 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-08-24 12:34:44 - scdo_api - ERROR - Upload failed: PDF libraries not installed. Please install pypdf and pdfplumber.
+2026-08-24 12:35:17 - scdo_api - ERROR - Upload failed: PDF libraries not installed. Please install pypdf and pdfplumber.
+2026-08-24 12:39:02 - scdo_api - INFO - Successfully parsed syllabus: test.txt (0 units, 0 outcomes)
+2026-08-24 12:45:36 - scdo_api - ERROR - Upload failed: PDF libraries not installed. Please install pypdf and pdfplumber.
+2026-08-24 12:52:49 - scdo_api - INFO - LLM cache initialized at D:\Syllabus Optimizer\cache\llm_responses
+2026-08-24 12:52:49 - scdo_api - INFO - ==================================================
+2026-08-24 12:52:49 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-24 12:52:49 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-24 12:52:49 - scdo_api - INFO - ==================================================
+2026-08-24 12:53:08 - scdo_api - INFO - LLM cache initialized at D:\Syllabus Optimizer\cache\llm_responses
+2026-08-24 12:53:08 - scdo_api - INFO - ==================================================
+2026-08-24 12:53:08 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-24 12:53:08 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-24 12:53:08 - scdo_api - INFO - ==================================================
+2026-08-24 12:53:09 - scdo_api - INFO - Critical components initialized successfully
+2026-08-24 12:53:26 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-08-24 12:59:50 - scdo_api - INFO - Shutdown complete
+2026-08-24 13:00:19 - scdo_api - INFO - LLM cache initialized at D:\Syllabus Optimizer\cache\llm_responses
+2026-08-24 13:00:19 - scdo_api - INFO - ==================================================
+2026-08-24 13:00:19 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-24 13:00:19 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-24 13:00:19 - scdo_api - INFO - ==================================================
+2026-08-24 13:00:20 - scdo_api - INFO - Critical components initialized successfully
+2026-08-24 13:00:35 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-08-24 13:03:02 - scdo_api - INFO - Shutdown complete
+2026-08-24 13:03:21 - scdo_api - INFO - LLM cache initialized at D:\Syllabus Optimizer\cache\llm_responses
+2026-08-24 13:03:22 - scdo_api - INFO - ==================================================
+2026-08-24 13:03:22 - scdo_api - INFO -   SCDO BACKEND SERVER - AI-POWERED ONLY  
+2026-08-24 13:03:22 - scdo_api - INFO -   IBM Granite Integration Required  
+2026-08-24 13:03:22 - scdo_api - INFO - ==================================================
+2026-08-24 13:03:22 - scdo_api - INFO - Critical components initialized successfully
+2026-08-24 13:03:40 - scdo_api - INFO - [OK] AI components initialized successfully (AI models active)
+2026-08-24 13:05:14 - scdo_api - INFO - Successfully parsed syllabus: OS.pdf (0 units)
+2026-08-24 13:05:14 - scdo_api - INFO - Calling LLM for optimization of ': Operating Systems'...
+2026-08-24 13:05:17 - scdo_api - ERROR - Optimization pipeline failed: Optimization failed: OpenRouter failed after 3 retries: Error code: 404 - {'error': {'message': 'No endpoints found for arcee-ai/trinity-large-preview:free.', 'code': 404}, 'user_id': 'user_39F8xyQCwCUhanjlSYyUiktCiQ4'}
+2026-08-24 13:05:17 - scdo_api - ERROR - Traceback (most recent call last):
+  File "D:\Syllabus Optimizer\src\optimization\content_optimizer.py", line 96, in optimize_full_syllabus
+    response = self.ai.generate_json(
+        prompt=prompt,
+    ...<8 lines>...
+        repetition_penalty=1.15
+    )
+  File "D:\Syllabus Optimizer\src\ai\model_manager.py", line 198, in generate_json
+    response = model.generate(
+        prompt=json_prompt,
+    ...<3 lines>...
+        **kwargs
+    )
+  File "D:\Syllabus Optimizer\src\ai\openrouter_model.py", line 137, in generate
+    raise RuntimeError(f"OpenRouter failed after {max_retries} retries: {last_error}")
+RuntimeError: OpenRouter failed after 3 retries: Error code: 404 - {'error': {'message': 'No endpoints found for arcee-ai/trinity-large-preview:free.', 'code': 404}, 'user_id': 'user_39F8xyQCwCUhanjlSYyUiktCiQ4'}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Syllabus Optimizer\webapp\backend\app\routers\analyze.py", line 67, in optimize_syllabus
+    optimization_result = comps.content_optimizer.optimize_full_syllabus(original_syllabus)
+  File "D:\Syllabus Optimizer\src\optimization\content_optimizer.py", line 120, in optimize_full_syllabus
+    raise ValueError(f"Optimization failed: {str(e)}")
+ValueError: Optimization failed: OpenRouter failed after 3 retries: Error code: 404 - {'error': {'message': 'No endpoints found for arcee-ai/trinity-large-preview:free.', 'code': 404}, 'user_id': 'user_39F8xyQCwCUhanjlSYyUiktCiQ4'}
+

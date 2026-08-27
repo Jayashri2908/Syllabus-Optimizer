@@ -69,4 +69,4 @@ async def upload_syllabus(file: UploadFile = File(...), comps=Depends(get_compon
             
     except Exception as e:
         logger.error(f"Upload failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="File upload failed. Please try again.")

@@ -1,16 +1,16 @@
 """
 AI Module for SCDO
-Simplified with Gemini + Granite only
+OpenRouter (primary) + Gemini (fallback)
 """
 
 from .model_manager import ModelManager
 from .base_model import BaseAIModel
-from .granite_model import GraniteModel
+from .openrouter_model import OpenRouterModel
 from .gemini_model import GeminiModel
 
 __all__ = [
     'ModelManager',
     'BaseAIModel',
-    'GraniteModel',
+    'OpenRouterModel',
     'GeminiModel',
 ]

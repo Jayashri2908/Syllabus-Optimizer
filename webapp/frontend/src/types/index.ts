@@ -163,6 +163,9 @@ export interface SystemHealth {
   status: string;
   service?: string;
   latency?: number;
+  chromadb?: string;
+  chromadb_documents?: number;
+  llm?: string;
 }
 
 // ---------------------------------------------------------------------------

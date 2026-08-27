@@ -5,7 +5,7 @@ const MarqueeTicker = () => {
   const items = [
     "✦ NBA Accredited",
     "✦ NEP 2020 Aligned",
-    "✦ Powered by IBM Granite",
+    "✦ Powered by OpenRouter AI",
     "✦ ABET Standardized",
     "✦ RAG Vector Grounding",
     "✦ Bloom's Balanced",

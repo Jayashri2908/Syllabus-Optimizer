@@ -23,7 +23,8 @@ class LocalStorage:
         self.logger = logging.getLogger(__name__)
         
         if base_dir is None:
-            base_dir = Path(__file__).parent.parent.parent
+            # Resolve project root relative to this file: src/ibm/ -> project root
+            base_dir = Path(__file__).resolve().parent.parent.parent
         
         self.base_dir = Path(base_dir)
         

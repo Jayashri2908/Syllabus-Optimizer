@@ -54,7 +54,7 @@ async def export_pdf(request: OptimizeRequest, comps=Depends(get_components)):
         return FileResponse(pdf_path, media_type="application/pdf", filename=filename)
     except Exception as e:
         logger.error(f"PDF export failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="PDF export failed.")
 
 
 @router.post("/api/export/latex-pdf")
@@ -85,7 +85,7 @@ async def export_latex_pdf(request: OptimizeRequest):
         return FileResponse(result_path, media_type=media_type, filename=filename)
     except Exception as e:
         logger.error(f"LaTeX PDF export failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="LaTeX PDF export failed.")
 
 
 @router.post("/api/export/excel")
@@ -116,7 +116,7 @@ async def export_excel(request: OptimizeRequest):
         )
     except Exception as e:
         logger.error(f"Excel export failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Excel export failed.")
 
 
 @router.post("/api/export/word")
@@ -294,4 +294,4 @@ async def export_word(request: OptimizeRequest):
         logger.error(f"Word export failed: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Word export failed.")

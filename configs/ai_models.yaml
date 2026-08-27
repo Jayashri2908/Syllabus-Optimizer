@@ -1,4 +1,4 @@
-# AI Models Configuration - MIMO (PRIMARY) + GEMINI + GRANITE
+# AI Models Configuration - OpenRouter (PRIMARY) + Gemini (FALLBACK)
 
 # OpenRouter - Nvidia Nemotron (PRIMARY - FREE)
 openrouter:
@@ -7,27 +7,22 @@ openrouter:
   # Set OPENROUTER_API_KEY environment variable
   # Get free key: https://openrouter.ai
 
-# Google Gemini (FALLBACK 1 - FREE)
+# Google Gemini (FALLBACK - FREE)
 gemini:
-  enabled: false  # Disabled - hit rate limit
+  enabled: false  # Enable when OPENROUTER_API_KEY is not set
   model: 'gemini-2.0-flash-exp'
   # Set GEMINI_API_KEY environment variable
 
-# IBM Granite (FALLBACK 2)
-granite:
-  enabled: true
-  # Uses existing ibm_config.yaml configuration
-
-# Task preferences - MiMo first, Gemini/Granite as fallback
+# Task preferences - OpenRouter first, Gemini fallback
 task_preferences:
-  generation: ['openrouter', 'gemini', 'granite']
-  analysis: ['openrouter', 'gemini', 'granite']
-  optimization: ['openrouter', 'gemini', 'granite']
-  validation: ['openrouter', 'gemini', 'granite']
+  generation: ['openrouter', 'gemini']
+  analysis: ['openrouter', 'gemini']
+  optimization: ['openrouter', 'gemini']
+  validation: ['openrouter', 'gemini']
 
 # Advanced settings
 advanced:
-  auto_fallback: true  # Auto-switch to Granite if Gemini fails
+  auto_fallback: true  # Auto-switch to Gemini if OpenRouter fails
   enable_caching: true
   cache_duration_hours: 24
   

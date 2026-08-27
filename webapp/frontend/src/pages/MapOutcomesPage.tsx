@@ -101,7 +101,7 @@ const MapOutcomesPage: React.FC = () => {
               <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid var(--border-subtle)' }}>
                 <h4>Validation Report</h4>
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-                  {coPoMapping.validation.unmapped_cos.length > 0 ? (
+                  {coPoMapping.validation?.unmapped_cos?.length > 0 ? (
                      <div className="finding-item warning" style={{ flex: 1, minWidth: '200px' }}>
                        <ShieldAlert size={20} className="text-amber" />
                        <div>

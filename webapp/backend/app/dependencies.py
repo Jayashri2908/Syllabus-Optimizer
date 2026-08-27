@@ -9,15 +9,18 @@ from src.utils.logging_utils import setup_logger
 
 logger = setup_logger("scdo_api", log_file="logs/api.log")
 
+# Project root — single source of truth
+PROJECT_ROOT = Path(__file__).resolve().parents[4]  # webapp/backend/app -> project root
+
 # Settings Configuration
 API_KEY = os.getenv("API_KEY", "")
-MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", 50 * 1024 * 1024))
+MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", str(50 * 1024 * 1024)))
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
 
 # Caching Configuration
 try:
     import diskcache
-    CACHE_DIR = Path(__file__).parent.parent.parent.parent / "cache" / "llm_responses"
+    CACHE_DIR = PROJECT_ROOT / "cache" / "llm_responses"
     llm_cache = diskcache.Cache(str(CACHE_DIR), size_limit=500 * 1024 * 1024)  # 500 MB
     CACHE_TTL = 24 * 60 * 60  # 24 hours
     logger.info(f"LLM cache initialized at {CACHE_DIR}")

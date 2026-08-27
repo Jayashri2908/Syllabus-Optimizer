@@ -1,6 +1,6 @@
 """
 Syllabus Generator for SCDO
-Generates complete syllabi using AI (Gemini/Granite) with enhanced prompts
+Generates complete syllabi using AI (OpenRouter/Gemini) with enhanced prompts
 """
 
 from typing import Dict, List, Any, Optional
@@ -36,7 +36,7 @@ class SyllabusGenerator:
     def __init__(self, model_manager: Optional[ModelManager] = None):
         self.logger = logging.getLogger(__name__)
         
-        # Use ModelManager instead of direct Granite client
+        # Use ModelManager for AI model orchestration
         self.ai = model_manager or self._initialize_model_manager()
         
         # Initialize prompt library
@@ -64,7 +64,7 @@ class SyllabusGenerator:
             
             # Check if any models available
             if not manager.models:
-                self.logger.warning("No AI models available! Please configure Gemini or Granite.")
+                self.logger.warning("No AI models available! Please configure OpenRouter or Gemini.")
             else:
                 available = [name for name in manager.models.keys()]
                 self.logger.info(f"Available AI models: {', '.join(available)}")
@@ -171,29 +171,9 @@ class SyllabusGenerator:
             Complete syllabus structure with quality score
         """
         
-        # Use staggered LLM chaining if requested
+        # Chained generation is not yet implemented — always use standard pipeline
         if use_chained_generation:
-            self.logger.info(f"Using staggered LLM chaining for {course_title}")
-            from .chained_generator import ChainedSyllabusGenerator
-            
-            chained = ChainedSyllabusGenerator(self.ai)
-            return chained.generate_staggered(
-                course_info={
-                    "course_title": course_title,
-                    "course_code": course_code,
-                    "credits": credits,
-                    "program_outcomes": program_outcomes,
-                    "keywords": keywords or [],
-                    "unit_topics": unit_topics,
-                    "domain": domain,
-                    "program": program,
-                    "year": year,
-                    "course_level": course_level
-                },
-                num_units=num_units,
-                num_outcomes=num_outcomes,
-                verbose=False
-            )
+            self.logger.warning("Chained generation is not yet implemented. Using standard generation.")
         
         self.logger.info(f"Generating syllabus for {course_title} (refinement: {enable_refinement})")
         

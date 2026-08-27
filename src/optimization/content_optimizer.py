@@ -1,6 +1,6 @@
 """
 Content Optimizer for SCDO
-Uses AI (Gemini/Granite) to provide actionable optimization suggestions
+Uses AI (OpenRouter/Gemini) to provide actionable optimization suggestions
 """
 
 from typing import Dict, List, Any, Optional

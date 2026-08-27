@@ -1,4 +1,0 @@
-ibm_granite:
-  api_key: "YOUR_IBM_CLOUD_API_KEY"
-  project_id: "YOUR_WATSONX_PROJECT_ID"
-  url: "https://us-south.ml.cloud.ibm.com"

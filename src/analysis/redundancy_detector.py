@@ -1,213 +1,166 @@
 """
 Redundancy Detector for SCDO
-Detects semantic duplicates and redundant content in syllabi
+Detects content redundancies and overlaps across syllabus units
 """
 
 from typing import Dict, List, Any, Tuple
 import logging
-from collections import defaultdict
 
-try:
-    from sentence_transformers import SentenceTransformer
-    import numpy as np
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
+from ..utils.text_processing import TextProcessor
 
 
 class RedundancyDetector:
-    """Detect content redundancies using semantic similarity"""
-    
+    """Detect content redundancies using text similarity analysis"""
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        
-        # Similarity thresholds
-        self.HIGH_SIMILARITY = 0.85  # > 85% = likely redundant
-        self.MODERATE_SIMILARITY = 0.70  # 70-85% = similar, review needed
-        
-        # Initialize sentence transformer if available
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
-            try:
-                self.model = SentenceTransformer('all-MiniLM-L6-v2')
-                self.enabled = True
-            except Exception as e:
-                self.logger.warning(f"Failed to load sentence transformer: {e}")
-                self.enabled = False
-        else:
-            self.logger.warning("sentence-transformers not installed. Redundancy detection disabled.")
-            self.enabled = False
-            self.model = None
-            
+        self.text_processor = TextProcessor()
+        self.similarity_threshold = 0.4
+
     def detect_redundancies(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Detect content redundancies in syllabus
-        
+        Detect content redundancies across syllabus units
+
         Args:
             syllabus_data: Parsed syllabus structure
-            
+
         Returns:
             Redundancy analysis report
         """
-        if not self.enabled:
-            return {
-                'enabled': False,
-                'message': 'Redundancy detection requires sentence-transformers package',
-                'duplicate_topics': [],
-                'similar_outcomes': [],
-                'redundant_objectives': []
-            }
-            
-        # Detect redundancies in different components
-        duplicate_topics = self._detect_duplicate_topics(syllabus_data.get('units', []))
-        similar_outcomes = self._detect_similar_outcomes(syllabus_data.get('learning_outcomes', []))
-        redundant_objectives = self._detect_redundant_objectives(syllabus_data.get('objectives', []))
-        
+        units = syllabus_data.get('units', [])
+        outcomes = syllabus_data.get('learning_outcomes', [])
+
+        redundant_pairs = []
+        unit_pairs_checked = 0
+
+        # Check for overlap between unit topics
+        unit_texts = self._extract_unit_texts(units)
+        for i in range(len(unit_texts)):
+            for j in range(i + 1, len(unit_texts)):
+                unit_pairs_checked += 1
+                similarity = self._compute_similarity(unit_texts[i][1], unit_texts[j][1])
+                if similarity >= self.similarity_threshold:
+                    redundant_pairs.append({
+                        'unit_1': unit_texts[i][0],
+                        'unit_2': unit_texts[j][0],
+                        'similarity': round(similarity, 3),
+                        'severity': 'high' if similarity >= 0.7 else 'medium',
+                        'description': (
+                            f"Significant overlap between {unit_texts[i][0]} and "
+                            f"{unit_texts[j][0]} (similarity: {similarity:.0%})"
+                        ),
+                    })
+
+        # Check for duplicate learning outcomes
+        duplicate_outcomes = self._find_duplicate_outcomes(outcomes)
+
         # Calculate overall redundancy score
-        total_checks = (
-            len(duplicate_topics) + 
-            len(similar_outcomes) + 
-            len(redundant_objectives)
-        )
-        
+        overlap_score = self._calculate_overlap_score(redundant_pairs, len(units))
+
         return {
-            'enabled': True,
-            'duplicate_topics': duplicate_topics,
-            'similar_outcomes': similar_outcomes,
-            'redundant_objectives': redundant_objectives,
-            'total_redundancies': total_checks,
-            'severity': self._calculate_severity(total_checks)
+            'redundant_pairs': redundant_pairs,
+            'duplicate_outcomes': duplicate_outcomes,
+            'overlap_score': overlap_score,
+            'unit_pairs_checked': unit_pairs_checked,
+            'total_redundancies': len(redundant_pairs) + len(duplicate_outcomes),
         }
-        
-    def _detect_duplicate_topics(self, units: List[Dict]) -> List[Dict]:
-        """Detect duplicate or highly similar topics across units"""
-        if not units:
-            return []
-            
-        # Collect all topics with their unit info
-        topics_with_context = []
-        for unit in units:
-            unit_number = unit.get('unit_number', 0)
-            unit_title = unit.get('title', '')
-            for topic in unit.get('topics', []):
-                topics_with_context.append({
-                    'text': topic,
-                    'unit_number': unit_number,
-                    'unit_title': unit_title
-                })
-                
-        if len(topics_with_context) < 2:
-            return []
-            
-        # Compute embeddings
-        topic_texts = [t['text'] for t in topics_with_context]
-        embeddings = self.model.encode(topic_texts)
-        
-        # Find similar pairs
+
+    def _extract_unit_texts(self, units: List[Dict[str, Any]]) -> List[Tuple[str, str]]:
+        """
+        Extract combined text from each unit for comparison
+
+        Returns:
+            List of (unit_label, combined_text) tuples
+        """
+        result = []
+        for idx, unit in enumerate(units, 1):
+            label = unit.get('title', f'Unit {idx}')
+            parts = []
+
+            title = unit.get('title', '')
+            if title:
+                parts.append(title)
+
+            topics = unit.get('topics', [])
+            for topic in topics:
+                if isinstance(topic, str):
+                    parts.append(topic)
+                elif isinstance(topic, dict):
+                    parts.append(topic.get('title', '') or topic.get('name', ''))
+                    subtopics = topic.get('subtopics', [])
+                    parts.extend(st if isinstance(st, str) else st.get('title', '') for st in subtopics)
+
+            combined = ' '.join(parts)
+            result.append((label, combined))
+
+        return result
+
+    def _compute_similarity(self, text_a: str, text_b: str) -> float:
+        """
+        Compute similarity between two texts using keyword overlap
+
+        Args:
+            text_a: First text
+            text_b: Second text
+
+        Returns:
+            Similarity score between 0 and 1
+        """
+        keywords_a = set(self.text_processor.extract_keywords(text_a, top_n=15))
+        keywords_b = set(self.text_processor.extract_keywords(text_b, top_n=15))
+
+        if not keywords_a or not keywords_b:
+            return 0.0
+
+        intersection = keywords_a & keywords_b
+        union = keywords_a | keywords_b
+
+        # Jaccard similarity
+        return len(intersection) / len(union) if union else 0.0
+
+    def _find_duplicate_outcomes(
+        self, outcomes: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Find duplicate or highly similar learning outcomes
+
+        Returns:
+            List of duplicate outcome pairs
+        """
         duplicates = []
-        for i in range(len(embeddings)):
-            for j in range(i + 1, len(embeddings)):
-                similarity = self._cosine_similarity(embeddings[i], embeddings[j])
-                
-                # Only report if high similarity and from different units
-                if (similarity >= self.MODERATE_SIMILARITY and 
-                    topics_with_context[i]['unit_number'] != topics_with_context[j]['unit_number']):
-                    
-                    duplicates.append({
-                        'topic1': topics_with_context[i]['text'],
-                        'unit1': f"Unit {topics_with_context[i]['unit_number']}: {topics_with_context[i]['unit_title']}",
-                        'topic2': topics_with_context[j]['text'],
-                        'unit2': f"Unit {topics_with_context[j]['unit_number']}: {topics_with_context[j]['unit_title']}",
-                        'similarity': float(similarity),
-                        'severity': 'high' if similarity >= self.HIGH_SIMILARITY else 'moderate'
-                    })
-                    
-        return duplicates
-        
-    def _detect_similar_outcomes(self, outcomes: List[Any]) -> List[Dict]:
-        """Detect similar learning outcomes"""
-        if not outcomes or len(outcomes) < 2:
-            return []
-            
-        # Extract outcome descriptions
-        outcome_texts = []
+        descriptions = []
+
         for outcome in outcomes:
-            if isinstance(outcome, dict):
-                text = outcome.get('description', '')
-                code = outcome.get('code', '')
-            elif isinstance(outcome, str):
-                text = outcome
-                code = f'CO{len(outcome_texts) + 1}'
-            else:
-                continue
-                
-            outcome_texts.append({'text': text, 'code': code})
-            
-        if len(outcome_texts) < 2:
-            return []
-            
-        # Compute embeddings
-        texts = [o['text'] for o in outcome_texts]
-        embeddings = self.model.encode(texts)
-        
-        # Find similar pairs
-        similar = []
-        for i in range(len(embeddings)):
-            for j in range(i + 1, len(embeddings)):
-                similarity = self._cosine_similarity(embeddings[i], embeddings[j])
-                
-                if similarity >= self.MODERATE_SIMILARITY:
-                    similar.append({
-                        'outcome1': outcome_texts[i]['code'],
-                        'text1': outcome_texts[i]['text'],
-                        'outcome2': outcome_texts[j]['code'],
-                        'text2': outcome_texts[j]['text'],
-                        'similarity': float(similarity),
-                        'severity': 'high' if similarity >= self.HIGH_SIMILARITY else 'moderate'
+            desc = outcome.get('description', '') if isinstance(outcome, dict) else str(outcome)
+            descriptions.append(desc)
+
+        for i in range(len(descriptions)):
+            for j in range(i + 1, len(descriptions)):
+                similarity = self._compute_similarity(descriptions[i], descriptions[j])
+                if similarity >= self.similarity_threshold:
+                    duplicates.append({
+                        'outcome_1': descriptions[i][:80],
+                        'outcome_2': descriptions[j][:80],
+                        'similarity': round(similarity, 3),
                     })
-                    
-        return similar
-        
-    def _detect_redundant_objectives(self, objectives: List[str]) -> List[Dict]:
-        """Detect redundant course objectives"""
-        if not objectives or len(objectives) < 2:
-            return []
-            
-        # Compute embeddings
-        embeddings = self.model.encode(objectives)
-        
-        # Find similar pairs
-        redundant = []
-        for i in range(len(embeddings)):
-            for j in range(i + 1, len(embeddings)):
-                similarity = self._cosine_similarity(embeddings[i], embeddings[j])
-                
-                if similarity >= self.MODERATE_SIMILARITY:
-                    redundant.append({
-                        'objective1': objectives[i],
-                        'objective2': objectives[j],
-                        'similarity': float(similarity),
-                        'severity': 'high' if similarity >= self.HIGH_SIMILARITY else 'moderate'
-                    })
-                    
-        return redundant
-        
-    def _cosine_similarity(self, vec1, vec2) -> float:
-        """Calculate cosine similarity between two vectors"""
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
-            import numpy as np
-            dot_product = np.dot(vec1, vec2)
-            norm1 = np.linalg.norm(vec1)
-            norm2 = np.linalg.norm(vec2)
-            return dot_product / (norm1 * norm2)
-        return 0.0
-        
-    def _calculate_severity(self, total_redundancies: int) -> str:
-        """Calculate overall redundancy severity"""
-        if total_redundancies == 0:
-            return 'none'
-        elif total_redundancies <= 2:
-            return 'low'
-        elif total_redundancies <= 5:
-            return 'moderate'
-        else:
-            return 'high'
+
+        return duplicates
+
+    def _calculate_overlap_score(
+        self, redundant_pairs: List[Dict[str, Any]], total_units: int
+    ) -> float:
+        """
+        Calculate an overall overlap score for the syllabus
+
+        Returns:
+            Overlap score between 0 (no overlap) and 1 (complete overlap)
+        """
+        if not redundant_pairs or total_units < 2:
+            return 0.0
+
+        max_possible_pairs = total_units * (total_units - 1) / 2
+        # Weight high-severity pairs more
+        weighted_count = sum(
+            1.5 if p.get('severity') == 'high' else 1.0 for p in redundant_pairs
+        )
+        return min(1.0, round(weighted_count / max_possible_pairs, 3))
