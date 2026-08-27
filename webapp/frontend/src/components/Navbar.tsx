@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { BookOpen, FileScan, PenTool, Lightbulb, Map, Activity, Sun, Moon, Monitor, Menu, X } from 'lucide-react';
+import { FileScan, PenTool, Lightbulb, Map, Activity, Sun, Moon, Monitor, Menu, X } from 'lucide-react';
 import './Navbar.css';
 
 type Theme = 'light' | 'dark' | 'system';
@@ -113,7 +113,16 @@ const Navbar: React.FC = () => {
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/" className="navbar-logo" onClick={closeMobileMenu}>
-          <BookOpen className="logo-icon" />
+          <svg className="logo-icon" width="28" height="28" viewBox="0 0 48 48" fill="none">
+            <path d="M10 2h20l12 12v26c0 2.2-1.8 4-4 4H10c-2.2 0-4-1.8-4-4V6c0-2.2 1.8-4 4-4z" fill="currentColor"/>
+            <path d="M30 2v8c0 2.2 1.8 4 4 4h8L30 2z" fill="rgba(0,0,0,0.12)"/>
+            <line x1="14" y1="19" x2="27" y2="19" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="14" y1="25" x2="24" y2="25" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M14 36L22 27L31 17" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx="14" cy="36" r="2.5" fill="white"/>
+            <circle cx="22" cy="27" r="2.5" fill="white"/>
+            <circle cx="31" cy="17" r="3" fill="white"/>
+          </svg>
           <span className="logo-text">SCDO</span>
         </Link>
 
