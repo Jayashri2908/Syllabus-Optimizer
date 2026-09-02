@@ -128,6 +128,47 @@ INDUSTRY_SKILLS = {
         "avg_salary_range": "$80,000 - $145,000",
         "job_growth": "18% (Faster than average)",
         "top_companies": ["Meta", "Uber", "DoorDash", "Airbnb", "Spotify"]
+    },
+    
+    "database": {
+        "hot_skills": [
+            "SQL and Advanced Query Optimization",
+            "Database Design and Normalization",
+            "NoSQL (MongoDB, Cassandra, DynamoDB)",
+            "Data Warehousing and ETL Pipelines",
+            "Database Administration and Tuning",
+            "Cloud Database Services (AWS RDS, Azure SQL)",
+            "Distributed Database Systems"
+        ],
+        "certifications": [
+            "Oracle Database Administrator (OCA/OCP)",
+            "AWS Certified Database Specialty",
+            "Microsoft Certified: Azure Database Administrator"
+        ],
+        "avg_salary_range": "$80,000 - $140,000",
+        "job_growth": "15% (Faster than average)",
+        "top_companies": ["Oracle", "Microsoft", "Amazon", "Google", "MongoDB"]
+    },
+    
+    "computer_networks": {
+        "hot_skills": [
+            "Network Protocol Analysis (TCP/IP, BGP, OSPF)",
+            "Software-Defined Networking (SDN)",
+            "Cloud Networking (AWS VPC, Azure VNet)",
+            "Network Automation (Python, Ansible)",
+            "Network Security and Firewalls",
+            "5G and Edge Computing",
+            "Network Monitoring (SNMP, NetFlow, Prometheus)"
+        ],
+        "certifications": [
+            "Cisco CCNA / CCNP",
+            "AWS Certified Advanced Networking",
+            "CompTIA Network+",
+            "Juniper Networks Certified Associate (JNCIA)"
+        ],
+        "avg_salary_range": "$75,000 - $135,000",
+        "job_growth": "12% (Faster than average)",
+        "top_companies": ["Cisco", "Juniper Networks", "Arista Networks", "Palo Alto Networks", "VMware"]
     }
 }
 
