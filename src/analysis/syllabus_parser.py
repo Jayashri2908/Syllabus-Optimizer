@@ -106,21 +106,21 @@ class SyllabusParser:
         return self._extract_structure(text)
         
     def _parse_pdf(self, file_path: Path) -> str:
-        """Extract text from PDF"""
+        """Extract text from PDF, using table-aware extraction when available"""
         text = ""
-        
+
         if pdfplumber is None and pypdf is None:
             raise ImportError("PDF libraries not installed. Please install pypdf and pdfplumber.")
-        
+
         self.logger.info(f"Parsing PDF: {file_path}")
-        
+
         try:
             # Try pdfplumber first (better for tables)
             if pdfplumber:
                 with pdfplumber.open(file_path) as pdf:
                     self.logger.info(f"PDF has {len(pdf.pages)} pages")
                     for i, page in enumerate(pdf.pages):
-                        page_text = page.extract_text()
+                        page_text = self._extract_page_text(page)
                         if page_text:
                             text += page_text + "\n"
                             self.logger.debug(f"Page {i+1}: extracted {len(page_text)} chars")
@@ -129,10 +129,10 @@ class SyllabusParser:
                 self.logger.info(f"pdfplumber extracted total {len(text)} chars")
             else:
                 raise ImportError("pdfplumber not installed")
-                
+
         except Exception as e:
             self.logger.warning(f"pdfplumber failed or missing, trying pypdf: {e}")
-            
+
             # Fallback to pypdf
             if pypdf:
                 try:
@@ -151,7 +151,7 @@ class SyllabusParser:
             else:
                 if not text: # Only raise if we haven't extracted anything yet and both failed/missing
                      raise ImportError("pypdf not installed and pdfplumber failed") from e
-        
+
         # If no text extracted or very minimal text (likely garbage from scanned PDF), try OCR
         # Using 50 chars as threshold since scanned PDFs often extract some whitespace/garbage
         extracted_text_length = len(text.strip())
@@ -181,6 +181,79 @@ class SyllabusParser:
                 self.logger.error("Also install Tesseract: https://github.com/tesseract-ocr/tesseract")
                 
         return text
+
+    def _extract_page_text(self, page) -> str:
+        """
+        Extract text from a single pdfplumber page.
+
+        Uses table-aware extraction: if the page contains tables, reconstructs
+        text from table cells in proper reading order. Falls back to plain
+        extract_text() for pages without tables.
+
+        Reading order: interleaves non-table text and tables based on their
+        vertical position on the page, so headings above a table appear before
+        the table, and text below appears after.
+        """
+        # Try table-aware extraction first
+        try:
+            tables = page.find_tables()
+        except Exception:
+            tables = []
+
+        if not tables:
+            return page.extract_text() or ""
+
+        table_bboxes = [t.bbox for t in tables]  # (x0, top, x1, bottom)
+
+        # Collect non-table chars and group into lines
+        chars = page.chars
+        non_table_chars = [
+            c for c in chars
+            if not any(
+                bbox[0] <= c['x0'] <= bbox[2] and bbox[1] <= c['top'] <= bbox[3]
+                for bbox in table_bboxes
+            )
+        ]
+
+        # Group non-table chars into text lines by vertical position
+        non_table_lines = []
+        if non_table_chars:
+            # Tolerance for same-line grouping (chars within 3px vertically)
+            sorted_chars = sorted(non_table_chars, key=lambda c: (c['top'], c['x0']))
+            current_line = [sorted_chars[0]]
+            for c in sorted_chars[1:]:
+                if abs(c['top'] - current_line[0]['top']) <= 3:
+                    current_line.append(c)
+                else:
+                    line_text = "".join(ch['text'] for ch in sorted(current_line, key=lambda x: x['x0']))
+                    if line_text.strip():
+                        non_table_lines.append((current_line[0]['top'], line_text))
+                    current_line = [c]
+            # Flush last line
+            line_text = "".join(ch['text'] for ch in sorted(current_line, key=lambda x: x['x0']))
+            if line_text.strip():
+                non_table_lines.append((current_line[0]['top'], line_text))
+
+        # Collect table text with their vertical position
+        table_entries = []
+        for table, bbox in zip(tables, table_bboxes):
+            rows = table.extract()
+            if not rows:
+                continue
+            row_texts = []
+            for row in rows:
+                cells = [(c or "") for c in row]
+                line = "\t".join(cells)
+                if line.strip():
+                    row_texts.append(line)
+            if row_texts:
+                table_entries.append((bbox[1], "\n".join(row_texts)))  # bbox[1] = top
+
+        # Merge both lists and sort by vertical position (reading order)
+        all_blocks = non_table_lines + table_entries
+        all_blocks.sort(key=lambda b: b[0])
+
+        return "\n".join(text for _, text in all_blocks)
     
     def _ocr_online(self, file_path: Path) -> str:
         """Extract text from scanned PDF using free online OCR API (OCR.space)"""
