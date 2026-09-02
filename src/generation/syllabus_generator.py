@@ -664,9 +664,145 @@ class SyllabusGenerator:
         
         return summary
         
-    def _generate_methodology(self, domain: str) -> Dict[str, List[str]]:
-        """Generate teaching-learning methodology"""
-        return {
+    def _generate_methodology(
+        self,
+        domain: str,
+        course_title: str = "",
+        outcomes: List[Dict[str, str]] = None
+    ) -> Dict[str, List[str]]:
+        """Generate domain-aware teaching-learning methodology"""
+        domain_methodologies = {
+            'machine_learning': {
+                'teaching_methods': [
+                    'Lectures with Jupyter notebook demonstrations',
+                    'Hands-on ML model building workshops',
+                    'Paper reading and discussion sessions',
+                    'Kaggle-style competition projects',
+                    'Code review and model debugging sessions'
+                ],
+                'learning_activities': [
+                    'Implement ML algorithms from scratch in Python',
+                    'Train and evaluate models on real datasets',
+                    'Participate in ML hackathons and competitions',
+                    'Write technical blog posts on ML concepts',
+                    'Peer code review of ML pipelines'
+                ]
+            },
+            'web_development': {
+                'teaching_methods': [
+                    'Live coding sessions with real project builds',
+                    'Pair programming exercises',
+                    'Code review and refactoring workshops',
+                    'Agile sprint-based project development',
+                    'Design review and UX critique sessions'
+                ],
+                'learning_activities': [
+                    'Build full-stack web applications from specifications',
+                    'Deploy applications to cloud platforms',
+                    'Write unit and integration tests',
+                    'Contribute to open-source web projects',
+                    'Create responsive UI components'
+                ]
+            },
+            'data_science': {
+                'teaching_methods': [
+                    'Exploratory data analysis workshops',
+                    'Statistical inference case studies',
+                    'Data visualization critique sessions',
+                    'Guest lectures from industry data scientists',
+                    'Capstone project with real-world datasets'
+                ],
+                'learning_activities': [
+                    'Perform EDA on messy real-world datasets',
+                    'Build interactive dashboards with Tableau/Power BI',
+                    'Write SQL queries for complex data extraction',
+                    'Present data-driven insights to stakeholders',
+                    'Conduct A/B testing and experiment analysis'
+                ]
+            },
+            'cybersecurity': {
+                'teaching_methods': [
+                    'CTF (Capture The Flag) challenge sessions',
+                    'Red team / blue team simulation exercises',
+                    'Security audit walkthroughs',
+                    'Incident response tabletop exercises',
+                    'Threat modeling workshops'
+                ],
+                'learning_activities': [
+                    'Perform vulnerability assessments on lab environments',
+                    'Configure firewalls and intrusion detection systems',
+                    'Analyze network traffic for malicious patterns',
+                    'Write security policies and procedures',
+                    'Conduct penetration testing on authorized targets'
+                ]
+            },
+            'database': {
+                'teaching_methods': [
+                    'Database design workshops with ER modeling',
+                    'SQL query optimization challenges',
+                    'Stored procedure and trigger development',
+                    'Database administration lab sessions',
+                    'NoSQL vs SQL comparison case studies'
+                ],
+                'learning_activities': [
+                    'Design normalized database schemas',
+                    'Write complex SQL queries with joins and subqueries',
+                    'Implement indexing strategies for performance',
+                    'Set up replication and backup procedures',
+                    'Build data pipelines with ETL processes'
+                ]
+            },
+            'cloud_computing': {
+                'teaching_methods': [
+                    'Cloud architecture design workshops',
+                    'Infrastructure-as-Code labs with Terraform',
+                    'Container orchestration with Kubernetes demos',
+                    'CI/CD pipeline building sessions',
+                    'Cloud cost optimization case studies'
+                ],
+                'learning_activities': [
+                    'Deploy microservices on AWS/Azure/GCP',
+                    'Configure auto-scaling and load balancing',
+                    'Build CI/CD pipelines with Jenkins/GitLab CI',
+                    'Implement monitoring with Prometheus/Grafana',
+                    'Practice infrastructure automation with Ansible'
+                ]
+            },
+            'mobile_development': {
+                'teaching_methods': [
+                    'App prototyping and UI/UX design sessions',
+                    'Cross-platform development workshops',
+                    'Mobile testing and debugging labs',
+                    'App store deployment walkthroughs',
+                    'Performance profiling exercises'
+                ],
+                'learning_activities': [
+                    'Build mobile apps with native and cross-platform frameworks',
+                    'Implement push notifications and offline storage',
+                    'Write unit and UI tests for mobile apps',
+                    'Optimize app performance and battery usage',
+                    'Publish apps to Google Play and App Store'
+                ]
+            },
+            'computer_networks': {
+                'teaching_methods': [
+                    'Network simulation labs with Cisco Packet Tracer/GNS3',
+                    'Protocol analysis with Wireshark demos',
+                    'Network design and subnetting exercises',
+                    'SDN controller programming workshops',
+                    'Network security configuration labs'
+                ],
+                'learning_activities': [
+                    'Configure routers, switches, and firewalls',
+                    'Capture and analyze network protocol traffic',
+                    'Design enterprise network topologies',
+                    'Implement VLANs and access control lists',
+                    'Automate network tasks with Python scripts'
+                ]
+            }
+        }
+        
+        return domain_methodologies.get(domain, {
             'teaching_methods': [
                 'Lectures with multimedia presentations',
                 'Interactive discussions and Q&A sessions',
@@ -681,7 +817,7 @@ class SyllabusGenerator:
                 'Peer learning and presentations',
                 'Online resources and tutorials'
             ]
-        }
+        })
         
     def _generate_assessment_pattern(
         self,
