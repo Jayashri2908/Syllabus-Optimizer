@@ -1,23 +1,49 @@
 """
 CO-PO Mapper for SCDO
-Maps Course Outcomes to Program Outcomes
+Maps Course Outcomes to Program Outcomes with LLM semantic analysis
 """
 
 from typing import Dict, List, Any, Optional
+import json
 import yaml
 from pathlib import Path
 import logging
 
 from ..utils.text_processing import TextProcessor
 
+try:
+    from ..ai.model_manager import ModelManager
+    AI_AVAILABLE = True
+except ImportError:
+    AI_AVAILABLE = False
+
 
 class COPOMapper:
     """Map Course Outcomes to Program Outcomes"""
     
-    def __init__(self):
+    def __init__(self, model_manager=None):
         self.logger = logging.getLogger(__name__)
         self.text_processor = TextProcessor()
         self.accreditation = self._load_accreditation_standards()
+        self.ai = model_manager
+        self._ai_initialized = False
+        
+    def _ensure_ai(self):
+        if self._ai_initialized:
+            return
+        self._ai_initialized = True
+        if self.ai is None and AI_AVAILABLE:
+            try:
+                config_path = Path(__file__).parent.parent.parent / "configs" / "ai_models.yaml"
+                if config_path.exists():
+                    with open(config_path, 'r') as f:
+                        config = yaml.safe_load(f)
+                else:
+                    config = {}
+                self.ai = ModelManager(config)
+            except Exception as e:
+                self.logger.debug(f"AI model not available for CO-PO mapping: {e}")
+                self.ai = None
         
     def _load_accreditation_standards(self) -> dict:
         """Load accreditation standards"""
@@ -32,28 +58,38 @@ class COPOMapper:
         domain: str = "engineering"
     ) -> Dict[str, Dict[str, int]]:
         """
-        Map course outcomes to program outcomes
-        
-        Args:
-            course_outcomes: List of course outcomes with descriptions
-            program_outcomes: List of PO codes (defaults to NBA engineering POs)
-            domain: Academic domain
-            
-        Returns:
-            CO-PO mapping matrix
+        Map course outcomes to program outcomes using LLM when available,
+        falling back to rule-based keyword matching.
         """
         if program_outcomes is None:
-            # Use NBA engineering POs by default
             program_outcomes = [f'PO{i}' for i in range(1, 13)]
-            
-        mapping = {}
         
+        self._ensure_ai()
+        
+        if self.ai is not None:
+            try:
+                semantic_mapping = self._map_co_to_po_semantic(
+                    course_outcomes, program_outcomes, domain
+                )
+                if semantic_mapping:
+                    return semantic_mapping
+            except Exception as e:
+                self.logger.warning(f"Semantic CO-PO mapping failed, using rule-based: {e}")
+        
+        return self._map_co_to_po_rule_based(course_outcomes, program_outcomes, domain)
+    
+    def _map_co_to_po_rule_based(
+        self,
+        course_outcomes: List[Dict[str, str]],
+        program_outcomes: List[str],
+        domain: str
+    ) -> Dict[str, Dict[str, int]]:
+        """Rule-based CO-PO mapping using keyword matching and Bloom's affinity"""
+        mapping = {}
         for co in course_outcomes:
             co_code = co.get('code', '')
             co_description = co.get('description', '')
             bloom_level = co.get('bloom_level', 'unknown')
-            
-            # Map to each PO
             po_mapping = {}
             for po_code in program_outcomes:
                 correlation = self._calculate_correlation(
@@ -61,10 +97,84 @@ class COPOMapper:
                 )
                 if correlation > 0:
                     po_mapping[po_code] = correlation
-                    
             mapping[co_code] = po_mapping
-            
         return mapping
+    
+    def _map_co_to_po_semantic(
+        self,
+        course_outcomes: List[Dict[str, str]],
+        program_outcomes: List[str],
+        domain: str
+    ) -> Optional[Dict[str, Dict[str, int]]]:
+        """LLM-based semantic CO-PO mapping"""
+        po_descriptions = {}
+        for po_code in program_outcomes:
+            po_data = self._get_po_description(po_code, domain)
+            if po_data:
+                po_descriptions[po_code] = po_data.get('description', '')
+        
+        if not po_descriptions:
+            return None
+        
+        co_list = []
+        for co in course_outcomes:
+            co_list.append({
+                'code': co.get('code', ''),
+                'description': co.get('description', ''),
+                'bloom_level': co.get('bloom_level', '')
+            })
+        
+        po_list = [{'code': k, 'description': v} for k, v in po_descriptions.items()]
+        
+        prompt = f"""Map each Course Outcome (CO) to Program Outcomes (PO) based on semantic alignment.
+
+COURSE OUTCOMES:
+{json.dumps(co_list, indent=2)}
+
+PROGRAM OUTCOMES:
+{json.dumps(po_list, indent=2)}
+
+For each CO, assign a correlation level (0-3) to each PO:
+- 0: No correlation
+- 1: Low correlation (tangentially related)
+- 2: Medium correlation (partially addresses the PO)
+- 3: High correlation (directly addresses the PO)
+
+Rules:
+- A CO should map to 2-5 POs with correlation >= 1
+- Only assign non-zero correlation where there is genuine alignment
+- Consider both the CO description content AND Bloom's taxonomy level
+
+Respond with ONLY valid JSON:
+{{"CO1": {{"PO1": 3, "PO2": 1, "PO5": 2}}, "CO2": {{"PO1": 1, "PO3": 3}}}}"""
+
+        response = self.ai.generate_json(
+            prompt=prompt,
+            system_prompt="You are an expert in Outcome-Based Education and NBA accreditation. Map course outcomes to program outcomes based on semantic content alignment.",
+            task_type='analysis',
+            temperature=0.2,
+            max_tokens=1500,
+            max_retries=1
+        )
+        
+        if not response:
+            return None
+        
+        mapping = {}
+        for co_code, po_dict in response.items():
+            if isinstance(po_dict, dict):
+                cleaned = {}
+                for po_code, level in po_dict.items():
+                    try:
+                        level_int = int(level)
+                        if 0 <= level_int <= 3 and level_int > 0:
+                            cleaned[po_code] = level_int
+                    except (ValueError, TypeError):
+                        continue
+                if cleaned:
+                    mapping[co_code] = cleaned
+        
+        return mapping if mapping else None
         
     def _calculate_correlation(
         self,
