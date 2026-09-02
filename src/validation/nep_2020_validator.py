@@ -163,9 +163,19 @@ class NEP2020Validator:
         
         assessment = syllabus_data.get('assessment_pattern', {})
         
-        # Try to identify formative vs summative
-        formative_keys = ['internal', 'continuous', 'assignment', 'quiz', 'lab', 'project']
-        formative_total = sum(assessment.get(key, 0) for key in formative_keys if key in assessment)
+        formative_total = 0
+        
+        if isinstance(assessment, dict):
+            internal = assessment.get('internal', {})
+            if isinstance(internal, dict):
+                formative_total = internal.get('weightage', 0)
+                if formative_total == 0:
+                    formative_total = sum(internal.get('components', {}).values()) if isinstance(internal.get('components'), dict) else 0
+            elif isinstance(internal, (int, float)):
+                formative_total = internal
+            else:
+                formative_keys = ['internal', 'continuous', 'assignment', 'quiz', 'lab', 'project']
+                formative_total = sum(assessment.get(key, 0) for key in formative_keys if key in assessment and isinstance(assessment.get(key), (int, float)))
         
         compliant = formative_min <= formative_total <= formative_max
         

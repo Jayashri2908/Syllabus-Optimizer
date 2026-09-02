@@ -114,14 +114,33 @@ class AccreditationChecker:
         """Check NBA-recommended assessment pattern (40% IA + 60% ESE)"""
         assessment = syllabus_data.get('assessment_pattern', {})
         
-        # Try to identify internal (IA) and external (ESE)
-        internal_keys = ['internal', 'continuous', 'ia', 'assignment', 'quiz']
-        external_keys = ['external', 'ese', 'end_semester', 'final']
+        internal_total = 0
+        external_total = 0
         
-        internal_total = sum(assessment.get(key, 0) for key in internal_keys if key in assessment)
-        external_total = sum(assessment.get(key, 0) for key in external_keys if key in assessment)
+        if isinstance(assessment, dict):
+            internal = assessment.get('internal', {})
+            external = assessment.get('external', {})
+            
+            if isinstance(internal, dict):
+                internal_total = internal.get('weightage', 0)
+                if internal_total == 0 and isinstance(internal.get('components'), dict):
+                    internal_total = sum(internal['components'].values())
+            elif isinstance(internal, (int, float)):
+                internal_total = internal
+                
+            if isinstance(external, dict):
+                external_total = external.get('weightage', 0)
+                if external_total == 0 and isinstance(external.get('components'), dict):
+                    external_total = sum(external['components'].values())
+            elif isinstance(external, (int, float)):
+                external_total = external
         
-        # NBA recommends 40% IA + 60% ESE
+        if internal_total == 0 and external_total == 0:
+            internal_keys = ['internal', 'continuous', 'ia', 'assignment', 'quiz']
+            external_keys = ['external', 'ese', 'end_semester', 'final']
+            internal_total = sum(assessment.get(key, 0) for key in internal_keys if key in assessment and isinstance(assessment.get(key), (int, float)))
+            external_total = sum(assessment.get(key, 0) for key in external_keys if key in assessment and isinstance(assessment.get(key), (int, float)))
+        
         ia_compliant = 35 <= internal_total <= 45
         ese_compliant = 55 <= external_total <= 65
         
