@@ -5,9 +5,24 @@ User prompts for each section with strictness (temperature) tuning
 
 from typing import Dict, List, Any, Optional
 import json
+import yaml
+from pathlib import Path
 
 
 class SectionPrompts:
+    
+    _verified_refs = None
+    
+    @classmethod
+    def _load_verified_references(cls) -> dict:
+        if cls._verified_refs is None:
+            config_path = Path(__file__).parent.parent.parent / "configs" / "verified_references.yaml"
+            try:
+                with open(config_path, 'r') as f:
+                    cls._verified_refs = yaml.safe_load(f) or {}
+            except Exception:
+                cls._verified_refs = {}
+        return cls._verified_refs
     """
     User prompts for each syllabus section.
     Uses a shared system prompt for overall structure consistency,
@@ -316,18 +331,14 @@ EXAMPLE for "Machine Learning, Neural Networks, Deep Learning, CNN, RNN":
 
 Generate exactly {num_units} units with 8-10 concise topic names each from the keywords."""
 
-    @staticmethod
-    def get_references_prompt(context: Dict[str, Any]) -> str:
+    @classmethod
+    def get_references_prompt(cls, context: Dict[str, Any]) -> str:
         """
-        Generate user prompt for references section.
-        
-        Args:
-            context: Includes all previous sections for topic alignment
+        Generate user prompt for references section with verified suggestions.
         """
         keywords = context.get('keywords', [])
         domain = context.get('domain', 'general')
         
-        # Get course level
         course_title = context.get('course_title', '')
         if any(term in course_title.lower() for term in ['advanced', 'graduate', 'phd']):
             level = "advanced/graduate"
@@ -336,12 +347,30 @@ Generate exactly {num_units} units with 8-10 concise topic names each from the k
         else:
             level = "intermediate/undergraduate"
         
+        verified_section = ""
+        verified_refs = cls._load_verified_references()
+        domain_refs = verified_refs.get(domain, verified_refs.get('general', {}))
+        if domain_refs:
+            verified_books = domain_refs.get('textbooks', [])
+            verified_online = domain_refs.get('online_resources', [])
+            if verified_books or verified_online:
+                verified_section = f"""
+
+**VERIFIED REFERENCES (choose from these - all are real and confirmed):**
+Textbooks:
+{chr(10).join(f'- {b}' for b in verified_books[:6])}
+
+Online Resources:
+{chr(10).join(f'- {r}' for r in verified_online[:4])}
+
+IMPORTANT: Select 3-4 textbooks and 2-3 online resources from the verified list above. You may add 1-2 additional references if you are CERTAIN they exist."""
+        
         return f"""Generate references for:
 
 Course: {context.get('course_title', 'Untitled Course')}
 Domain: {domain}
 Level: {level}
-Topics: {', '.join(keywords[:6])}
+Topics: {', '.join(keywords[:6])}{verified_section}
 
 Respond with JSON in this exact format:
 {{

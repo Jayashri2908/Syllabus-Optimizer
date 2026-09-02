@@ -1,0 +1,102 @@
+# Verified Reference Books for SCDO
+# Only well-known, widely-adopted textbooks with confirmed existence
+# Used to guide LLM reference generation and reduce hallucination
+
+machine_learning:
+  textbooks:
+    - "Pattern Recognition and Machine Learning by Christopher Bishop (Springer, 2006)"
+    - "Deep Learning by Ian Goodfellow, Yoshua Bengio, Aaron Courville (MIT Press, 2016)"
+    - "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow by Aurelien Geron (O'Reilly, 3rd Edition, 2022)"
+    - "An Introduction to Statistical Learning by Gareth James et al. (Springer, 2nd Edition, 2021)"
+    - "Machine Learning: A Probabilistic Perspective by Kevin Murphy (MIT Press, 2012)"
+  online_resources:
+    - "Machine Learning Specialization by Andrew Ng on Coursera (Stanford)"
+    - "Deep Learning Specialization by Andrew Ng on Coursera (deeplearning.ai)"
+    - "Fast.ai Practical Deep Learning for Coders (free online course)"
+
+web_development:
+  textbooks:
+    - "Eloquent JavaScript by Marijn Haverbeke (No Starch Press, 4th Edition, 2024)"
+    - "You Don't Know JS series by Kyle Simpson (O'Reilly)"
+    - "Node.js Design Patterns by Mario Casciarola (Packt, 3rd Edition, 2020)"
+    - "Learning React by Alex Banks and Eve Porcello (O'Reilly, 2nd Edition, 2020)"
+  online_resources:
+    - "The Odin Project - Full Stack Web Development (free online)"
+    - "Meta Front-End Developer Professional Certificate on Coursera"
+    - "MDN Web Docs by Mozilla (developer.mozilla.org)"
+
+data_science:
+  textbooks:
+    - "Python for Data Analysis by Wes McKinney (O'Reilly, 3rd Edition, 2022)"
+    - "Data Science from Scratch by Joel Grus (O'Reilly, 2nd Edition, 2019)"
+    - "Practical Statistics for Data Scientists by Peter Bruce et al. (O'Reilly, 3rd Edition, 2022)"
+    - "Storytelling with Data by Cole Nussbaumer Knaflic (Wiley, 2015)"
+  online_resources:
+    - "Google Data Analytics Professional Certificate on Coursera"
+    - "IBM Data Science Professional Certificate on Coursera"
+    - "Kaggle Learn - Free Data Science Micro-courses"
+
+cybersecurity:
+  textbooks:
+    - "Cryptography and Network Security by William Stallings (Pearson, 8th Edition, 2022)"
+    - "Security Engineering by Ross Anderson (Wiley, 3rd Edition, 2020)"
+    - "The Web Application Hacker's Handbook by Dafydd Stuttard (Wiley, 2nd Edition, 2011)"
+    - "Applied Cyber Security by Scott Donaldson et al. (Apress, 2018)"
+  online_resources:
+    - "CompTIA Security+ Certification (CompTIA)"
+    - "Cybersecurity Fundamentals by ISACA"
+    - "OWASP Web Security Testing Guide (free online)"
+
+database:
+  textbooks:
+    - "Database System Concepts by Abraham Silberschatz, Henry Korth, S. Sudarshan (McGraw-Hill, 7th Edition, 2019)"
+    - "Fundamentals of Database Systems by Ramez Elmasri, Shamkant Navathe (Pearson, 7th Edition, 2015)"
+    - "Designing Data-Intensive Applications by Martin Kleppmann (O'Reilly, 2017)"
+    - "SQL in 10 Minutes by Ben Forta (Sams, 4th Edition, 2013)"
+  online_resources:
+    - "MongoDB University - Free Online Courses (university.mongodb.com)"
+    - "Stanford Database Course on edX (self-paced)"
+    - "SQLZoo - Interactive SQL Tutorials (free online)"
+
+cloud_computing:
+  textbooks:
+    - "Cloud Computing: Concepts, Technology and Architecture by Thomas Erl (Prentice Hall, 2013)"
+    - "Building Microservices by Sam Newman (O'Reilly, 2nd Edition, 2021)"
+    - "The Phoenix Project by Gene Kim et al. (IT Revolution, 2018)"
+    - "Terraform: Up and Running by Yevgeniy Brikman (O'Reilly, 3rd Edition, 2022)"
+  online_resources:
+    - "AWS Free Tier and AWS Training (aws.amazon.com/training)"
+    - "Google Cloud Training on Coursera"
+    - "Kubernetes Official Documentation (kubernetes.io/docs)"
+
+mobile_development:
+  textbooks:
+    - "Android Programming: The Big Nerd Ranch Guide by Bill Phillips et al. (Big Nerd Ranch, 5th Edition, 2023)"
+    - "iOS Programming: The Big Nerd Ranch Guide by Christian Keur et al. (Big Nerd Ranch, 7th Edition, 2022)"
+    - "Flutter in Action by Eric Windmill (Manning, 2020)"
+    - "React Native in Action by Nader Dabit (Manning, 2019)"
+  online_resources:
+    - "Google Android Developers Training (developer.android.com/courses)"
+    - "Apple Develop Tutorials (developer.apple.com/tutorials)"
+    - "Flutter Documentation and Codelabs (flutter.dev)"
+
+computer_networks:
+  textbooks:
+    - "Computer Networking: A Top-Down Approach by James Kurose, Keith Ross (Pearson, 8th Edition, 2021)"
+    - "Computer Networks by Andrew Tanenbaum, David Wetherall (Pearson, 5th Edition, 2011)"
+    - "Data Communications and Networking by Behrouz Forouzan (McGraw-Hill, 5th Edition, 2013)"
+    - "TCP/IP Illustrated, Volume 1 by W. Richard Stevens (Addison-Wesley, 2nd Edition, 2011)"
+  online_resources:
+    - "Cisco Networking Academy (netacad.com)"
+    - "Computer Networking Course by Stanford on Coursera"
+    - "Juniper Learning Portal (learning.juniper.net)"
+
+general:
+  textbooks:
+    - "Introduction to Algorithms by Thomas Cormen et al. (MIT Press, 4th Edition, 2022)"
+    - "Structure and Interpretation of Computer Programs by Harold Abelson et al. (MIT Press, 2nd Edition, 1996)"
+    - "The Art of Computer Programming by Donald Knuth (Addison-Wesley)"
+  online_resources:
+    - "MIT OpenCourseWare (ocw.mit.edu)"
+    - "Coursera - University Courses Online"
+    - "edX - Free Online Courses"
