@@ -7,17 +7,13 @@ taxonomy:
     description: "Retrieve relevant knowledge from long-term memory"
     verbs:
       - define
-      - describe
-      - identify
       - label
       - list
       - match
       - name
-      - outline
       - recall
       - recognize
       - reproduce
-      - select
       - state
     assessment_types:
       - "Multiple Choice Questions (MCQs)"
@@ -37,11 +33,10 @@ taxonomy:
     description: "Construct meaning from instructional messages"
     verbs:
       - classify
-      - compare
-      - contrast
-      - demonstrate
+      - describe
       - explain
       - extend
+      - identify
       - illustrate
       - infer
       - interpret
@@ -70,20 +65,15 @@ taxonomy:
       - apply
       - calculate
       - change
-      - choose
       - compute
-      - construct
       - demonstrate
-      - develop
       - discover
       - execute
       - implement
       - modify
       - operate
       - perform
-      - predict
       - prepare
-      - produce
       - show
       - solve
       - use
@@ -116,14 +106,9 @@ taxonomy:
       - distinguish
       - examine
       - experiment
-      - identify
-      - illustrate
-      - infer
       - investigate
       - organize
-      - outline
       - relate
-      - select
       - separate
     assessment_types:
       - "Case study analysis"
@@ -147,9 +132,7 @@ taxonomy:
       - argue
       - assess
       - choose
-      - compare
       - conclude
-      - contrast
       - criticize
       - critique
       - decide
@@ -158,7 +141,6 @@ taxonomy:
       - evaluate
       - judge
       - justify
-      - predict
       - prioritize
       - prove
       - rank

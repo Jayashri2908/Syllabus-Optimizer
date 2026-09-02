@@ -97,11 +97,11 @@ def format_distribution_for_prompt(distribution: Dict[str, int]) -> str:
 def get_bloom_verb_list(level: str) -> List[str]:
     """Get list of Bloom's verbs for a level"""
     BLOOM_VERBS = {
-        'remember': ['Define', 'Identify', 'List', 'Name', 'Recall', 'Recognize', 'State'],
-        'understand': ['Explain', 'Summarize', 'Interpret', 'Classify', 'Compare', 'Contrast'],
-        'apply': ['Apply', 'Execute', 'Implement', 'Solve', 'Use', 'Demonstrate', 'Calculate'],
-        'analyze': ['Analyze', 'Differentiate', 'Examine', 'Compare', 'Investigate', 'Categorize'],
-        'evaluate': ['Evaluate', 'Critique', 'Judge', 'Assess', 'Justify', 'Rank', 'Validate'],
-        'create': ['Design', 'Develop', 'Create', 'Formulate', 'Construct', 'Compose', 'Plan']
+        'remember': ['Define', 'Label', 'List', 'Name', 'Recall', 'Recognize', 'State'],
+        'understand': ['Describe', 'Explain', 'Summarize', 'Classify', 'Identify', 'Infer', 'Predict', 'Outline'],
+        'apply': ['Apply', 'Calculate', 'Execute', 'Implement', 'Solve', 'Use', 'Demonstrate', 'Compute'],
+        'analyze': ['Analyze', 'Compare', 'Contrast', 'Differentiate', 'Examine', 'Investigate', 'Categorize', 'Distinguish'],
+        'evaluate': ['Evaluate', 'Assess', 'Critique', 'Judge', 'Justify', 'Rank', 'Recommend', 'Choose', 'Select'],
+        'create': ['Design', 'Develop', 'Create', 'Formulate', 'Construct', 'Compose', 'Generate', 'Plan', 'Produce', 'Devise']
     }
     return BLOOM_VERBS.get(level.lower(), [])

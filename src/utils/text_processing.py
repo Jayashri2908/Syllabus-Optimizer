@@ -51,7 +51,7 @@ class TextProcessor:
         
     def classify_bloom_level(self, text: str) -> str:
         """
-        Classify text to Bloom's taxonomy level
+        Classify text to Bloom's taxonomy level (highest matching level)
         
         Args:
             text: Text to classify (learning outcome or objective)
@@ -61,11 +61,12 @@ class TextProcessor:
         """
         text_lower = text.lower()
         
-        # Check for verbs in each level
-        for level, verbs in self.bloom_verbs.items():
+        HIGHEST_FIRST = ['create', 'evaluate', 'analyze', 'apply', 'understand', 'remember']
+        
+        for level in HIGHEST_FIRST:
+            verbs = self.bloom_verbs.get(level, set())
             for verb in verbs:
-                # Match whole words only
-                if re.search(rf'\b{verb}\b', text_lower):
+                if re.search(rf'\b{re.escape(verb)}\b', text_lower):
                     return level
                     
         return "unknown"

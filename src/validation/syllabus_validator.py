@@ -12,12 +12,12 @@ class SyllabusValidator:
     
     # Bloom's taxonomy verbs for validation
     BLOOM_VERBS = {
-        'remember': ['define', 'identify', 'list', 'name', 'recall', 'recognize', 'state', 'describe'],
-        'understand': ['explain', 'summarize', 'interpret', 'classify', 'compare', 'contrast', 'demonstrate'],
-        'apply': ['apply', 'calculate', 'execute', 'implement', 'solve', 'use', 'demonstrate', 'operate'],
-        'analyze': ['analyze', 'compare', 'contrast', 'differentiate', 'examine', 'investigate', 'categorize'],
-        'evaluate': ['evaluate', 'assess', 'critique', 'judge', 'justify', 'rank', 'recommend', 'validate'],
-        'create': ['create', 'design', 'develop', 'formulate', 'construct', 'compose', 'generate', 'plan']
+        'remember': ['define', 'label', 'list', 'name', 'recall', 'recognize', 'state'],
+        'understand': ['describe', 'explain', 'summarize', 'interpret', 'classify', 'identify', 'infer', 'predict', 'outline'],
+        'apply': ['apply', 'calculate', 'execute', 'implement', 'solve', 'use', 'demonstrate', 'operate', 'compute'],
+        'analyze': ['analyze', 'compare', 'contrast', 'differentiate', 'examine', 'investigate', 'categorize', 'deconstruct', 'distinguish'],
+        'evaluate': ['evaluate', 'assess', 'critique', 'judge', 'justify', 'rank', 'recommend', 'validate', 'choose', 'select', 'decide'],
+        'create': ['create', 'design', 'develop', 'formulate', 'construct', 'compose', 'generate', 'plan', 'produce', 'devise']
     }
     
     def validate(self, syllabus: Dict[str, Any]) -> Dict[str, Any]:
@@ -44,7 +44,9 @@ class SyllabusValidator:
                 description = outcome.get('description', '').lower()
                 has_bloom_verb = False
                 
-                for level, verbs in self.BLOOM_VERBS.items():
+                HIGHEST_FIRST = ['create', 'evaluate', 'analyze', 'apply', 'understand', 'remember']
+                for level in HIGHEST_FIRST:
+                    verbs = self.BLOOM_VERBS.get(level, [])
                     if any(description.startswith(verb) for verb in verbs):
                         bloom_counts[level] += 1
                         has_bloom_verb = True
