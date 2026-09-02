@@ -311,7 +311,7 @@ class SyllabusGenerator:
         
         syllabus['teaching_methodology'] = self._generate_methodology(domain)
         syllabus['assessment_pattern'] = self._generate_assessment_pattern(
-            syllabus.get('learning_outcomes', []), domain
+            syllabus.get('learning_outcomes', []), domain, credits
         )
         
         industry_context = self._get_industry_context(keywords, course_title)
@@ -383,7 +383,7 @@ class SyllabusGenerator:
         
         methodology = self._generate_methodology(domain)
         
-        assessment = self._generate_assessment_pattern(outcomes, domain)
+        assessment = self._generate_assessment_pattern(outcomes, domain, credits)
         
         has_user_refs = (
             (textbooks and len(textbooks) > 0) or 
@@ -822,34 +822,66 @@ class SyllabusGenerator:
     def _generate_assessment_pattern(
         self,
         outcomes: List[Dict[str, str]],
-        domain: str
+        domain: str,
+        credits: str = "3-0-0"
     ) -> Dict[str, Any]:
-        """Generate assessment pattern"""
-        # Standard assessment pattern
-        pattern = {
+        """Generate assessment pattern based on credits (L-T-P), domain, and outcomes"""
+        lecture_hours = 3
+        tutorial_hours = 0
+        practical_hours = 0
+        try:
+            parts = credits.split('-')
+            lecture_hours = int(parts[0])
+            tutorial_hours = int(parts[1]) if len(parts) > 1 else 0
+            practical_hours = int(parts[2]) if len(parts) > 2 else 0
+        except (ValueError, IndexError):
+            pass
+        
+        has_lab = practical_hours > 0 or domain in ['engineering', 'science', 'computer_science']
+        has_project_heavy_outcomes = any(
+            o.get('bloom_level', '') in ['create', 'evaluate']
+            for o in (outcomes or [])
+        )
+        
+        internal_weight = 40
+        external_weight = 60
+        
+        if has_lab:
+            internal_components = {
+                'midterm_exam': 15,
+                'assignments': 5,
+                'quizzes': 5,
+                'class_participation': 5,
+                'lab_work': 10
+            }
+        elif has_project_heavy_outcomes:
+            internal_components = {
+                'midterm_exam': 15,
+                'assignments': 5,
+                'quizzes': 5,
+                'class_participation': 5,
+                'project': 10
+            }
+        else:
+            internal_components = {
+                'midterm_exam': 20,
+                'assignments': 10,
+                'quizzes': 5,
+                'class_participation': 5
+            }
+        
+        external_components = {'final_exam': 60}
+        
+        return {
             'internal': {
-                'weightage': 40,
-                'components': {
-                    'midterm_exam': 20,
-                    'assignments': 10,
-                    'quizzes': 5,
-                    'class_participation': 5
-                }
+                'weightage': internal_weight,
+                'components': internal_components
             },
             'external': {
-                'weightage': 60,
-                'components': {
-                    'final_exam': 60
-                }
+                'weightage': external_weight,
+                'components': external_components
             }
         }
-        
-        # Add lab component if applicable
-        if domain in ['engineering', 'science']:
-            pattern['internal']['components']['lab_work'] = 10
-            pattern['internal']['components']['assignments'] = 5
-            
-        return pattern
         
     def _generate_references(
         self,
