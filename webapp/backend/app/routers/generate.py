@@ -34,7 +34,7 @@ async def generate_syllabus(request: GenerateRequest, comps=Depends(get_componen
             domain=request.domain,
             num_units=request.num_units,
             num_outcomes=request.num_outcomes,
-            use_chained_generation=False
+            use_chained_generation=request.use_chained_generation
         )
         
         # Add institution details to syllabus

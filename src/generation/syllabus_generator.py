@@ -28,6 +28,7 @@ from .section_schemas import (
     UnitsSection,
     ReferencesSection
 )
+from .chained_generator import ChainedSyllabusGenerator
 
 
 class SyllabusGenerator:
@@ -171,11 +172,7 @@ class SyllabusGenerator:
             Complete syllabus structure with quality score
         """
         
-        # Chained generation is not yet implemented — always use standard pipeline
-        if use_chained_generation:
-            self.logger.warning("Chained generation is not yet implemented. Using standard generation.")
-        
-        self.logger.info(f"Generating syllabus for {course_title} (refinement: {enable_refinement})")
+        self.logger.info(f"Generating syllabus for {course_title} (chained: {use_chained_generation}, refinement: {enable_refinement})")
         
         # Clear cached domain for new generation
         if hasattr(self, '_cached_domain'):
@@ -184,50 +181,210 @@ class SyllabusGenerator:
         # Handle keywords: use unit_topics or fallback to keywords
         keywords = keywords or []
         if unit_topics:
-            # Extract all topics from unit_topics for general use
             all_topics = []
             for unit in unit_topics:
                 all_topics.extend(unit.get('topics', []))
             if all_topics:
                 keywords = all_topics
         
-        # Determine course level: use explicit or auto-detect
         effective_level = course_level if course_level else self._estimate_course_level(course_title)
         
-        # Generate course overview (4-5 lines)
+        if use_chained_generation:
+            return self._generate_with_chaining(
+                course_title=course_title,
+                course_code=course_code,
+                credits=credits,
+                program_outcomes=program_outcomes,
+                keywords=keywords,
+                unit_topics=unit_topics,
+                textbooks=textbooks,
+                references=references,
+                online_resources=online_resources,
+                domain=domain,
+                num_units=num_units,
+                num_outcomes=num_outcomes,
+                enable_refinement=enable_refinement,
+                program=program,
+                year=year,
+                course_level=effective_level
+            )
+        
+        return self._generate_standard(
+            course_title=course_title,
+            course_code=course_code,
+            credits=credits,
+            program_outcomes=program_outcomes,
+            keywords=keywords,
+            unit_topics=unit_topics,
+            textbooks=textbooks,
+            references=references,
+            online_resources=online_resources,
+            domain=domain,
+            num_units=num_units,
+            num_outcomes=num_outcomes,
+            enable_refinement=enable_refinement,
+            program=program,
+            year=year,
+            course_level=effective_level
+        )
+    
+    def _generate_with_chaining(
+        self,
+        course_title: str,
+        course_code: str,
+        credits: str,
+        program_outcomes: List[str],
+        keywords: List[str],
+        unit_topics: List[Dict[str, Any]] = None,
+        textbooks: List[str] = None,
+        references: List[str] = None,
+        online_resources: List[str] = None,
+        domain: str = "engineering",
+        num_units: int = 5,
+        num_outcomes: int = 5,
+        enable_refinement: bool = False,
+        program: str = "",
+        year: str = "",
+        course_level: str = ""
+    ) -> Dict[str, Any]:
+        """Generate syllabus using chained (staggered) LLM calls with accumulated context."""
+        self.logger.info("Using chained generation for context-aware syllabus creation")
+        
+        chained_gen = ChainedSyllabusGenerator(self.ai)
+        
+        course_info = {
+            'course_title': course_title,
+            'course_code': course_code,
+            'credits': credits,
+            'program': program,
+            'year': year,
+            'course_level': course_level,
+            'keywords': keywords,
+            'domain': domain,
+            'program_outcomes': program_outcomes,
+            'unit_topics': unit_topics,
+        }
+        
+        try:
+            syllabus = chained_gen.generate_staggered(
+                course_info=course_info,
+                num_units=num_units,
+                num_outcomes=num_outcomes,
+                verbose=True
+            )
+        except Exception as e:
+            self.logger.error(f"Chained generation failed: {e}. Falling back to standard generation.")
+            return self._generate_standard(
+                course_title=course_title,
+                course_code=course_code,
+                credits=credits,
+                program_outcomes=program_outcomes,
+                keywords=keywords,
+                unit_topics=unit_topics,
+                textbooks=textbooks,
+                references=references,
+                online_resources=online_resources,
+                domain=domain,
+                num_units=num_units,
+                num_outcomes=num_outcomes,
+                enable_refinement=enable_refinement,
+                program=program,
+                year=year,
+                course_level=course_level
+            )
+        
+        syllabus['course_level'] = course_level
+        syllabus['domain'] = domain
+        
+        has_user_refs = (
+            (textbooks and len(textbooks) > 0) or
+            (references and len(references) > 0) or
+            (online_resources and len(online_resources) > 0)
+        )
+        if has_user_refs:
+            syllabus['references'] = {
+                'textbooks': textbooks if textbooks else [],
+                'references': references if references else [],
+                'online_resources': online_resources if online_resources else [],
+                'raw_suggestions': ''
+            }
+        
+        syllabus['teaching_methodology'] = self._generate_methodology(domain)
+        syllabus['assessment_pattern'] = self._generate_assessment_pattern(
+            syllabus.get('learning_outcomes', []), domain
+        )
+        
+        industry_context = self._get_industry_context(keywords, course_title)
+        syllabus['metadata'] = syllabus.get('metadata', {})
+        syllabus['metadata'].update({
+            'domain_detected': self._detect_and_cache_domain(course_title, keywords),
+            'course_level': course_level,
+            'industry_context': industry_context,
+            'refinement_enabled': enable_refinement,
+            'program': program,
+            'year': year,
+            'generation_method': 'staggered_chaining'
+        })
+        
+        rubrics = self.rubric_gen.generate_rubrics(syllabus.get('assessment_pattern', {}), domain)
+        syllabus['rubrics'] = rubrics
+        
+        copo_summary = self._generate_copo_summary(
+            syllabus.get('learning_outcomes', []), program_outcomes
+        )
+        syllabus['copo_summary'] = copo_summary
+        
+        validation = self.validator.validate(syllabus)
+        syllabus['quality_score'] = validation['score']
+        syllabus['quality_grade'] = validation['grade']
+        
+        self.logger.info(f"Chained generation complete. Quality: {validation['grade']} ({validation['score']}/100)")
+        return syllabus
+    
+    def _generate_standard(
+        self,
+        course_title: str,
+        course_code: str,
+        credits: str,
+        program_outcomes: List[str],
+        keywords: List[str],
+        unit_topics: List[Dict[str, Any]] = None,
+        textbooks: List[str] = None,
+        references: List[str] = None,
+        online_resources: List[str] = None,
+        domain: str = "engineering",
+        num_units: int = 5,
+        num_outcomes: int = 5,
+        enable_refinement: bool = False,
+        program: str = "",
+        year: str = "",
+        course_level: str = ""
+    ) -> Dict[str, Any]:
+        """Standard (non-chained) generation pipeline — original logic."""
         overview = self._generate_overview(course_title, keywords, domain, program, year)
         
-        # Generate course objectives
         objectives = self._generate_objectives(course_title, keywords, domain)
         
-        # Refine objectives if enabled
         if enable_refinement and objectives:
             self.logger.info("Refining objectives...")
             objectives = self.refiner.refine_objectives(objectives, course_title, keywords)
         
-        # Generate learning outcomes
         outcomes = self._generate_learning_outcomes(
             course_title, keywords, program_outcomes, num_outcomes
         )
         
-        # Refine outcomes if enabled
         if enable_refinement and outcomes:
             self.logger.info("Refining learning outcomes...")
             outcomes = self.refiner.refine_learning_outcomes(
                 outcomes, course_title, keywords, program_outcomes, num_outcomes
             )
         
-        # Generate unit-wise syllabus (use unit_topics if available)
         units = self._generate_units(course_title, keywords, num_units, credits, unit_topics)
         
-        # Generate teaching methodology
         methodology = self._generate_methodology(domain)
         
-        # Generate assessment pattern
         assessment = self._generate_assessment_pattern(outcomes, domain)
         
-        # Handle references: use user-provided or generate
-        # Check if any user-provided references exist (not None and not empty)
         has_user_refs = (
             (textbooks and len(textbooks) > 0) or 
             (references and len(references) > 0) or 
@@ -235,7 +392,6 @@ class SyllabusGenerator:
         )
         
         if has_user_refs:
-            # Use user-provided references
             refs = {
                 'textbooks': textbooks if textbooks else [],
                 'references': references if references else [],
@@ -243,26 +399,21 @@ class SyllabusGenerator:
                 'raw_suggestions': ''
             }
         else:
-            # Generate references using AI
             refs = self._generate_references(course_title, keywords)
         
-        # Generate assessment rubrics
         rubrics = self.rubric_gen.generate_rubrics(assessment, domain)
         
-        # Get industry context
         industry_context = self._get_industry_context(keywords, course_title)
         
-        # Generate CO-PO summary (1 line)
         copo_summary = self._generate_copo_summary(outcomes, program_outcomes)
         
-        # Create syllabus structure
         syllabus = {
             'course_title': course_title,
             'course_code': course_code,
             'credits': credits,
             'program': program,
             'year': year,
-            'course_level': effective_level,
+            'course_level': course_level,
             'overview': overview,
             'objectives': objectives,
             'learning_outcomes': outcomes,
@@ -275,7 +426,7 @@ class SyllabusGenerator:
             'generated': True,
             'metadata': {
                 'domain_detected': self._detect_and_cache_domain(course_title, keywords),
-                'course_level': effective_level,
+                'course_level': course_level,
                 'industry_context': industry_context,
                 'refinement_enabled': enable_refinement,
                 'program': program,
@@ -283,7 +434,6 @@ class SyllabusGenerator:
             }
         }
         
-        # Validate quality
         validation = self.validator.validate(syllabus)
         syllabus['quality_score'] = validation['score']
         syllabus['quality_grade'] = validation['grade']
@@ -296,11 +446,6 @@ class SyllabusGenerator:
         
         return syllabus
     
-
-    
-
-
-        
     def _generate_overview(
         self,
         course_title: str,

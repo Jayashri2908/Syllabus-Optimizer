@@ -31,6 +31,7 @@ class GenerateRequest(BaseModel):
     domain: str = "engineering"
     num_units: int = 5
     num_outcomes: int = 5
+    use_chained_generation: bool = True
 
 
 class OptimizeRequest(BaseModel):
