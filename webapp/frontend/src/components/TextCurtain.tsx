@@ -39,6 +39,7 @@ class Particle {
     const dy = this.mouse.current.y - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
+    if (distance < 0.001) return;
     if (distance < this.mouse.current.radius) {
       const forceDirectionX = dx / distance;
       const forceDirectionY = dy / distance;
