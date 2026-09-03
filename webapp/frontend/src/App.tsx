@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -41,6 +41,7 @@ const App = () => {
             <Route path="/optimize" element={<OptimizePage />} />
             <Route path="/map-outcomes" element={<MapOutcomesPage />} />
             <Route path="/specs" element={<SpecsPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
       </ErrorBoundary>
