@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React from 'react';
 
-const SkeletonLoader = ({ type = 'text', count = 1, className = '' }) => {
+const SkeletonLoader = ({ type = 'text', count = 1, className = '' }: { type?: 'text' | 'card' | 'chart'; count?: number; className?: string }) => {
   const elements = Array.from({ length: count }, (_, i) => i);
 
   if (type === 'card') {

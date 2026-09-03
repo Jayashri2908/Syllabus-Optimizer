@@ -18,11 +18,6 @@ const applyTheme = (theme: Theme): void => {
   }
 };
 
-const resolveEffectiveTheme = (theme: Theme): 'light' | 'dark' => {
-  if (theme !== 'system') return theme;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-};
-
 const themeIcon = (theme: Theme) => {
   switch (theme) {
     case 'light': return <Sun size={18} />;

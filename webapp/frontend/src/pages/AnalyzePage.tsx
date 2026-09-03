@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSyllabus } from '../context/SyllabusContext';
-import { uploadAndAnalyze, analyzeSyllabus, exportPDF } from '../services/api';
+import { uploadAndAnalyze, exportPDF } from '../services/api';
 import FileUploader from '../components/FileUploader';
 import ThreeBloomChart from '../components/ThreeBloomChart';
 import { ShieldAlert, CheckCircle, Download } from 'lucide-react';

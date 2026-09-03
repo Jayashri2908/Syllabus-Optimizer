@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import './OptimizePage.css';
 
 const OptimizePage: React.FC = () => {
-  const { currentSyllabus, setCurrentSyllabus, optimizedSyllabus, setOptimizedSyllabus } = useSyllabus();
+  const { setCurrentSyllabus, optimizedSyllabus, setOptimizedSyllabus } = useSyllabus();
   const [isLoading, setIsLoading] = useState(false);
   const [originalUpload, setOriginalUpload] = useState<SyllabusData | null>(null);
 

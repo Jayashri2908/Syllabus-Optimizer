@@ -3,7 +3,7 @@ import { useSyllabus } from '../context/SyllabusContext';
 import { generateSyllabus, exportPDF } from '../services/api';
 import { SyllabusData, LearningOutcome, GenerateRequest } from '../types';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { PenTool, ChevronRight, Activity, Download, Edit2, Save } from 'lucide-react';
+import { ChevronRight, Activity, Download, Edit2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './GeneratePage.css';
 
