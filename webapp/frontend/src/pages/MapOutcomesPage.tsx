@@ -69,7 +69,7 @@ const MapOutcomesPage: React.FC = () => {
              onClick={handleMap}
              disabled={isLoading}
            >
-             {isLoading ? 'Mapping...' : <><Activity size={18}/> Generate Headmap</>}
+             {isLoading ? 'Mapping...' : <><Activity size={18}/> Generate Heatmap</>}
            </button>
         </div>
 
