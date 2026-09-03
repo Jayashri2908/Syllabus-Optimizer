@@ -7,6 +7,7 @@ from typing import Dict, List, Any
 import yaml
 from pathlib import Path
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from ..utils.text_processing import TextProcessor
 from .lesson_plan_extractor import LessonPlanExtractor
@@ -44,7 +45,7 @@ class GapAnalyzer:
             
     def analyze(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Perform comprehensive gap analysis
+        Perform comprehensive gap analysis with parallel sub-analyses
         
         Args:
             syllabus_data: Parsed syllabus structure
@@ -52,19 +53,46 @@ class GapAnalyzer:
         Returns:
             Gap analysis report
         """
+        # Define all independent analysis tasks
+        tasks = {
+            'bloom_coverage': lambda: self._analyze_bloom_coverage(syllabus_data),
+            'co_po_mapping_gaps': lambda: self._analyze_co_po_mapping(syllabus_data),
+            'assessment_gaps': lambda: self._analyze_assessment(syllabus_data),
+            'content_gaps': lambda: self._analyze_content(syllabus_data),
+            'structural_issues': lambda: self._analyze_structure(syllabus_data),
+            'lesson_plan_analysis': lambda: self._analyze_lesson_plans(syllabus_data),
+            'redundancies': lambda: self._analyze_redundancies(syllabus_data),
+            'content_quality': lambda: self.content_analyzer.analyze(syllabus_data),
+            'nep_2020_compliance': lambda: self.nep_validator.validate(syllabus_data),
+            'nba_compliance': lambda: self.accreditation_checker.check_nba_compliance(syllabus_data),
+            'naac_compliance': lambda: self.accreditation_checker.check_naac_compliance(syllabus_data),
+        }
+        
+        # Run all independent analyses in parallel
+        results = {}
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            futures = {executor.submit(fn): key for key, fn in tasks.items()}
+            for future in as_completed(futures):
+                key = futures[future]
+                try:
+                    results[key] = future.result()
+                except Exception as e:
+                    self.logger.error(f"Analysis task '{key}' failed: {e}")
+                    results[key] = {}
+        
         report = {
-            'bloom_coverage': self._analyze_bloom_coverage(syllabus_data),
-            'co_po_mapping_gaps': self._analyze_co_po_mapping(syllabus_data),
-            'assessment_gaps': self._analyze_assessment(syllabus_data),
-            'content_gaps': self._analyze_content(syllabus_data),
-            'structural_issues': self._analyze_structure(syllabus_data),
-            'lesson_plan_analysis': self._analyze_lesson_plans(syllabus_data),
-            'redundancies': self._analyze_redundancies(syllabus_data),
-            'content_quality': self.content_analyzer.analyze(syllabus_data),
-            'nep_2020_compliance': self.nep_validator.validate(syllabus_data),
+            'bloom_coverage': results.get('bloom_coverage', {}),
+            'co_po_mapping_gaps': results.get('co_po_mapping_gaps', {}),
+            'assessment_gaps': results.get('assessment_gaps', {}),
+            'content_gaps': results.get('content_gaps', {}),
+            'structural_issues': results.get('structural_issues', []),
+            'lesson_plan_analysis': results.get('lesson_plan_analysis', {}),
+            'redundancies': results.get('redundancies', {}),
+            'content_quality': results.get('content_quality', {}),
+            'nep_2020_compliance': results.get('nep_2020_compliance', {}),
             'accreditation_compliance': {
-                'nba': self.accreditation_checker.check_nba_compliance(syllabus_data),
-                'naac': self.accreditation_checker.check_naac_compliance(syllabus_data)
+                'nba': results.get('nba_compliance', {}),
+                'naac': results.get('naac_compliance', {}),
             },
             'recommendations': []
         }

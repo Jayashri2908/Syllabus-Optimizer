@@ -1,6 +1,8 @@
 from typing import Dict, Any, List
 from ..rag.retriever import RAGEngine
 import logging
+import concurrent.futures
+
 
 class RAGAwareAnalyzer:
     """
@@ -62,56 +64,65 @@ class RAGAwareAnalyzer:
             "recommendations": recommendations
         }
 
-        # Enhance with RAG if available
+        # Enhance with RAG if available — run all 4 queries in parallel
         if self.rag_ready:
-            rag_recs = self._get_rag_recommendations(syllabus_data)
+            rag_recs = self._get_rag_recommendations_parallel(syllabus_data)
             if rag_recs:
                 report['recommendations'] = rag_recs + report['recommendations']
                 report['ai_analysis'] = rag_recs[0] if rag_recs else None
 
         return report
 
-    def _get_rag_recommendations(self, syllabus_data: Dict[str, Any]) -> List[str]:
-        recommendations = []
+    def _rag_query(self, question: str, n_results: int = 3) -> tuple:
+        """Run a single RAG query, returns (question, results_dict)."""
+        try:
+            results = self.rag.query(question, n_results=n_results)
+            return (question, results)
+        except Exception as e:
+            self.logger.error(f"RAG query failed for '{question}': {e}")
+            return (question, None)
+
+    def _get_rag_recommendations_parallel(self, syllabus_data: Dict[str, Any]) -> List[str]:
+        """Run all RAG queries concurrently and build recommendations from results."""
         course_title = syllabus_data.get('course_title', 'this course')
-        
-        # Query 1: Assessment guidelines
-        try:
-            results = self.rag.query("What is the recommended weightage for continuous assessment?")
-            if results['documents'] and results['documents'][0]:
-                doc_snippet = results['documents'][0][0][:150] + "..."
-                source = results['metadatas'][0][0]['source']
-                recommendations.append(f"Consider guideline from {source}: '{doc_snippet}' regarding assessment.")
-        except Exception as e:
-            self.logger.error(f"RAG Query (assessment) failed: {e}")
 
-        # Query 2: NBA PO requirements  
-        try:
-            results = self.rag.query("What are the mandatory Program Outcomes for Engineering in NBA?")
-            if results['documents'] and results['documents'][0]:
-                doc_snippet = results['documents'][0][0][:120] + "..."
-                source = results['metadatas'][0][0].get('source', 'NBA Manual')
-                recommendations.append(f"From {source}: Ensure all 12 Program Outcomes are mapped - '{doc_snippet}'")
-        except Exception as e:
-            self.logger.error(f"RAG Query (NBA PO) failed: {e}")
-
-        # Query 3: Higher-order thinking recommendations
-        try:
-            results = self.rag.query("How to assess higher order thinking skills in engineering education?")
-            if results['documents'] and results['documents'][0]:
-                doc_snippet = results['documents'][0][0][:120] + "..."
-                recommendations.append(f"For higher-order outcomes: '{doc_snippet}'")
-        except Exception as e:
-            self.logger.error(f"RAG Query (HOT skills) failed: {e}")
-
-        # Query 4: Course-specific if title available
+        queries = [
+            "What is the recommended weightage for continuous assessment?",
+            "What are the mandatory Program Outcomes for Engineering in NBA?",
+            "How to assess higher order thinking skills in engineering education?",
+        ]
         if course_title and course_title != 'this course':
-            try:
-                results = self.rag.query(f"What topics should be included in {course_title}?")
-                if results['documents'] and results['documents'][0]:
-                    doc_snippet = results['documents'][0][0][:120] + "..."
-                    recommendations.append(f"For {course_title}: Consider including '{doc_snippet}'")
-            except Exception:
-                pass  # Course-specific queries may not always find results
+            queries.append(f"What topics should be included in {course_title}?")
+
+        recommendations = []
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            future_to_query = {
+                executor.submit(self._rag_query, q): q for q in queries
+            }
+            for future in concurrent.futures.as_completed(future_to_query):
+                query = future_to_query[future]
+                try:
+                    question, results = future.result()
+                    if not results:
+                        continue
+                    docs = results.get('documents', [[]])[0]
+                    metas = results.get('metadatas', [[]])[0]
+                    if not docs:
+                        continue
+
+                    doc_snippet = docs[0][:150] + "..."
+                    source = metas[0].get('source', 'Reference') if metas else 'Reference'
+
+                    if "assessment" in question.lower():
+                        recommendations.append(f"Consider guideline from {source}: '{doc_snippet}' regarding assessment.")
+                    elif "nba" in question.lower() or "program outcomes" in question.lower():
+                        recommendations.append(f"From {source}: Ensure all 12 Program Outcomes are mapped - '{doc_snippet}'")
+                    elif "higher order" in question.lower():
+                        recommendations.append(f"For higher-order outcomes: '{doc_snippet}'")
+                    else:
+                        recommendations.append(f"For {course_title}: Consider including '{doc_snippet}'")
+                except Exception as e:
+                    self.logger.error(f"RAG result processing failed: {e}")
 
         return recommendations
