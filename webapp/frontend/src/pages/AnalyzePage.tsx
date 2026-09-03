@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSyllabus } from '../context/SyllabusContext';
-import { uploadSyllabus, analyzeSyllabus, exportPDF } from '../services/api';
+import { uploadAndAnalyze, analyzeSyllabus, exportPDF } from '../services/api';
 import FileUploader from '../components/FileUploader';
 import ThreeBloomChart from '../components/ThreeBloomChart';
 import { ShieldAlert, CheckCircle, Download } from 'lucide-react';
@@ -21,15 +21,12 @@ const AnalyzePage: React.FC = () => {
     setIsLoading(true);
     const loadingToast = toast.loading('Parsing syllabus and detecting gaps...');
     try {
-      // 1. Upload & Parse
-      const uploadRes = await uploadSyllabus(file);
-      setCurrentSyllabus(uploadRes.data);
+      // Single combined request — upload + parse + analyze in one round-trip
+      const res = await uploadAndAnalyze(file);
+      setCurrentSyllabus(res.data);
+      setAnalysisResult(res.analysis);
       
-      // 2. Analyze
-      const analysisRes = await analyzeSyllabus(uploadRes.data);
-      setAnalysisResult(analysisRes.analysis);
-      
-      toast.success('Analysis complete!', { id: loadingToast });
+      toast.success(res.cached ? 'Analysis complete (cached)!' : 'Analysis complete!', { id: loadingToast });
     } catch (err: unknown) {
       console.error(err);
       const message = err instanceof Error ? err.message : "An error occurred during analysis.";
@@ -64,9 +61,27 @@ const AnalyzePage: React.FC = () => {
         <p>Upload a syllabus document to extract course outcomes and detect pedagogical gaps.</p>
       </div>
 
-      {!currentSyllabus && (
+      {(!currentSyllabus || (!analysisResult && !isLoading)) && (
         <div className="upload-section">
           <FileUploader onUpload={handleUpload} isLoading={isLoading} />
+        </div>
+      )}
+
+      {currentSyllabus && !analysisResult && !isLoading && (
+        <div className="glass-card p-6 animate-slide-up" style={{ marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ marginBottom: '0.25rem' }}>{currentSyllabus.course_code}: {currentSyllabus.course_title}</h3>
+              <span className="mono-tag">Parsed — No Analysis Yet</span>
+            </div>
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                setCurrentSyllabus(null);
+              }}>
+              Clear & Upload New
+            </button>
+          </div>
         </div>
       )}
 

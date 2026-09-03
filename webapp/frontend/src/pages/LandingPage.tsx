@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSyllabus } from '../context/SyllabusContext';
-import { uploadSyllabus, analyzeSyllabus } from '../services/api';
+import { uploadAndAnalyze } from '../services/api';
 import { FileScan, PenTool, Lightbulb, ArrowRight, ShieldCheck, UploadCloud } from 'lucide-react';
 import TextCurtain from '../components/TextCurtain';
 import MarqueeTicker from '../components/MarqueeTicker';
@@ -50,19 +50,11 @@ const LandingPage = () => {
     const t = toast.loading('Initiating Fast-Track analysis...');
     
     try {
-      const uploadRes = await uploadSyllabus(file);
-      setCurrentSyllabus(uploadRes.data);
-      toast.success('Document uploaded!', { id: t });
-
-      // Complete analysis BEFORE navigating so the Analyze page has data ready
-      const analysisLoading = toast.loading('Running gap analysis...');
-      try {
-        const analysisRes = await analyzeSyllabus(uploadRes.data);
-        setAnalysisResult(analysisRes.analysis);
-        toast.success('Analysis complete!', { id: analysisLoading });
-      } catch {
-        toast.error('Analysis failed — you can retry on the Analyze page.', { id: analysisLoading });
-      }
+      // Single combined request — upload + parse + analyze in one round-trip
+      const res = await uploadAndAnalyze(file);
+      setCurrentSyllabus(res.data);
+      setAnalysisResult(res.analysis);
+      toast.success(res.cached ? 'Analysis complete (cached)!' : 'Analysis complete!', { id: t });
 
       navigate('/analyze');
     } catch {

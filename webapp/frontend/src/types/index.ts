@@ -126,6 +126,14 @@ export interface UploadResponse {
   data: SyllabusData;
 }
 
+export interface UploadAndAnalyzeResponse {
+  success: boolean;
+  filename: string;
+  data: SyllabusData;
+  analysis: AnalysisResult;
+  cached: boolean;
+}
+
 export interface AnalyzeResponse {
   success: boolean;
   analysis: AnalysisResult;
