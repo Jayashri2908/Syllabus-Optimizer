@@ -59,7 +59,7 @@ const OptimizePage: React.FC = () => {
 
       {!optimizedSyllabus && !isLoading && (
         <div className="upload-section animate-slide-up">
-           <FileUploader onUpload={handleUpload} isLoading={false} />
+           <FileUploader onUpload={handleUpload} isLoading={isLoading} />
         </div>
       )}
 
