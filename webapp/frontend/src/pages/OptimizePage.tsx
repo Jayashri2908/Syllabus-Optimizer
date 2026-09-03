@@ -42,6 +42,8 @@ const OptimizePage: React.FC = () => {
       a.href = url;
       a.download = `optimized_${optimizedSyllabus.course_code}.pdf`;
       a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Downloaded!', { id: t });
     } catch {
       toast.error('Failed to export', { id: t });

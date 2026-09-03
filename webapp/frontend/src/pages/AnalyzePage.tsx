@@ -48,6 +48,7 @@ const AnalyzePage: React.FC = () => {
       document.body.appendChild(a);
       a.click();
       a.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Downloaded!', { id: t });
     } catch {
       toast.error("Failed to export PDF", { id: t });

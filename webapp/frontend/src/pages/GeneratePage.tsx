@@ -73,6 +73,8 @@ const GeneratePage: React.FC = () => {
       a.href = url;
       a.download = `${generatedData.course_code || 'generated'}_syllabus.pdf`;
       a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Exported successfully!', { id: t });
     } catch {
       toast.error('Export failed.', { id: t });
