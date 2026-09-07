@@ -60,11 +60,93 @@ export interface SyllabusData {
   [key: string]: unknown;  // allow extra backend fields without losing safety
 }
 
+export interface BloomCoverage {
+  level_counts: Record<string, number>;
+  percentages: Record<string, number>;
+  gaps: Array<{ level: string; current: number; recommended: string; issue: string }>;
+  total_outcomes: number;
+}
+
+export interface COPOMappingGaps {
+  total_cos: number;
+  mapped_cos: number;
+  gaps: Array<{ type: string; co: string; description: string }>;
+  coverage_percentage: number;
+}
+
+export interface AssessmentGaps {
+  total_percentage: number;
+  components: Record<string, number>;
+  gaps: Array<{ type: string; description: string; component?: string; current_total?: number; expected_total?: number }>;
+}
+
+export interface ContentGaps {
+  gaps: Array<{ type: string; component?: string; description: string; current_count?: number; recommended_min?: number }>;
+  total_units: number;
+  total_hours: number;
+  reference_count: number;
+}
+
+export interface StructuralIssues {
+  type: string;
+  severity: string;
+  description: string;
+}
+
+export interface Recommendation {
+  text: string;
+  priority: 'high' | 'medium' | 'low';
+  category: string;
+}
+
+export interface ContentQuality {
+  depth_score: number;
+  breadth_score: number;
+  alignment_score: number;
+  overall_score: number;
+  issues: Array<{ type: string; severity: string; unit: string; description: string }>;
+}
+
+export interface LessonPlanAnalysis {
+  status?: string;
+  message?: string;
+  units_without_hours: string[];
+  units_without_methods: string[];
+  gaps: Array<{ type: string; severity: string; description: string }>;
+  lesson_distribution: {
+    lessons_per_unit: Record<string, number>;
+    total_lessons: number;
+    average_per_unit: number;
+  };
+  total_units: number;
+}
+
+export interface RedundancyAnalysis {
+  redundant_pairs: Array<{ unit_1: string; unit_2: string; similarity: number; severity: string; description: string }>;
+  duplicate_outcomes: string[];
+  overlap_score: number;
+  unit_pairs_checked: number;
+  total_redundancies: number;
+}
+
+export interface ComplianceResult {
+  [key: string]: unknown;
+}
+
 export interface AnalysisResult {
-  bloom_analysis?: BloomAnalysis;
+  bloom_coverage: BloomCoverage;
+  co_po_mapping_gaps: COPOMappingGaps;
+  assessment_gaps: AssessmentGaps;
+  content_gaps: ContentGaps;
+  structural_issues: StructuralIssues[];
+  lesson_plan_analysis: LessonPlanAnalysis;
+  redundancies: RedundancyAnalysis;
+  content_quality: ContentQuality;
+  nep_2020_compliance: ComplianceResult;
+  accreditation_compliance: { nba: ComplianceResult; naac: ComplianceResult };
+  recommendations: Recommendation[];
   ai_analysis?: string;
-  structural_analysis?: Record<string, unknown>;
-  sequence_optimization?: Record<string, unknown> | string;
+  cached: boolean;
   [key: string]: unknown;
 }
 
