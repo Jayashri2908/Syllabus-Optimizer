@@ -368,6 +368,46 @@ const AnalyzePage: React.FC = () => {
               )}
             </div>
 
+            <div className="glass-card p-6">
+              <h3>NEP 2020 Compliance</h3>
+              {analysisResult?.nep_2020_compliance ? (
+                <div className="compliance-section">
+                  <div className="compliance-header">
+                    <span className="compliance-pct">{Math.round(analysisResult.nep_2020_compliance.compliance_percentage ?? 0)}%</span>
+                    <span className={`compliance-level ${(analysisResult.nep_2020_compliance.compliance_percentage ?? 0) >= 70 ? 'level-good' : 'level-needs-work'}`}>
+                      {analysisResult.nep_2020_compliance.compliance_level ?? 'Unknown'}
+                    </span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${analysisResult.nep_2020_compliance.compliance_percentage ?? 0}%` }}></div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-muted">NEP 2020 compliance data unavailable.</p>
+              )}
+            </div>
+
+            <div className="glass-card p-6">
+              <h3>Accreditation (NBA/NAAC)</h3>
+              <div className="accreditation-grid">
+                <div className="accred-item">
+                  <span className="accred-label">NBA</span>
+                  <span className="accred-pct">{Math.round(analysisResult?.accreditation_compliance?.nba?.compliance_percentage ?? 0)}%</span>
+                </div>
+                <div className="accred-item">
+                  <span className="accred-label">NAAC</span>
+                  <span className="accred-pct">{Math.round(analysisResult?.accreditation_compliance?.naac?.compliance_percentage ?? 0)}%</span>
+                </div>
+              </div>
+              {(analysisResult?.accreditation_compliance?.nba?.recommendations?.length > 0) && (
+                <div className="accred-recs">
+                  {analysisResult.accreditation_compliance.nba.recommendations.slice(0, 2).map((r: string, i: number) => (
+                    <p key={i} className="accred-rec">{r}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="glass-card p-6 full-width">
               <h3>RAG Grounded Insights</h3>
               {analysisResult?.ai_analysis ? (

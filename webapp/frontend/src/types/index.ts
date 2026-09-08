@@ -123,7 +123,7 @@ export interface LessonPlanAnalysis {
 
 export interface RedundancyAnalysis {
   redundant_pairs: Array<{ unit_1: string; unit_2: string; similarity: number; severity: string; description: string }>;
-  duplicate_outcomes: string[];
+  duplicate_outcomes: Array<{ outcome_1: string; outcome_2: string; similarity: number }>;
   overlap_score: number;
   unit_pairs_checked: number;
   total_redundancies: number;

@@ -581,6 +581,80 @@ gap-section h3 {
   font-style: italic;
 }
 
+.compliance-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.compliance-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.compliance-pct {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-indigo);
+}
+
+.compliance-level {
+  font-size: 0.8rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.level-good {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--accent-green);
+}
+
+.level-needs-work {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--accent-yellow);
+}
+
+.accreditation-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.accred-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.accred-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.accred-pct {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--accent-indigo);
+}
+
+.accred-recs {
+  margin-top: 0.5rem;
+}
+
+.accred-rec {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--accent-indigo);
+}
+
 @media (max-width: 968px) {
   .analysis-grid {
     grid-template-columns: 1fr;
