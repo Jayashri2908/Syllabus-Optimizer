@@ -14,6 +14,7 @@ from ..utils.text_processing import TextProcessor
 from .lesson_plan_extractor import LessonPlanExtractor
 from .redundancy_detector import RedundancyDetector
 from .content_analyzer import ContentAnalyzer
+from .outcome_extractor import OutcomeExtractor
 from ..validation.nep_2020_validator import NEP2020Validator
 from ..validation.accreditation_checker import AccreditationChecker
 
@@ -38,6 +39,7 @@ class GapAnalyzer:
         self.content_analyzer = ContentAnalyzer()
         self.nep_validator = NEP2020Validator()
         self.accreditation_checker = AccreditationChecker()
+        self.outcome_extractor = OutcomeExtractor()
         self.rag = None
         self.rag_ready = False
         self._init_rag()
@@ -91,6 +93,7 @@ class GapAnalyzer:
             'nep_2020_compliance': lambda: self.nep_validator.validate(syllabus_data),
             'nba_compliance': lambda: self.accreditation_checker.check_nba_compliance(syllabus_data),
             'naac_compliance': lambda: self.accreditation_checker.check_naac_compliance(syllabus_data),
+            'outcome_validation': lambda: self._validate_outcomes(syllabus_data),
         }
         
         # Run all independent analyses in parallel
@@ -119,6 +122,7 @@ class GapAnalyzer:
                 'nba': results.get('nba_compliance', {}),
                 'naac': results.get('naac_compliance', {}),
             },
+            'outcome_validation': results.get('outcome_validation', {}),
             'recommendations': []
         }
         
@@ -422,6 +426,23 @@ class GapAnalyzer:
                     'category': 'structure'
                 })
         
+        # Outcome validation recommendations (High priority)
+        outcome_validation = report.get('outcome_validation', {})
+        invalid_count = outcome_validation.get('issues_count', 0)
+        if invalid_count > 0:
+            recommendations.append({
+                'text': f"{invalid_count} learning outcome(s) need improvement — use measurable action verbs and avoid vague terms",
+                'priority': 'high',
+                'category': 'outcome_quality'
+            })
+        avg_measurability = outcome_validation.get('average_measurability', 1)
+        if avg_measurability < 0.5:
+            recommendations.append({
+                'text': "Overall outcome measurability is low — rewrite outcomes with specific, assessable verbs",
+                'priority': 'medium',
+                'category': 'outcome_quality'
+            })
+        
         # Sort by priority: high > medium > low
         priority_order = {'high': 0, 'medium': 1, 'low': 2}
         recommendations.sort(key=lambda x: priority_order.get(x.get('priority', 'low'), 2))
@@ -599,3 +620,42 @@ class GapAnalyzer:
         if scores:
             return round(sum(scores) / len(scores), 1)
         return 0.0
+
+    def _validate_outcomes(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate each learning outcome for measurability and quality"""
+        outcomes = syllabus_data.get('learning_outcomes', [])
+        validated = []
+        issues_count = 0
+
+        for outcome in outcomes:
+            description = outcome.get('description', '') if isinstance(outcome, dict) else str(outcome)
+            if not description:
+                continue
+
+            validation = self.outcome_extractor.validate_outcome(description)
+            entry = {
+                'code': outcome.get('code', '') if isinstance(outcome, dict) else '',
+                'description': description,
+                'is_valid': validation.get('is_valid', True),
+                'measurability_score': validation.get('measurability_score', 0),
+                'bloom_level': validation.get('bloom_level', 'unknown'),
+                'issues': validation.get('issues', []),
+                'suggestions': validation.get('suggestions', []),
+            }
+            if not entry['is_valid']:
+                issues_count += 1
+            validated.append(entry)
+
+        avg_measurability = 0.0
+        if validated:
+            avg_measurability = round(
+                sum(v['measurability_score'] for v in validated) / len(validated), 2
+            )
+
+        return {
+            'outcomes': validated,
+            'total_outcomes': len(validated),
+            'valid_outcomes': len(validated) - issues_count,
+            'issues_count': issues_count,
+            'average_measurability': avg_measurability,
+        }

@@ -133,6 +133,22 @@ export interface ComplianceResult {
   [key: string]: unknown;
 }
 
+export interface OutcomeValidation {
+  outcomes: Array<{
+    code: string;
+    description: string;
+    is_valid: boolean;
+    measurability_score: number;
+    bloom_level: string;
+    issues: string[];
+    suggestions: string[];
+  }>;
+  total_outcomes: number;
+  valid_outcomes: number;
+  issues_count: number;
+  average_measurability: number;
+}
+
 export interface AnalysisResult {
   bloom_coverage: BloomCoverage;
   co_po_mapping_gaps: COPOMappingGaps;
@@ -144,6 +160,7 @@ export interface AnalysisResult {
   content_quality: ContentQuality;
   nep_2020_compliance: ComplianceResult;
   accreditation_compliance: { nba: ComplianceResult; naac: ComplianceResult };
+  outcome_validation: OutcomeValidation;
   recommendations: Recommendation[];
   overall_quality_score: number;
   ai_analysis?: string;

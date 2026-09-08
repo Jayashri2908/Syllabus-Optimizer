@@ -331,6 +331,39 @@ const AnalyzePage: React.FC = () => {
               )}
             </div>
 
+            <div className="glass-card p-6">
+              <h3><ListChecks size={20}/> Outcome Validation</h3>
+              {analysisResult?.outcome_validation ? (
+                <div className="outcome-validation">
+                  <div className="validation-stats">
+                    <span className="stat-pair"><strong>{analysisResult.outcome_validation.valid_outcomes}</strong> / {analysisResult.outcome_validation.total_outcomes} valid</span>
+                    <span className="stat-pair">Avg measurability: <strong>{Math.round(analysisResult.outcome_validation.average_measurability * 100)}%</strong></span>
+                  </div>
+                  {analysisResult.outcome_validation.outcomes.filter(o => !o.is_valid).map((outcome, i) => (
+                    <div key={i} className="outcome-issue">
+                      <div className="outcome-header">
+                        <span className="outcome-code">{outcome.code}</span>
+                        <span className="gap-severity gap-severity-high">needs improvement</span>
+                      </div>
+                      <p className="outcome-desc">{outcome.description}</p>
+                      {outcome.issues.length > 0 && (
+                        <ul className="outcome-issues-list">
+                          {outcome.issues.map((issue, j) => (
+                            <li key={j}>{issue}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {outcome.suggestions.length > 0 && (
+                        <p className="outcome-suggestion">{outcome.suggestions[0]}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted">No outcome validation data available.</p>
+              )}
+            </div>
+
             <div className="glass-card p-6 full-width">
               <h3>RAG Grounded Insights</h3>
               {analysisResult?.ai_analysis ? (

@@ -516,6 +516,71 @@ gap-section h3 {
   margin-top: 0.75rem;
 }
 
+.outcome-validation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.validation-stats {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.stat-pair {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.stat-pair strong {
+  color: var(--text-primary);
+}
+
+.outcome-issue {
+  background: rgba(220, 38, 38, 0.04);
+  border-left: 3px solid var(--accent-red);
+  padding: 0.75rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.outcome-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.outcome-code {
+  font-weight: 600;
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+}
+
+.outcome-desc {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.outcome-issues-list {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+  color: var(--accent-rose);
+}
+
+.outcome-issues-list li {
+  margin-bottom: 0.125rem;
+}
+
+.outcome-suggestion {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--accent-indigo);
+  font-style: italic;
+}
+
 @media (max-width: 968px) {
   .analysis-grid {
     grid-template-columns: 1fr;
