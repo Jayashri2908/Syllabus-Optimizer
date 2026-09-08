@@ -121,9 +121,13 @@ const AnalyzePage: React.FC = () => {
       (analysis.structural_issues?.length ?? 0) > 0 ||
       (analysis.lesson_plan_analysis?.gaps?.length ?? 0) > 0 ||
       (analysis.redundancies?.total_redundancies ?? 0) > 0 ||
-      analysis.content_quality?.overall_score < 70
+      (analysis.content_quality?.overall_score ?? 1) < 0.7
     );
   };
+
+  const missingBloomLevels = (['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'] as const).filter(
+    k => !(k in (analysisResult?.bloom_coverage?.level_counts ?? {})) || (analysisResult?.bloom_coverage?.level_counts?.[k] ?? 0) === 0
+  );
 
   if (!currentSyllabus || (!analysisResult && !isLoading)) {
     return (
@@ -211,12 +215,12 @@ const AnalyzePage: React.FC = () => {
 
             <div className="glass-card p-6 gap-section">
               <h3><AlertCircle size={20}/> Bloom's Gaps</h3>
-              {analysisResult?.bloom_coverage?.missing_levels?.length > 0 ? (
+              {missingBloomLevels.length > 0 ? (
                 <div className="gap-warning">
                   <ShieldAlert size={20} className="text-amber" />
                   <div>
                     <strong>Missing Cognitive Levels</strong>
-                    <p>Syllabus lacks outcomes at: {analysisResult.bloom_coverage.missing_levels.join(', ')}</p>
+                    <p>Syllabus lacks outcomes at: {missingBloomLevels.join(', ')}</p>
                   </div>
                 </div>
               ) : (
@@ -249,7 +253,7 @@ const AnalyzePage: React.FC = () => {
                   </div>
                 </div>
                 <div className="components">
-                  {(analysisResult?.assessment_gaps?.components || {}).map(([key, val]) => (
+                  {Object.entries(analysisResult?.assessment_gaps?.components ?? {}).map(([key, val]) => (
                     <span key={key} className="component-badge">{key}: {val}%</span>
                   ))}
                 </div>
