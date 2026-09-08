@@ -145,6 +145,7 @@ export interface AnalysisResult {
   nep_2020_compliance: ComplianceResult;
   accreditation_compliance: { nba: ComplianceResult; naac: ComplianceResult };
   recommendations: Recommendation[];
+  overall_quality_score: number;
   ai_analysis?: string;
   cached: boolean;
   [key: string]: unknown;

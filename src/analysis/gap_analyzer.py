@@ -8,6 +8,7 @@ import yaml
 from pathlib import Path
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import concurrent.futures
 
 from ..utils.text_processing import TextProcessor
 from .lesson_plan_extractor import LessonPlanExtractor
@@ -15,6 +16,13 @@ from .redundancy_detector import RedundancyDetector
 from .content_analyzer import ContentAnalyzer
 from ..validation.nep_2020_validator import NEP2020Validator
 from ..validation.accreditation_checker import AccreditationChecker
+
+try:
+    from ..rag.retriever import RAGEngine
+    RAG_AVAILABLE = True
+except Exception:
+    RAG_ENGINE = None
+    RAG_AVAILABLE = False
 
 
 class GapAnalyzer:
@@ -30,6 +38,23 @@ class GapAnalyzer:
         self.content_analyzer = ContentAnalyzer()
         self.nep_validator = NEP2020Validator()
         self.accreditation_checker = AccreditationChecker()
+        self.rag = None
+        self.rag_ready = False
+        self._init_rag()
+        
+    def _init_rag(self):
+        """Initialize RAG engine if available"""
+        if not RAG_AVAILABLE:
+            self.logger.info("RAG engine not available — using rule-based analysis only")
+            return
+        try:
+            self.rag = RAGEngine()
+            self.rag_ready = True
+            self.logger.info("RAG engine initialized successfully")
+        except Exception as e:
+            self.logger.warning(f"RAG engine initialization failed: {e}")
+            self.rag = None
+            self.rag_ready = False
         
     def _load_bloom_taxonomy(self) -> dict:
         """Load Bloom's taxonomy configuration"""
@@ -99,6 +124,21 @@ class GapAnalyzer:
         
         # Generate recommendations based on gaps
         report['recommendations'] = self._generate_recommendations(report)
+        
+        # Enhance recommendations with RAG if available
+        if self.rag_ready:
+            rag_recs = self._get_rag_recommendations(syllabus_data)
+            if rag_recs:
+                report['ai_analysis'] = rag_recs[0]
+                for rec in rag_recs:
+                    report['recommendations'].append({
+                        'text': rec,
+                        'priority': 'medium',
+                        'category': 'rag_insight'
+                    })
+        
+        # Calculate overall quality score
+        report['overall_quality_score'] = self._calculate_overall_score(report)
         
         return report
         
@@ -462,3 +502,100 @@ class GapAnalyzer:
             Redundancy analysis
         """
         return self.redundancy_detector.detect_redundancies(syllabus_data)
+
+    def _rag_query(self, question: str, n_results: int = 3) -> tuple:
+        """Run a single RAG query, returns (question, results_dict)."""
+        try:
+            results = self.rag.query(question, n_results=n_results)
+            return (question, results)
+        except Exception as e:
+            self.logger.error(f"RAG query failed for '{question}': {e}")
+            return (question, None)
+
+    def _get_rag_recommendations(self, syllabus_data: Dict[str, Any]) -> List[str]:
+        """Run all RAG queries concurrently and build recommendations from results."""
+        if not self.rag_ready or not self.rag:
+            return []
+
+        course_title = syllabus_data.get('course_title', 'this course')
+
+        queries = [
+            "What is the recommended weightage for continuous assessment?",
+            "What are the mandatory Program Outcomes for Engineering in NBA?",
+            "How to assess higher order thinking skills in engineering education?",
+        ]
+        if course_title and course_title != 'this course':
+            queries.append(f"What topics should be included in {course_title}?")
+
+        recommendations = []
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            future_to_query = {
+                executor.submit(self._rag_query, q): q for q in queries
+            }
+            for future in concurrent.futures.as_completed(future_to_query):
+                query = future_to_query[future]
+                try:
+                    question, results = future.result()
+                    if not results:
+                        continue
+                    docs = results.get('documents', [[]])[0]
+                    metas = results.get('metadatas', [[]])[0]
+                    if not docs:
+                        continue
+
+                    doc_snippet = docs[0][:150] + "..."
+                    source = metas[0].get('source', 'Reference') if metas else 'Reference'
+
+                    if "assessment" in question.lower():
+                        recommendations.append(f"Consider guideline from {source}: '{doc_snippet}' regarding assessment.")
+                    elif "nba" in question.lower() or "program outcomes" in question.lower():
+                        recommendations.append(f"From {source}: Ensure all 12 Program Outcomes are mapped - '{doc_snippet}'")
+                    elif "higher order" in question.lower():
+                        recommendations.append(f"For higher-order outcomes: '{doc_snippet}'")
+                    else:
+                        recommendations.append(f"For {course_title}: Consider including '{doc_snippet}'")
+                except Exception as e:
+                    self.logger.error(f"RAG result processing failed: {e}")
+
+        return recommendations
+
+    def _calculate_overall_score(self, report: Dict[str, Any]) -> float:
+        """Calculate an overall quality score (0-100) from sub-analysis results."""
+        scores = []
+
+        content_quality = report.get('content_quality', {})
+        if content_quality:
+            scores.append(content_quality.get('overall_score', 0) * 100)
+
+        bloom_coverage = report.get('bloom_coverage', {})
+        bloom_gaps = bloom_coverage.get('gaps', [])
+        total_outcomes = bloom_coverage.get('total_outcomes', 0)
+        if total_outcomes > 0:
+            bloom_score = max(0, 100 - len(bloom_gaps) * 15)
+            scores.append(bloom_score)
+
+        co_po = report.get('co_po_mapping_gaps', {})
+        coverage_pct = co_po.get('coverage_percentage', 0)
+        scores.append(coverage_pct)
+
+        assessment = report.get('assessment_gaps', {})
+        assessment_gaps = assessment.get('gaps', [])
+        if assessment.get('total_percentage') == 100 and not assessment_gaps:
+            scores.append(100)
+        elif assessment.get('total_percentage', 0) > 0:
+            scores.append(max(0, 100 - len(assessment_gaps) * 20))
+        else:
+            scores.append(50)
+
+        structural = report.get('structural_issues', [])
+        struct_score = max(0, 100 - len(structural) * 20)
+        scores.append(struct_score)
+
+        redundancies = report.get('redundancies', {})
+        overlap = redundancies.get('overlap_score', 0)
+        scores.append(max(0, 100 - overlap * 100))
+
+        if scores:
+            return round(sum(scores) / len(scores), 1)
+        return 0.0

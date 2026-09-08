@@ -139,7 +139,7 @@ const AnalyzePage: React.FC = () => {
     );
   }
 
-  const score = analysisResult?.content_quality?.overall_score ?? 75;
+  const score = analysisResult?.overall_quality_score ?? Math.round((analysisResult?.content_quality?.overall_score ?? 0.75) * 100);
   const totalUnits = currentSyllabus.units?.length ?? 0;
   const totalOutcomes = currentSyllabus.learning_outcomes?.length ?? 0;
 
