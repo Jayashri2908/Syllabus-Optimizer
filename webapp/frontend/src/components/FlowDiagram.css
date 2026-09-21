@@ -49,7 +49,6 @@
   box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3);
 }
 
-/* SVG Bounds */
 .svg-canvas-container {
   width: 100%;
   border-radius: 1rem;
@@ -62,19 +61,24 @@
   transition: all 0.4s ease;
 }
 
+.svg-canvas-container.glass {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+}
+
 .svg-canvas-container.schematic {
-  background: #f1f5f9;
-  border: 2px dashed #cbd5e1;
+  background: var(--surface-glass);
+  border: 2px dashed var(--border-subtle);
 }
 
 .main-svg {
   width: 100%;
   max-width: 1000px;
   height: auto;
-  overflow: visible; /* Prevent bounds clipping on hover shadows */
+  overflow: visible;
 }
 
-/* Connection Lines */
 .connection-track {
   fill: none;
   stroke: var(--border-subtle);
@@ -91,16 +95,16 @@
 }
 
 .schematic .connection-track {
-  stroke: #cbd5e1;
+  stroke: var(--border-subtle);
   stroke-width: 2px;
 }
+
 .schematic .connection-flow {
-  stroke: #0f172a;
+  stroke: var(--text-primary);
   stroke-width: 2px;
   filter: none;
 }
 
-/* Nodes */
 .svg-node {
   cursor: pointer;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -110,7 +114,6 @@
   transform: translateY(-5px);
 }
 
-/* HTML Wrapper inside SVG */
 .node-content {
   width: 100%;
   height: 100%;
@@ -120,13 +123,11 @@
   align-items: center;
   gap: 0.25rem;
   color: var(--text-primary);
-  /* Make sure foreignObject HTML inherits cursor */
-  pointer-events: none; 
+  pointer-events: none;
 }
 
 .schematic .node-content {
   font-family: var(--font-mono);
-  color: #0f172a;
 }
 
 .node-label {
@@ -135,7 +136,6 @@
   text-align: center;
 }
 
-/* Responsive Overrides */
 @media (max-width: 768px) {
   .diagram-controls {
     flex-direction: column;

@@ -1,0 +1,247 @@
+.map-layout {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.co-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.co-editor-header h3 {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  gap: 0.35rem;
+}
+
+.co-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.co-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--surface-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.5rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.co-row:focus-within {
+  border-color: var(--accent-indigo);
+  box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.1);
+}
+
+.grip-icon {
+  color: var(--text-secondary);
+  opacity: 0.3;
+  flex-shrink: 0;
+  cursor: grab;
+}
+
+.co-code-input {
+  width: 56px;
+  flex-shrink: 0;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.375rem;
+  background: rgba(255, 255, 255, 0.6);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-indigo);
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.co-code-input:focus {
+  border-color: var(--accent-indigo);
+  background: #fff;
+}
+
+.co-desc-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.co-desc-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.co-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.co-remove-btn:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--accent-rose);
+}
+
+.co-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--accent-indigo);
+  margin-bottom: 1.25rem;
+  opacity: 0.7;
+}
+
+.btn-generate {
+  width: 100%;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.map-results-panel h3 {
+  margin-bottom: 1.5rem;
+}
+
+.map-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.empty-illustration {
+  margin-bottom: 1.5rem;
+  opacity: 0.6;
+}
+
+.map-empty-state h4 {
+  font-family: var(--font-sans);
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.map-empty-state p {
+  font-size: 0.9rem;
+  max-width: 300px;
+}
+
+.map-loading {
+  padding: 3rem;
+  text-align: center;
+}
+
+.map-results-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.section-heading {
+  font-family: var(--font-sans);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.validation-section {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.validation-cards {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.finding-card {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  flex: 1;
+  min-width: 220px;
+}
+
+.finding-card.warning {
+  background: rgba(217, 119, 6, 0.05);
+  border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+.finding-card.success {
+  background: rgba(67, 56, 202, 0.05);
+  border: 1px solid rgba(67, 56, 202, 0.15);
+  color: var(--accent-indigo);
+}
+
+.finding-card.info {
+  background: rgba(67, 56, 202, 0.05);
+  border: 1px solid rgba(67, 56, 202, 0.15);
+  color: var(--accent-indigo);
+}
+
+.finding-card strong {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.finding-card p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+@media (max-width: 968px) {
+  .map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .co-list {
+    max-height: 300px;
+  }
+}

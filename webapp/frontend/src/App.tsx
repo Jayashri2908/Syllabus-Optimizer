@@ -1,11 +1,11 @@
 import React, { Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './components/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
-import './components/SkeletonLoader.css'; // Global skeleton styles
+import './components/SkeletonLoader.css';
 
-// Lazy Loaded Pages
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 const AnalyzePage = React.lazy(() => import('./pages/AnalyzePage'));
 const GeneratePage = React.lazy(() => import('./pages/GeneratePage'));
@@ -19,7 +19,33 @@ const PageFallback = () => (
   </div>
 );
 
+const pageVariants = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -12 }
+};
+
+const pageTransition = {
+  type: 'tween' as const,
+  ease: 'easeInOut' as const,
+  duration: 0.25
+};
+
+const AnimatedPage: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <motion.div
+    variants={pageVariants}
+    initial="initial"
+    animate="animate"
+    exit="exit"
+    transition={pageTransition}
+  >
+    {children}
+  </motion.div>
+);
+
 const App = () => {
+  const location = useLocation();
+
   return (
     <>
       <Toaster position="bottom-right" toastOptions={{
@@ -34,15 +60,17 @@ const App = () => {
       <Navbar />
       <ErrorBoundary>
         <Suspense fallback={<PageFallback />}>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/analyze" element={<AnalyzePage />} />
-            <Route path="/generate" element={<GeneratePage />} />
-            <Route path="/optimize" element={<OptimizePage />} />
-            <Route path="/map-outcomes" element={<MapOutcomesPage />} />
-            <Route path="/specs" element={<SpecsPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<AnimatedPage><LandingPage /></AnimatedPage>} />
+              <Route path="/analyze" element={<AnimatedPage><AnalyzePage /></AnimatedPage>} />
+              <Route path="/generate" element={<AnimatedPage><GeneratePage /></AnimatedPage>} />
+              <Route path="/optimize" element={<AnimatedPage><OptimizePage /></AnimatedPage>} />
+              <Route path="/map-outcomes" element={<AnimatedPage><MapOutcomesPage /></AnimatedPage>} />
+              <Route path="/specs" element={<AnimatedPage><SpecsPage /></AnimatedPage>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AnimatePresence>
         </Suspense>
       </ErrorBoundary>
     </>
