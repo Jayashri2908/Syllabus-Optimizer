@@ -22,16 +22,10 @@ CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost
 RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
 RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
 
-try:
-    import diskcache
-    CACHE_DIR = PROJECT_ROOT / "cache" / "llm_responses"
-    llm_cache = diskcache.Cache(str(CACHE_DIR), size_limit=500 * 1024 * 1024)
-    CACHE_TTL = 24 * 60 * 60
-    logger.info(f"LLM cache initialized at {CACHE_DIR}")
-except ImportError:
-    llm_cache = None
-    CACHE_TTL = 0
-    logger.warning("diskcache not installed — LLM caching enabled")
+from src.utils.cache import cache_manager
+
+llm_cache = cache_manager
+CACHE_TTL = 24 * 60 * 60
 
 _rate_limit_store: dict[str, list[float]] = {}
 
