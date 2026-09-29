@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import os
+import time
+import uuid
 
 from src.analysis.syllabus_parser import SyllabusParser
 from src.analysis.gap_analyzer import GapAnalyzer
@@ -19,14 +21,14 @@ from src.utils.mock_services import MockContentOptimizer, MockBloomMapper, MockG
 from src.analysis.rag_analyzer import RAGAwareAnalyzer
 from src.utils.logging_utils import setup_logger
 
-from app.dependencies import comps, CORS_ORIGINS
+from app.dependencies import comps, CORS_ORIGINS, IS_PRODUCTION
 from app.routers import system, upload, analyze, generate, mapping, utils, export
 
 logger = setup_logger("scdo_api", log_file="logs/api.log")
 
+
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    """Startup/shutdown lifecycle: initialize heavy components."""
     try:
         comps.parser = SyllabusParser()
         comps.outcome_extractor = OutcomeExtractor()
@@ -70,6 +72,7 @@ async def lifespan(application: FastAPI):
 
     logger.info("Shutdown complete")
 
+
 app = FastAPI(
     title="Syllabus and Curriculum Design Optimizer API",
     description="AI-powered syllabus analysis, optimization, and generation",
@@ -78,13 +81,61 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    if IS_PRODUCTION:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    request_id = str(uuid.uuid4())[:8]
+    request.state.request_id = request_id
+    start_time = time.time()
+
+    logger.info(f"[{request_id}] {request.method} {request.url.path} - Started")
+
+    try:
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Process-Time"] = f"{process_time:.3f}s"
+        logger.info(
+            f"[{request_id}] {request.method} {request.url.path} - "
+            f"Completed {response.status_code} in {process_time:.3f}s"
+        )
+        return response
+    except Exception as e:
+        process_time = time.time() - start_time
+        logger.error(
+            f"[{request_id}] {request.method} {request.url.path} - "
+            f"Failed {type(e).__name__}: {e} in {process_time:.3f}s"
+        )
+        raise
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Catch-all handler — prevents leaking internal details to clients."""
-    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}")
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.error(f"[{request_id}] Unhandled exception on {request.method} {request.url.path}: {exc}")
     import traceback
     logger.error(traceback.format_exc())
-    return JSONResponse(status_code=500, content={"detail": "Internal server error."})
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error.",
+            "error_code": "INTERNAL_ERROR",
+            "request_id": request_id
+        }
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -97,9 +148,9 @@ app.add_middleware(
 logger.info("=" * 50)
 logger.info("  SCDO BACKEND SERVER  ")
 logger.info("  OpenRouter + Gemini  ")
+logger.info(f"  Environment: {'production' if IS_PRODUCTION else 'development'}")
 logger.info("=" * 50)
 
-# Include routers
 app.include_router(system.router)
 app.include_router(upload.router)
 app.include_router(analyze.router)
