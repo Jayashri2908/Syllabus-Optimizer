@@ -9,8 +9,8 @@ openrouter:
 
 # Google Gemini (FALLBACK - FREE)
 gemini:
-  enabled: false  # Enable when OPENROUTER_API_KEY is not set
-  model: 'gemini-2.0-flash-exp'
+  enabled: true  # Used as fallback when OpenRouter fails
+  model: 'gemini-2.0-flash'
   # Set GEMINI_API_KEY environment variable
 
 # Task preferences - OpenRouter first, Gemini fallback

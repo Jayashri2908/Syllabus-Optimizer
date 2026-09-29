@@ -23,8 +23,16 @@ from src.utils.logging_utils import setup_logger
 
 from app.dependencies import comps, CORS_ORIGINS, IS_PRODUCTION
 from app.routers import system, upload, analyze, generate, mapping, utils, export
+from src.utils.config_validator import validate_config, log_config_status
 
 logger = setup_logger("scdo_api", log_file="logs/api.log")
+
+try:
+    config_status = validate_config()
+    log_config_status(config_status)
+except Exception as e:
+    logger.critical(f"Configuration validation failed: {e}")
+    raise
 
 
 @asynccontextmanager
