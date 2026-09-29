@@ -16,19 +16,22 @@ An AI-powered system for analyzing, optimizing, and generating academic syllabi 
 ```
 d:/Syllabus Optimizer/
 ├── src/
+│   ├── ai/                # AI model integration (OpenRouter + Gemini)
 │   ├── analysis/          # Syllabus parsing and gap analysis
 │   ├── optimization/      # Bloom's mapper and content optimizer
 │   ├── generation/        # Syllabus generator
 │   ├── mapping/           # CO-PO mapping utilities
-│   ├── export/            # PDF/Excel exporters
+│   ├── export/            # PDF/Excel/LaTeX/Word exporters
 │   ├── rag/               # Vector store and RAG retrieval
-│   └── utils/             # Utilities and helpers
+│   ├── ibm/               # Local storage utilities
+│   ├── validation/        # NEP 2020 and accreditation validators
+│   └── utils/             # Utilities, exceptions, retry logic
 ├── webapp/
-│   └── backend/          # FastAPI server
-├── configs/              # Configuration files
-├── templates/            # Syllabus templates
-├── scripts/              # Demo and utility scripts
-└── tests/               # Unit and integration tests
+│   ├── backend/           # FastAPI server
+│   └── frontend/          # React + TypeScript + Vite
+├── configs/               # Configuration files
+├── scripts/               # Demo and utility scripts
+└── tests/                 # Unit and integration tests
 ```
 
 ## Installation
