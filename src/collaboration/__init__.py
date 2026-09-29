@@ -1,0 +1,1 @@
+"""Collaboration module for SCDO"""
