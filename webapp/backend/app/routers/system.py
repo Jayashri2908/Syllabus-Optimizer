@@ -1,26 +1,27 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import PlainTextResponse
 from app.dependencies import get_components, Components
+from src.utils.metrics import metrics
 
 router = APIRouter()
 
+
 @router.get("/")
 async def root():
-    """Root endpoint"""
     return {
         "message": "Syllabus and Curriculum Design Optimizer API",
         "version": "1.0.0",
         "status": "operational"
     }
 
+
 @router.get("/api/health")
 async def health_check(comps: Components = Depends(get_components)):
-    """Health check with downstream dependency verification"""
     result = {
         "status": "healthy",
         "service": "SCDO API",
     }
 
-    # Check ChromaDB connectivity
     try:
         from src.rag.vector_store import VectorStore
         vs = VectorStore()
@@ -28,10 +29,9 @@ async def health_check(comps: Components = Depends(get_components)):
         result["chromadb"] = "connected" if count >= 0 else "error"
         result["chromadb_documents"] = count
     except Exception as e:
-        result["chromadb"] = f"unavailable"
+        result["chromadb"] = "unavailable"
         result["status"] = "degraded"
 
-    # Check LLM model availability
     try:
         from src.ai.model_manager import ModelManager
         import yaml
@@ -55,3 +55,9 @@ async def health_check(comps: Components = Depends(get_components)):
         result["status"] = "degraded"
 
     return result
+
+
+@router.get("/api/metrics")
+async def get_metrics():
+    content, content_type = metrics.get_metrics()
+    return PlainTextResponse(content=content, media_type=content_type)
