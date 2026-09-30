@@ -8,10 +8,10 @@ class VectorStore:
     def __init__(self, persist_directory: str = None):
         self.persist_directory = persist_directory or str(Path(os.getcwd()) / "data" / "chroma_db")
         # Ensure directory exists
-        os.makedirs(persist_directory, exist_ok=True)
+        os.makedirs(self.persist_directory, exist_ok=True)
         
         # Initialize Client
-        self.client = chromadb.PersistentClient(path=persist_directory)
+        self.client = chromadb.PersistentClient(path=self.persist_directory)
         
         # Use default Sentence Transformer embedding function (all-MiniLM-L6-v2)
         # This automatically downloads the model if not present.

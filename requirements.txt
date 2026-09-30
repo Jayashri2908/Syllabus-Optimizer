@@ -35,6 +35,9 @@ python-pptx>=0.6.23,<1.0.0
 # OCR for scanned PDFs (Tesseract binary also required)
 pytesseract>=0.3.10,<1.0.0
 pdf2image>=1.16.0,<2.0.0
+# Alternative pip-only OCR pipeline
+pymupdf>=1.23.0,<2.0.0
+easyocr>=1.7.1,<2.0.0
 
 # -----------------------------------------------------------------------------
 # Data Processing & Analysis

@@ -21,8 +21,8 @@ class OpenRouterModel(BaseAIModel):
     def __init__(self, config: dict = None):
         super().__init__(config)
         self.api_key = os.getenv('OPENROUTER_API_KEY', self.config.get('api_key'))
-        # Default to Nvidia Nemotron (Free)
-        self.model_name = self.config.get('model', 'nvidia/nemotron-3.5-lightning:free')
+        # Default to Gemini 2.0 Flash (Free)
+        self.model_name = self.config.get('model', 'google/gemini-2.0-flash-exp:free')
         self.client = None
         
         if self.api_key and OPENAI_AVAILABLE:
@@ -32,9 +32,11 @@ class OpenRouterModel(BaseAIModel):
         """Initialize OpenRouter client"""
         try:
             # OpenRouter uses OpenAI-compatible API
+            # Timeout prevents hanging when OpenRouter is slow/unresponsive
             self.client = OpenAI(
                 base_url="https://openrouter.ai/api/v1",
                 api_key=self.api_key,
+                timeout=120.0,
             )
             self.logger.info(f"Initialized OpenRouter with model: {self.model_name}")
         except Exception as e:

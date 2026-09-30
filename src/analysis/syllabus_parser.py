@@ -23,6 +23,15 @@ except ImportError:
 
 # OCR support for scanned PDFs
 try:
+    import easyocr
+    import pymupdf
+    import numpy as np
+    EASYOCR_AVAILABLE = True
+    logging.info("EasyOCR and PyMuPDF found. Pip-only OCR available.")
+except ImportError:
+    EASYOCR_AVAILABLE = False
+
+try:
     import pytesseract
     from pdf2image import convert_from_path
     from PIL import Image
@@ -157,7 +166,10 @@ class SyllabusParser:
         extracted_text_length = len(text.strip())
         if extracted_text_length < 50:
             self.logger.info(f"Minimal text extracted ({extracted_text_length} chars), attempting OCR for scanned PDF...")
-            if OCR_AVAILABLE:
+            if EASYOCR_AVAILABLE:
+                self.logger.info("Using local EasyOCR (pip-only, no Poppler needed)...")
+                ocr_text = self._ocr_easyocr(file_path)
+            elif OCR_AVAILABLE:
                 self.logger.info("Using local Tesseract OCR...")
                 ocr_text = self._ocr_pdf(file_path)
             else:
@@ -176,9 +188,9 @@ class SyllabusParser:
             self.logger.info(f"PDF extraction successful: {len(text.strip())} total characters")
         else:
             self.logger.error("Failed to extract text from PDF (likely a scanned document)")
-            if not OCR_AVAILABLE:
-                self.logger.error("Install OCR to handle scanned PDFs: pip install pytesseract pdf2image Pillow")
-                self.logger.error("Also install Tesseract: https://github.com/tesseract-ocr/tesseract")
+            if not OCR_AVAILABLE and not EASYOCR_AVAILABLE:
+                self.logger.error("Install OCR to handle scanned PDFs: pip install easyocr pymupdf")
+                self.logger.error("Alternatively, install Tesseract: pip install pytesseract pdf2image Pillow")
                 
         return text
 
@@ -323,6 +335,40 @@ class SyllabusParser:
             
         return text
     
+    def _ocr_easyocr(self, file_path: Path) -> str:
+        """Extract text using EasyOCR and PyMuPDF rendering (requires NO system dependencies)"""
+        text = ""
+        try:
+            self.logger.info(f"Loading PDF with PyMuPDF for rendering...")
+            doc = pymupdf.open(file_path)
+            
+            self.logger.info("Initializing EasyOCR reader (CPU mode)...")
+            # Create reader once for all pages
+            reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+            
+            for i, page in enumerate(doc):
+                self.logger.info(f"OCR processing page {i+1}/{len(doc)}...")
+                # Render to 300 DPI for OCR
+                pix = page.get_pixmap(dpi=300)
+                img = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
+                
+                results = reader.readtext(img, detail=0, paragraph=True)
+                page_text = "\n".join(results)
+                
+                if page_text:
+                    text += page_text + "\n\n"
+                    self.logger.info(f"Page {i+1}: EasyOCR extracted {len(page_text)} chars")
+                else:
+                    self.logger.warning(f"Page {i+1}: EasyOCR found no text")
+                    
+            doc.close()
+            self.logger.info(f"EasyOCR extracted total {len(text)} chars")
+            
+        except Exception as e:
+            self.logger.error(f"EasyOCR parsing failed: {e}")
+            
+        return text
+
     def _ocr_pdf(self, file_path: Path) -> str:
         """Extract text from scanned PDF using local OCR (Tesseract)"""
         text = ""
@@ -472,7 +518,7 @@ class SyllabusParser:
         regex_units = len(structure['units'])
         regex_outcomes = len(structure['learning_outcomes'])
         
-        if self.use_llm_fallback and self.ai_model and (regex_units < 2 or regex_outcomes < 2):
+        if self.use_llm_fallback and self.ai_model and len(text.strip()) > 50 and (regex_units < 2 or regex_outcomes < 2):
             self.logger.info(f"Regex extraction yielded poor results (units={regex_units}, outcomes={regex_outcomes}). Trying LLM fallback...")
             
             try:
