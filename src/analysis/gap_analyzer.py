@@ -178,16 +178,28 @@ class GapAnalyzer:
         
         # Identify gaps
         gaps = []
+
+        # Flag unknown Bloom levels as a gap
+        unknown_count = level_counts.get('unknown', 0)
+        if unknown_count > 0 and total > 0:
+            gaps.append({
+                'level': 'unknown',
+                'current': round((unknown_count / total) * 100, 1),
+                'recommended': '0%',
+                'issue': 'unknown_level',
+                'count': unknown_count
+            })
+
         for level, percentage in percentages.items():
             if level == 'unknown':
                 continue
-                
+
             rec_range = recommended.get(level, '0-0%')
             # Parse range (e.g., "10-15%")
             if isinstance(rec_range, str) and '-' in rec_range:
                 min_val = int(rec_range.split('-')[0])
                 max_val = int(rec_range.split('-')[1].rstrip('%'))
-                
+
                 if percentage < min_val:
                     gaps.append({
                         'level': level,
@@ -252,11 +264,16 @@ class GapAnalyzer:
     def _analyze_assessment(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze assessment pattern"""
         assessment = syllabus_data.get('assessment_pattern', {})
-        
+
         gaps = []
-        
+
         # Check if assessment adds up to 100%
-        total = sum(assessment.values())
+        total = 0
+        for v in assessment.values():
+            if isinstance(v, (int, float)):
+                total += v
+            elif isinstance(v, dict):
+                total += v.get('weightage', 0)
         if total != 100 and total > 0:
             gaps.append({
                 'type': 'total_mismatch',
@@ -264,7 +281,7 @@ class GapAnalyzer:
                 'expected_total': 100,
                 'description': f'Assessment components total {total}% instead of 100%'
             })
-            
+
         # Check for missing common components
         recommended_components = ['internal', 'external', 'assignment']
         for component in recommended_components:
@@ -274,29 +291,54 @@ class GapAnalyzer:
                     'component': component,
                     'description': f'Missing {component} assessment component'
                 })
-                
+
         # Check for balanced assessment
-        if assessment:
-            max_component = max(assessment.values())
+        numeric_values = [v for v in assessment.values() if isinstance(v, (int, float))]
+        if numeric_values:
+            max_component = max(numeric_values)
             if max_component > 70:
                 gaps.append({
                     'type': 'imbalanced',
                     'description': f'One component has {max_component}% weightage (too high)'
                 })
-                
+
+        # Check continuous vs end-semester balance (NBA recommends 40% IA + 60% ESE)
+        internal_total = 0
+        external_total = 0
+        if assessment:
+            internal_keys = ['internal', 'continuous', 'ia', 'assignment', 'quiz', 'lab', 'project']
+            external_keys = ['external', 'ese', 'end_semester', 'final']
+            internal_total = sum(assessment.get(k, 0) for k in internal_keys if k in assessment and isinstance(assessment.get(k), (int, float)))
+            external_total = sum(assessment.get(k, 0) for k in external_keys if k in assessment and isinstance(assessment.get(k), (int, float)))
+            if internal_total > 0 and external_total > 0:
+                if internal_total < 30:
+                    gaps.append({
+                        'type': 'low_continuous_assessment',
+                        'current': internal_total,
+                        'description': f'Continuous assessment is only {internal_total}% (NBA recommends 30-50%)'
+                    })
+                elif internal_total > 50:
+                    gaps.append({
+                        'type': 'high_continuous_assessment',
+                        'current': internal_total,
+                        'description': f'Continuous assessment is {internal_total}% (NBA recommends 30-50%)'
+                    })
+
         return {
             'total_percentage': total,
             'components': assessment,
-            'gaps': gaps
+            'gaps': gaps,
+            'internal_total': internal_total,
+            'external_total': external_total
         }
         
     def _analyze_content(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze content quality and completeness"""
         gaps = []
-        
+
         # Check for missing essential components
         essential = ['course_title', 'course_code', 'credits', 'learning_outcomes', 'units']
-        
+
         for component in essential:
             value = syllabus_data.get(component)
             if not value or (isinstance(value, (list, dict)) and len(value) == 0):
@@ -305,17 +347,17 @@ class GapAnalyzer:
                     'component': component,
                     'description': f'Missing or empty {component}'
                 })
-                
+
         # Check unit hours
         units = syllabus_data.get('units', [])
         total_hours = sum(unit.get('hours', 0) for unit in units)
-        
+
         if total_hours == 0:
             gaps.append({
                 'type': 'missing_hours',
                 'description': 'No unit hours specified'
             })
-            
+
         # Check references
         references = syllabus_data.get('references', [])
         if len(references) < 3:
@@ -325,12 +367,44 @@ class GapAnalyzer:
                 'recommended_min': 3,
                 'description': 'Insufficient reference materials (minimum 3 recommended)'
             })
-            
+
+        # Check topic coverage vs course level
+        course_level = syllabus_data.get('course_level', '').lower()
+        total_topics = sum(len(unit.get('topics', [])) for unit in units)
+        if course_level in ['undergraduate', 'ug', 'b.tech', 'b.e'] and total_topics < 15:
+            gaps.append({
+                'type': 'insufficient_topic_depth',
+                'current_count': total_topics,
+                'description': f'Only {total_topics} topics for an undergraduate course (15+ recommended)'
+            })
+
+        # Check keyword overlap between outcomes and unit topics
+        outcomes = syllabus_data.get('learning_outcomes', [])
+        if outcomes and units:
+            outcome_text = ' '.join(
+                o.get('description', '') if isinstance(o, dict) else str(o) for o in outcomes
+            )
+            unit_text = ' '.join(
+                t.get('title', '') if isinstance(t, dict) else str(t)
+                for u in units for t in u.get('topics', [])
+            )
+            outcome_kw = set(self.text_processor.extract_keywords(outcome_text, top_n=15))
+            unit_kw = set(self.text_processor.extract_keywords(unit_text, top_n=15))
+            if outcome_kw and unit_kw:
+                overlap = len(outcome_kw & unit_kw) / len(outcome_kw | unit_kw)
+                if overlap < 0.15:
+                    gaps.append({
+                        'type': 'outcome_content_misalignment',
+                        'overlap': round(overlap, 3),
+                        'description': f'Low keyword overlap between outcomes and unit topics ({overlap:.1%}) — outcomes may not be covered by content'
+                    })
+
         return {
             'gaps': gaps,
             'total_units': len(units),
             'total_hours': total_hours,
-            'reference_count': len(references)
+            'reference_count': len(references),
+            'total_topics': total_topics
         }
         
     def _analyze_structure(self, syllabus_data: Dict[str, Any]) -> List[Dict[str, str]]:
@@ -363,90 +437,158 @@ class GapAnalyzer:
             
         return issues
         
-    def _generate_recommendations(self, report: Dict[str, Any]) -> List[Dict[str, str]]:
-        """Generate actionable recommendations with priority levels"""
+    def _generate_recommendations(self, report: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate actionable recommendations with priority levels and specific details"""
         recommendations = []
-        
-        # Bloom's coverage recommendations (Medium priority)
+
+        # Bloom's coverage recommendations
         bloom_gaps = report['bloom_coverage'].get('gaps', [])
         for gap in bloom_gaps:
             level = gap['level']
             issue = gap['issue']
+            current = gap.get('current', 0)
+            recommended = gap.get('recommended', 'N/A')
             if issue == 'underrepresented':
                 recommendations.append({
-                    'text': f"Add more learning outcomes at '{level}' level to meet recommended distribution",
+                    'text': f"Add more learning outcomes at '{level}' level — currently {current:.1f}% (recommended: {recommended})",
                     'priority': 'medium',
-                    'category': 'bloom_taxonomy'
+                    'category': 'bloom_taxonomy',
+                    'related_to': f"bloom_{level}"
                 })
             elif issue == 'overrepresented':
                 recommendations.append({
-                    'text': f"Consider reducing '{level}' level outcomes and diversifying cognitive levels",
+                    'text': f"Consider reducing '{level}' level outcomes — currently {current:.1f}% (recommended: {recommended})",
                     'priority': 'low',
-                    'category': 'bloom_taxonomy'
+                    'category': 'bloom_taxonomy',
+                    'related_to': f"bloom_{level}"
                 })
-                
-        # CO-PO mapping recommendations (High priority - accreditation critical)
+
+        # CO-PO mapping recommendations
         co_po_gaps = report['co_po_mapping_gaps'].get('gaps', [])
         if co_po_gaps:
+            unmapped_cos = [g.get('co', 'unknown') for g in co_po_gaps if g['type'] == 'missing_co_mapping']
+            empty_mapped = [g.get('co', 'unknown') for g in co_po_gaps if g['type'] == 'empty_mapping']
+            detail_parts = []
+            if unmapped_cos:
+                detail_parts.append(f"unmapped: {', '.join(unmapped_cos[:5])}")
+            if empty_mapped:
+                detail_parts.append(f"empty mapping: {', '.join(empty_mapped[:5])}")
             recommendations.append({
-                'text': "Complete CO-PO mapping for all course outcomes to meet accreditation requirements",
+                'text': f"Complete CO-PO mapping for all course outcomes ({'; '.join(detail_parts)})",
                 'priority': 'high',
-                'category': 'accreditation'
+                'category': 'accreditation',
+                'related_to': 'co_po_mapping'
             })
-            
-        # Assessment recommendations (High priority)
+
+        # Assessment recommendations
         assessment_gaps = report['assessment_gaps'].get('gaps', [])
         for gap in assessment_gaps:
             if gap['type'] == 'total_mismatch':
                 recommendations.append({
-                    'text': "Adjust assessment component weightages to total 100%",
+                    'text': f"Adjust assessment weightages — current total is {gap.get('current_total', 0)}% (must equal 100%)",
                     'priority': 'high',
-                    'category': 'assessment'
+                    'category': 'assessment',
+                    'related_to': 'assessment_total'
                 })
             elif gap['type'] == 'missing_component':
                 recommendations.append({
-                    'text': f"Add {gap['component']} assessment component",
+                    'text': f"Add {gap['component']} assessment component to ensure comprehensive evaluation",
                     'priority': 'medium',
-                    'category': 'assessment'
+                    'category': 'assessment',
+                    'related_to': f"assessment_{gap['component']}"
                 })
-                
-        # Content recommendations (Medium priority)
+            elif gap['type'] == 'imbalanced':
+                recommendations.append({
+                    'text': f"Rebalance assessment — one component has {gap.get('description', 'high')}% weightage",
+                    'priority': 'medium',
+                    'category': 'assessment',
+                    'related_to': 'assessment_balance'
+                })
+
+        # Content recommendations
         content_gaps = report['content_gaps'].get('gaps', [])
         for gap in content_gaps:
             if gap['type'] == 'insufficient_references':
+                current = gap.get('current_count', 0)
+                recommended = gap.get('recommended_min', 3)
                 recommendations.append({
-                    'text': "Add more reference materials (textbooks, research papers, online resources)",
+                    'text': f"Add more reference materials — currently {current} (minimum {recommended} recommended)",
                     'priority': 'medium',
-                    'category': 'content'
+                    'category': 'content',
+                    'related_to': 'references'
                 })
             elif gap['type'] == 'missing_hours':
                 recommendations.append({
-                    'text': "Specify contact hours for each unit",
+                    'text': "Specify contact hours for each unit to ensure adequate time allocation",
                     'priority': 'high',
-                    'category': 'structure'
+                    'category': 'structure',
+                    'related_to': 'unit_hours'
                 })
-        
-        # Outcome validation recommendations (High priority)
+            elif gap['type'] == 'missing_component':
+                component = gap.get('component', 'unknown')
+                recommendations.append({
+                    'text': f"Add missing essential component: {component}",
+                    'priority': 'high',
+                    'category': 'structure',
+                    'related_to': f"missing_{component}"
+                })
+
+        # Outcome validation recommendations
         outcome_validation = report.get('outcome_validation', {})
         invalid_count = outcome_validation.get('issues_count', 0)
         if invalid_count > 0:
+            invalid_outcomes = [o['code'] for o in outcome_validation.get('outcomes', []) if not o.get('is_valid', True)]
             recommendations.append({
-                'text': f"{invalid_count} learning outcome(s) need improvement — use measurable action verbs and avoid vague terms",
+                'text': f"{invalid_count} learning outcome(s) need improvement: {', '.join(invalid_outcomes[:5])} — use measurable action verbs and avoid vague terms",
                 'priority': 'high',
-                'category': 'outcome_quality'
+                'category': 'outcome_quality',
+                'related_to': 'outcome_validation'
             })
         avg_measurability = outcome_validation.get('average_measurability', 1)
         if avg_measurability < 0.5:
             recommendations.append({
-                'text': "Overall outcome measurability is low — rewrite outcomes with specific, assessable verbs",
+                'text': f"Overall outcome measurability is low ({avg_measurability:.0%}) — rewrite outcomes with specific, assessable verbs",
                 'priority': 'medium',
-                'category': 'outcome_quality'
+                'category': 'outcome_quality',
+                'related_to': 'measurability'
             })
-        
+
+        # Structural issue recommendations
+        structural_issues = report.get('structural_issues', [])
+        for issue in structural_issues:
+            recommendations.append({
+                'text': issue.get('description', 'Structural issue detected'),
+                'priority': issue.get('severity', 'medium'),
+                'category': 'structure',
+                'related_to': issue.get('type', 'structure')
+            })
+
+        # Redundancy recommendations
+        redundancies = report.get('redundancies', {})
+        if redundancies.get('total_redundancies', 0) > 0:
+            pair_count = len(redundancies.get('redundant_pairs', []))
+            dup_count = len(redundancies.get('duplicate_outcomes', []))
+            recommendations.append({
+                'text': f"Address {pair_count} overlapping unit pair(s) and {dup_count} duplicate outcome(s) to reduce content redundancy",
+                'priority': 'medium',
+                'category': 'content',
+                'related_to': 'redundancy'
+            })
+
+        # Lesson plan recommendations
+        lesson_gaps = report.get('lesson_plan_analysis', {}).get('gaps', [])
+        for gap in lesson_gaps:
+            recommendations.append({
+                'text': gap.get('description', 'Lesson plan issue'),
+                'priority': gap.get('severity', 'medium'),
+                'category': 'lesson_plan',
+                'related_to': gap.get('type', 'lesson_plan')
+            })
+
         # Sort by priority: high > medium > low
         priority_order = {'high': 0, 'medium': 1, 'low': 2}
         recommendations.sort(key=lambda x: priority_order.get(x.get('priority', 'low'), 2))
-                
+
         return recommendations
         
     def _analyze_lesson_plans(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -582,43 +724,52 @@ class GapAnalyzer:
         return recommendations
 
     def _calculate_overall_score(self, report: Dict[str, Any]) -> float:
-        """Calculate an overall quality score (0-100) from sub-analysis results."""
-        scores = []
+        """Calculate an overall quality score (0-100) from sub-analysis results with configurable weights."""
+        weights = {
+            'content_quality': 0.20,
+            'bloom_coverage': 0.15,
+            'co_po_mapping': 0.20,
+            'assessment': 0.15,
+            'structure': 0.15,
+            'redundancy': 0.15,
+        }
+
+        scores = {}
 
         content_quality = report.get('content_quality', {})
         if content_quality:
-            scores.append(content_quality.get('overall_score', 0) * 100)
+            scores['content_quality'] = content_quality.get('overall_score', 0) * 100
 
         bloom_coverage = report.get('bloom_coverage', {})
         bloom_gaps = bloom_coverage.get('gaps', [])
         total_outcomes = bloom_coverage.get('total_outcomes', 0)
         if total_outcomes > 0:
-            bloom_score = max(0, 100 - len(bloom_gaps) * 15)
-            scores.append(bloom_score)
+            scores['bloom_coverage'] = max(0, 100 - len(bloom_gaps) * 15)
 
         co_po = report.get('co_po_mapping_gaps', {})
-        coverage_pct = co_po.get('coverage_percentage', 0)
-        scores.append(coverage_pct)
+        scores['co_po_mapping'] = co_po.get('coverage_percentage', 0)
 
         assessment = report.get('assessment_gaps', {})
         assessment_gaps = assessment.get('gaps', [])
         if assessment.get('total_percentage') == 100 and not assessment_gaps:
-            scores.append(100)
+            scores['assessment'] = 100
         elif assessment.get('total_percentage', 0) > 0:
-            scores.append(max(0, 100 - len(assessment_gaps) * 20))
+            scores['assessment'] = max(0, 100 - len(assessment_gaps) * 20)
         else:
-            scores.append(50)
+            scores['assessment'] = 50
 
         structural = report.get('structural_issues', [])
-        struct_score = max(0, 100 - len(structural) * 20)
-        scores.append(struct_score)
+        scores['structure'] = max(0, 100 - len(structural) * 20)
 
         redundancies = report.get('redundancies', {})
         overlap = redundancies.get('overlap_score', 0)
-        scores.append(max(0, 100 - overlap * 100))
+        scores['redundancy'] = max(0, 100 - overlap * 100)
 
-        if scores:
-            return round(sum(scores) / len(scores), 1)
+        weighted_sum = sum(scores.get(k, 0) * w for k, w in weights.items())
+        total_weight = sum(w for k, w in weights.items() if k in scores)
+
+        if total_weight > 0:
+            return round(weighted_sum / total_weight, 1)
         return 0.0
 
     def _validate_outcomes(self, syllabus_data: Dict[str, Any]) -> Dict[str, Any]:

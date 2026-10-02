@@ -63,7 +63,7 @@ export interface SyllabusData {
 export interface BloomCoverage {
   level_counts: Record<string, number>;
   percentages: Record<string, number>;
-  gaps: Array<{ level: string; current: number; recommended: string; issue: string }>;
+  gaps: Array<{ level: string; current: number; recommended: string; issue: string; count?: number }>;
   total_outcomes: number;
 }
 
@@ -77,14 +77,17 @@ export interface COPOMappingGaps {
 export interface AssessmentGaps {
   total_percentage: number;
   components: Record<string, number>;
-  gaps: Array<{ type: string; description: string; component?: string; current_total?: number; expected_total?: number }>;
+  gaps: Array<{ type: string; description: string; component?: string; current_total?: number; expected_total?: number; current?: number }>;
+  internal_total?: number;
+  external_total?: number;
 }
 
 export interface ContentGaps {
-  gaps: Array<{ type: string; component?: string; description: string; current_count?: number; recommended_min?: number }>;
+  gaps: Array<{ type: string; component?: string; description: string; current_count?: number; recommended_min?: number; overlap?: number }>;
   total_units: number;
   total_hours: number;
   reference_count: number;
+  total_topics?: number;
 }
 
 export interface StructuralIssues {
@@ -97,6 +100,7 @@ export interface Recommendation {
   text: string;
   priority: 'high' | 'medium' | 'low';
   category: string;
+  related_to?: string;
 }
 
 export interface ContentQuality {

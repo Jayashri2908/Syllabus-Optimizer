@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useSyllabus } from '../context/SyllabusContext';
 import { uploadAndAnalyze, exportPDF } from '../services/api';
 import FileUploader from '../components/FileUploader';
 import ThreeBloomChart from '../components/ThreeBloomChart';
-import { ShieldAlert, CheckCircle, Download, AlertCircle, TrendingUp, BarChart3, BookOpen, Map as MapIcon, Calendar, RefreshCw, ListChecks, ChevronDown, ChevronUp, Zap, FileText, Target } from 'lucide-react';
+import { ShieldAlert, CheckCircle, Download, AlertCircle, TrendingUp, BarChart3, BookOpen, Map as MapIcon, Calendar, RefreshCw, ListChecks, ChevronDown, ChevronUp, Zap, FileText, Target, Award, Lightbulb, AlertTriangle, Sparkles, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import './AnalyzePage.css';
@@ -64,8 +64,19 @@ const GapBadge: React.FC<GapBadgeProps> = ({ type, severity, description }) => (
 );
 
 interface RecommendationCardProps {
-  recommendation: { text: string; priority: 'high' | 'medium' | 'low'; category: string };
+  recommendation: { text: string; priority: 'high' | 'medium' | 'low'; category: string; related_to?: string };
 }
+
+const categoryIcons: Record<string, React.ReactNode> = {
+  bloom_taxonomy: <BarChart3 size={14} />,
+  accreditation: <Award size={14} />,
+  assessment: <Target size={14} />,
+  content: <BookOpen size={14} />,
+  structure: <AlertTriangle size={14} />,
+  outcome_quality: <Lightbulb size={14} />,
+  lesson_plan: <Calendar size={14} />,
+  rag_insight: <Sparkles size={14} />,
+};
 
 const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommendation }) => {
   const priorityColors = {
@@ -77,7 +88,9 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommendation 
     <div className="recommendation-card" style={{ borderLeftColor: priorityColors[recommendation.priority] }}>
       <div className="recommendation-header">
         <span className={`priority-badge priority-${recommendation.priority}`}>{recommendation.priority}</span>
-        <span className="category">{recommendation.category}</span>
+        <span className="category">
+          {categoryIcons[recommendation.category] || <Zap size={14} />} {recommendation.category.replace(/_/g, ' ')}
+        </span>
       </div>
       <p className="recommendation-text">{recommendation.text}</p>
     </div>
@@ -85,11 +98,13 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommendation 
 };
 
 type TabId = 'overview' | 'bloom' | 'compliance' | 'recommendations';
+type PriorityFilter = 'all' | 'high' | 'medium' | 'low';
 
 const AnalyzePage: React.FC = () => {
   const { currentSyllabus, setCurrentSyllabus, analysisResult, setAnalysisResult } = useSyllabus();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
 
   const handleUpload = async (file: File): Promise<void> => {
     const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
@@ -136,6 +151,44 @@ const AnalyzePage: React.FC = () => {
     k => !(k in (analysisResult?.bloom_coverage?.level_counts ?? {})) || (analysisResult?.bloom_coverage?.level_counts?.[k] ?? 0) === 0
   );
 
+  const filteredRecommendations = useMemo(() => {
+    if (!analysisResult?.recommendations) return [];
+    if (priorityFilter === 'all') return analysisResult.recommendations;
+    return analysisResult.recommendations.filter(r => r.priority === priorityFilter);
+  }, [analysisResult?.recommendations, priorityFilter]);
+
+  const positiveFindings = useMemo(() => {
+    if (!analysisResult) return [];
+    const findings: string[] = [];
+
+    if (analysisResult.bloom_coverage?.gaps?.length === 0 && (analysisResult.bloom_coverage?.total_outcomes ?? 0) > 0) {
+      findings.push("Good Bloom's taxonomy distribution across cognitive levels");
+    }
+    if ((analysisResult.co_po_mapping_gaps?.coverage_percentage ?? 0) >= 80) {
+      findings.push(`Strong CO-PO mapping coverage (${analysisResult.co_po_mapping_gaps!.coverage_percentage!.toFixed(0)}%)`);
+    }
+    if (analysisResult.assessment_gaps?.total_percentage === 100 && (analysisResult.assessment_gaps?.gaps?.length ?? 0) === 0) {
+      findings.push("Assessment components properly total 100%");
+    }
+    if ((analysisResult.content_gaps?.reference_count ?? 0) >= 5) {
+      findings.push(`Good reference materials (${analysisResult.content_gaps!.reference_count} references)`);
+    }
+    if ((analysisResult.structural_issues?.length ?? 0) === 0) {
+      findings.push("No structural issues detected");
+    }
+    if ((analysisResult.redundancies?.total_redundancies ?? 0) === 0) {
+      findings.push("No significant content redundancies");
+    }
+    if ((analysisResult.outcome_validation?.average_measurability ?? 0) >= 0.7) {
+      findings.push(`High outcome measurability (${(analysisResult.outcome_validation!.average_measurability * 100).toFixed(0)}%)`);
+    }
+    if ((analysisResult.content_quality?.overall_score ?? 0) >= 0.7) {
+      findings.push(`Good overall content quality (${(analysisResult.content_quality!.overall_score * 100).toFixed(0)}%)`);
+    }
+
+    return findings;
+  }, [analysisResult]);
+
   if (!currentSyllabus || (!analysisResult && !isLoading)) {
     return (
       <div className="page-container animate-fade-in">
@@ -166,6 +219,23 @@ const AnalyzePage: React.FC = () => {
   ];
 
   const nbaRecommendations = (analysisResult?.accreditation_compliance?.nba?.recommendations ?? []) as string[];
+  const naacRecommendations = (analysisResult?.accreditation_compliance?.naac?.recommendations ?? []) as string[];
+
+  const nepChecks = (analysisResult?.nep_2020_compliance?.detailed_checks ?? {}) as Record<string, { compliant: boolean; message: string; score: number }>;
+  const nbaChecks = (analysisResult?.accreditation_compliance?.nba?.checks ?? {}) as Record<string, { compliant: boolean; message: string; score: number }>;
+  const naacChecks = (analysisResult?.accreditation_compliance?.naac?.checks ?? {}) as Record<string, { compliant: boolean; message: string; score: number }>;
+
+  const coPOMapping = currentSyllabus.co_po_mapping?.matrix ?? [];
+  const poSet = new Set<string>();
+  coPOMapping.forEach(entry => {
+    entry.po_scores.forEach((_, idx) => {
+      if (entry.po_scores[idx] > 0) poSet.add(`PO${idx + 1}`);
+    });
+  });
+
+  const contentQualityIssues = (analysisResult?.content_quality?.issues ?? []) as Array<{ type: string; severity: string; unit: string; description: string }>;
+  const duplicateOutcomes = (analysisResult?.redundancies?.duplicate_outcomes ?? []) as Array<{ outcome_1: string; outcome_2: string; similarity: number }>;
+  const lessonDistribution = analysisResult?.lesson_plan_analysis?.lesson_distribution?.lessons_per_unit ?? {};
 
   return (
     <div className="analyze-page animate-fade-in">
@@ -250,6 +320,22 @@ const AnalyzePage: React.FC = () => {
                   <div className="coverage-value">{analysisResult?.co_po_mapping_gaps?.coverage_percentage?.toFixed(0) ?? 0}%</div>
                   <p>{analysisResult?.co_po_mapping_gaps?.mapped_cos ?? 0} / {analysisResult?.co_po_mapping_gaps?.total_cos ?? 0} course outcomes mapped</p>
                 </div>
+                {coPOMapping.length > 0 && (
+                  <div className="co-po-heatmap">
+                    <h4>PO Coverage Heatmap</h4>
+                    <div className="heatmap-grid">
+                      {Array.from({ length: 12 }, (_, i) => `PO${i + 1}`).map(po => (
+                        <div key={po} className={`heatmap-cell ${poSet.has(po) ? 'mapped' : 'unmapped'}`}>
+                          {po}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="heatmap-legend">
+                      <span className="heatmap-cell mapped">Mapped</span>
+                      <span className="heatmap-cell unmapped">Unmapped</span>
+                    </p>
+                  </div>
+                )}
                 {(analysisResult?.co_po_mapping_gaps?.gaps?.length ?? 0) > 0 && (
                   <div className="gap-list">
                     {analysisResult!.co_po_mapping_gaps!.gaps!.slice(0, 3).map((gap, i) => (
@@ -272,17 +358,56 @@ const AnalyzePage: React.FC = () => {
                       <span key={key} className="component-badge">{key}: {val}%</span>
                     ))}
                   </div>
+                  {(analysisResult?.assessment_gaps?.internal_total !== undefined || analysisResult?.assessment_gaps?.external_total !== undefined) && (
+                    <div className="assessment-balance">
+                      <span>IA: {analysisResult?.assessment_gaps?.internal_total ?? 0}%</span>
+                      <span>ESE: {analysisResult?.assessment_gaps?.external_total ?? 0}%</span>
+                    </div>
+                  )}
                 </div>
               </CollapsibleCard>
 
               <CollapsibleCard title="Content & Structure" icon={<BookOpen size={20} />}>
                 <div className="content-stats">
-                  <span><strong>{totalUnits}</strong> units &bull; <strong>{totalOutcomes}</strong> outcomes &bull; <strong>{analysisResult?.content_gaps?.reference_count ?? 0}</strong> references</span>
+                  <span><strong>{totalUnits}</strong> units &bull; <strong>{totalOutcomes}</strong> outcomes &bull; <strong>{analysisResult?.content_gaps?.reference_count ?? 0}</strong> references &bull; <strong>{analysisResult?.content_gaps?.total_topics ?? 0}</strong> topics</span>
                 </div>
                 {(analysisResult?.content_gaps?.gaps?.length ?? 0) > 0 && (
                   <div className="gap-list">
                     {analysisResult!.content_gaps!.gaps!.map((gap, i) => (
                       <GapBadge key={i} type={gap.type} severity="medium" description={gap.description} />
+                    ))}
+                  </div>
+                )}
+              </CollapsibleCard>
+
+              <CollapsibleCard title="Content Quality" icon={<Sparkles size={20} />} badge={`${Math.round((analysisResult?.content_quality?.overall_score ?? 0) * 100)}%`}>
+                <div className="quality-scores">
+                  <div className="quality-score-item">
+                    <span>Depth</span>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: `${(analysisResult?.content_quality?.depth_score ?? 0) * 100}%` }}></div>
+                    </div>
+                    <strong>{Math.round((analysisResult?.content_quality?.depth_score ?? 0) * 100)}%</strong>
+                  </div>
+                  <div className="quality-score-item">
+                    <span>Breadth</span>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: `${(analysisResult?.content_quality?.breadth_score ?? 0) * 100}%` }}></div>
+                    </div>
+                    <strong>{Math.round((analysisResult?.content_quality?.breadth_score ?? 0) * 100)}%</strong>
+                  </div>
+                  <div className="quality-score-item">
+                    <span>Alignment</span>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: `${(analysisResult?.content_quality?.alignment_score ?? 0) * 100}%` }}></div>
+                    </div>
+                    <strong>{Math.round((analysisResult?.content_quality?.alignment_score ?? 0) * 100)}%</strong>
+                  </div>
+                </div>
+                {contentQualityIssues.length > 0 && (
+                  <div className="gap-list">
+                    {contentQualityIssues.map((issue, i) => (
+                      <GapBadge key={i} type={issue.type} severity={issue.severity} description={`${issue.unit}: ${issue.description}`} />
                     ))}
                   </div>
                 )}
@@ -310,6 +435,18 @@ const AnalyzePage: React.FC = () => {
                     {analysisResult!.redundancies!.redundant_pairs?.slice(0, 3).map((pair, i) => (
                       <GapBadge key={i} type="overlap" severity={pair.severity} description={pair.description} />
                     ))}
+                    {duplicateOutcomes.length > 0 && (
+                      <div className="duplicate-outcomes">
+                        <h4>Duplicate Outcomes</h4>
+                        {duplicateOutcomes.map((dup, i) => (
+                          <div key={i} className="duplicate-outcome">
+                            <span className="similarity">{Math.round(dup.similarity * 100)}% similar</span>
+                            <p>"{dup.outcome_1}"</p>
+                            <p>"{dup.outcome_2}"</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="issue-ok"><CheckCircle size={16} /> No significant content overlaps</div>
@@ -333,11 +470,38 @@ const AnalyzePage: React.FC = () => {
                     {analysisResult?.lesson_plan_analysis?.lesson_distribution?.total_lessons && (
                       <div className="lesson-dist">
                         <p>Average: {analysisResult.lesson_plan_analysis.lesson_distribution.average_per_unit} lessons/unit</p>
+                        {Object.keys(lessonDistribution).length > 0 && (
+                          <table className="lesson-table">
+                            <thead>
+                              <tr><th>Unit</th><th>Lessons</th></tr>
+                            </thead>
+                            <tbody>
+                              {Object.entries(lessonDistribution).map(([unit, count]) => (
+                                <tr key={unit}>
+                                  <td>Unit {unit}</td>
+                                  <td>{count}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
               </CollapsibleCard>
+
+              {positiveFindings.length > 0 && (
+                <CollapsibleCard title="What's Good" icon={<Award size={20} />} badge={positiveFindings.length} badgeColor="rgba(5,150,105,0.9)" defaultOpen={true}>
+                  <div className="positive-findings">
+                    {positiveFindings.map((finding, i) => (
+                      <div key={i} className="positive-finding">
+                        <CheckCircle size={14} /> {finding}
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleCard>
+              )}
             </div>
           </motion.div>
         )}
@@ -353,12 +517,22 @@ const AnalyzePage: React.FC = () => {
                     )
                   )} />
                 </div>
+                <div className="bloom-counts">
+                  {(['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'] as const).map(level => (
+                    <div key={level} className="bloom-count-item">
+                      <span className="bloom-level-name">{level}</span>
+                      <span className="bloom-level-count">{analysisResult?.bloom_coverage?.level_counts?.[level] ?? 0} outcomes</span>
+                      <span className="bloom-level-pct">({((analysisResult?.bloom_coverage?.percentages?.[level] ?? 0)).toFixed(1)}%)</span>
+                    </div>
+                  ))}
+                </div>
                 {(analysisResult?.bloom_coverage?.gaps?.length ?? 0) > 0 && (
                   <div className="bloom-gaps">
                     <h4>Distribution Gaps</h4>
                     {analysisResult!.bloom_coverage!.gaps!.map((gap, i) => (
                       <div key={i} className={`gap-item gap-${gap.issue}`}>
                         <strong>{gap.level}</strong>: {gap.current.toFixed(1)}% (recommended: {gap.recommended})
+                        {gap.issue === 'unknown_level' && <span className="gap-count">({gap.count} outcomes)</span>}
                       </div>
                     ))}
                   </div>
@@ -406,7 +580,11 @@ const AnalyzePage: React.FC = () => {
                         </ul>
                       )}
                       {outcome.suggestions.length > 0 && (
-                        <p className="outcome-suggestion">{outcome.suggestions[0]}</p>
+                        <div className="outcome-suggestions">
+                          {outcome.suggestions.map((suggestion, j) => (
+                            <p key={j} className="outcome-suggestion">{suggestion}</p>
+                          ))}
+                        </div>
                       )}
                     </div>
                   ))}
@@ -433,6 +611,18 @@ const AnalyzePage: React.FC = () => {
                     <div className="progress-bar">
                       <div className="progress-fill" style={{ width: `${nepPct}%` }}></div>
                     </div>
+                    {Object.keys(nepChecks).length > 0 && (
+                      <div className="criteria-breakdown">
+                        <h4>Criteria Breakdown</h4>
+                        {Object.entries(nepChecks).map(([key, check]) => (
+                          <div key={key} className={`criterion-item ${check.compliant ? 'pass' : 'fail'}`}>
+                            <span className="criterion-status">{check.compliant ? '✓' : '✗'}</span>
+                            <span className="criterion-name">{key.replace(/_/g, ' ')}</span>
+                            <span className="criterion-score">{Math.round(check.score)}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-muted">NEP 2020 compliance data unavailable.</p>
@@ -450,9 +640,42 @@ const AnalyzePage: React.FC = () => {
                     <span className="accred-pct">{naacPct}%</span>
                   </div>
                 </div>
+                {Object.keys(nbaChecks).length > 0 && (
+                  <div className="criteria-breakdown">
+                    <h4>NBA Criteria</h4>
+                    {Object.entries(nbaChecks).map(([key, check]) => (
+                      <div key={key} className={`criterion-item ${check.compliant ? 'pass' : 'fail'}`}>
+                        <span className="criterion-status">{check.compliant ? '✓' : '✗'}</span>
+                        <span className="criterion-name">{key.replace(/_/g, ' ')}</span>
+                        <span className="criterion-score">{Math.round(check.score)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {Object.keys(naacChecks).length > 0 && (
+                  <div className="criteria-breakdown">
+                    <h4>NAAC Criteria</h4>
+                    {Object.entries(naacChecks).map(([key, check]) => (
+                      <div key={key} className={`criterion-item ${check.compliant ? 'pass' : 'fail'}`}>
+                        <span className="criterion-status">{check.compliant ? '✓' : '✗'}</span>
+                        <span className="criterion-name">{key.replace(/_/g, ' ')}</span>
+                        <span className="criterion-score">{Math.round(check.score)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {nbaRecommendations.length > 0 && (
                   <div className="accred-recs">
-                    {nbaRecommendations.slice(0, 2).map((r: string, i: number) => (
+                    <h4>NBA Recommendations</h4>
+                    {nbaRecommendations.map((r: string, i: number) => (
+                      <p key={i} className="accred-rec">{r}</p>
+                    ))}
+                  </div>
+                )}
+                {naacRecommendations.length > 0 && (
+                  <div className="accred-recs">
+                    <h4>NAAC Recommendations</h4>
+                    {naacRecommendations.map((r: string, i: number) => (
                       <p key={i} className="accred-rec">{r}</p>
                     ))}
                   </div>
@@ -474,9 +697,22 @@ const AnalyzePage: React.FC = () => {
 
         {activeTab === 'recommendations' && (
           <motion.div key="recommendations" className="tab-content" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-            {(analysisResult?.recommendations?.length ?? 0) > 0 ? (
+            <div className="recommendations-filter">
+              <Filter size={16} />
+              <span>Filter by priority:</span>
+              {(['all', 'high', 'medium', 'low'] as const).map(p => (
+                <button
+                  key={p}
+                  className={`filter-btn ${priorityFilter === p ? 'active' : ''}`}
+                  onClick={() => setPriorityFilter(p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            {filteredRecommendations.length > 0 ? (
               <div className="recommendations-list">
-                {analysisResult!.recommendations!.map((rec, i) => (
+                {filteredRecommendations.map((rec, i) => (
                   <RecommendationCard key={i} recommendation={rec} />
                 ))}
               </div>
