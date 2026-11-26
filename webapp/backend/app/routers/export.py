@@ -259,7 +259,7 @@ async def export_word(request: OptimizeRequest):
                 
                 topics = unit.get('topics', [])
                 if topics:
-                    topics_text = ", ".join(topics)
+                    topics_text = ", ".join(t.get('topic', str(t)) if isinstance(t, dict) else str(t) for t in topics)
                     p = doc.add_paragraph(topics_text)
                     p.paragraph_format.left_indent = Inches(0.2)
                     p.paragraph_format.space_after = Pt(12)

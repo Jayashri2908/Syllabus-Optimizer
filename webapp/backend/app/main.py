@@ -3,8 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import os
+import sys
 import time
 import uuid
+from pathlib import Path
+
+# Ensure the project root is importable so `src.*` works regardless of how the
+# app is launched (python main.py, uvicorn app.main:app, or a reloader worker).
+_PROJECT_ROOT = str(Path(__file__).resolve().parents[3])
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
 from src.analysis.syllabus_parser import SyllabusParser
 from src.analysis.gap_analyzer import GapAnalyzer

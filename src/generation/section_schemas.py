@@ -132,18 +132,20 @@ class UnitTopic(BaseModel):
     topic: str = Field(
         ..., 
         min_length=5, 
-        max_length=200,
-        description="Topic name (5-12 words, specific and descriptive)"
+        max_length=150,
+        description="Self-explanatory topic name (5-12 words, specific and descriptive)"
     )
-    description: Optional[str] = Field(
-        default=None,
-        max_length=1500,  # Increased for 4-6 sentence descriptions
-        description="Comprehensive 4-6 sentence description of the topic"
+    description: str = Field(
+        ...,
+        min_length=20,
+        max_length=1500,
+        description="2-3 sentence description of the topic (REQUIRED, must be substantive)"
     )
-    subtopics: Optional[List[str]] = Field(
-        default_factory=list,
+    subtopics: List[str] = Field(
+        ...,
+        min_length=2,
         max_length=8,
-        description="List of subtopics (3-5 items)"
+        description="List of subtopics (3-5 items, REQUIRED)"
     )
     key_concepts: Optional[List[str]] = Field(
         default_factory=list,
@@ -161,6 +163,15 @@ class UnitTopic(BaseModel):
     def clean_topic(cls, v: str) -> str:
         # Remove numbering prefixes
         v = re.sub(r'^\d+[\.\)\-:\s]+', '', v.strip())
+        return v
+
+    @field_validator('topic')
+    @classmethod
+    def warn_generic_topics(cls, v: str) -> str:
+        generic_patterns = ['concepts and', 'fundamentals', 'theory and', 'basics', 'introduction to']
+        if any(p in v.lower() for p in generic_patterns):
+            import logging
+            logging.getLogger(__name__).warning(f"Generic topic name detected: {v}")
         return v
     
     @field_validator('subtopics', 'key_concepts', 'practical_examples')
@@ -266,6 +277,25 @@ class UnitsSection(BaseModel):
         return v
 
 
+class SingleUnitSection(BaseModel):
+    """Schema for a single unit (used in per-unit generation)"""
+    unit_number: int = Field(..., ge=1, le=10)
+    title: str = Field(..., min_length=5, max_length=150)
+    topics: List[UnitTopic] = Field(
+        ...,
+        min_length=3,
+        max_length=8,
+        description="5-6 richly detailed topics for this unit"
+    )
+    hours: int = Field(default=10, ge=4, le=25)
+
+    @field_validator('title')
+    @classmethod
+    def clean_title(cls, v: str) -> str:
+        v = re.sub(r'^Unit\s*\d+[\s:\-]*', '', v.strip(), flags=re.IGNORECASE)
+        return v.strip()
+
+
 # =============================================================================
 # Section 5: References
 # =============================================================================
@@ -338,6 +368,7 @@ def get_schema_for_section(section_name: str) -> type[BaseModel]:
         "outcomes": LearningOutcomesSection,
         "learning_outcomes": LearningOutcomesSection,
         "units": UnitsSection,
+        "single_unit": SingleUnitSection,
         "references": ReferencesSection,
     }
     return schemas.get(section_name.lower())

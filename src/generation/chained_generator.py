@@ -14,6 +14,7 @@ from .section_schemas import (
     ObjectivesSection,
     LearningOutcomesSection,
     UnitsSection,
+    SingleUnitSection,
     ReferencesSection,
     get_schema_for_section
 )
@@ -138,7 +139,9 @@ class ChainedSyllabusGenerator:
                     context[section] = section_data
                     
             except Exception as e:
+                import traceback
                 self.logger.error(f"Failed to generate {section}: {e}")
+                self.logger.error(f"Traceback: {traceback.format_exc()}")
                 results[section] = self._get_fallback_section(section, context)
         
         # Assemble complete syllabus
@@ -163,14 +166,12 @@ class ChainedSyllabusGenerator:
     ) -> Dict[str, Any]:
         """
         Generate a single section using the appropriate prompt and schema.
-        
-        Args:
-            section: Section name (overview, objectives, etc.)
-            context: Accumulated context from previous sections
-            
-        Returns:
-            Validated section data as dict
+        For 'units', delegates to per-unit generation for richer content.
         """
+        # Units use per-unit generation strategy for rich content
+        if section == "units":
+            return self._generate_units_per_unit(context)
+        
         # Get prompt configuration
         system_prompt, user_prompt, strictness = SectionPrompts.get_prompt_for_section(
             section, context
@@ -191,6 +192,125 @@ class ChainedSyllabusGenerator:
         )
         
         return result
+    
+    def _generate_units_per_unit(
+        self,
+        context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Generate units ONE AT A TIME for rich, detailed content.
+        
+        Instead of generating all 5 units in one massive LLM call (which
+        token-starves the model and produces hollow stubs), we make 5
+        separate calls — each producing 1 unit with full descriptions,
+        subtopics, key_concepts, and practical_examples.
+        """
+        num_units = context.get('num_units', 5)
+        keywords = context.get('keywords', [])
+        course_title = context.get('course_title', 'Untitled Course')
+        domain = context.get('domain', 'engineering')
+        
+        # Calculate hours per unit
+        credits = context.get('credits', '3-1-0')
+        try:
+            parts = credits.split('-')
+            l, t = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+            total_hours = (l + t) * 15
+            hours_per_unit = total_hours // num_units
+        except Exception:
+            hours_per_unit = 10
+        
+        # Distribute keywords across units
+        # Check for user-provided unit topics first
+        unit_topics = context.get('unit_topics', [])
+        keyword_groups = []
+        
+        if unit_topics:
+            # User provided unit structure — use those as themes
+            for ut in unit_topics[:num_units]:
+                keyword_groups.append(ut.get('topics', []))
+            # Pad if fewer groups than units
+            while len(keyword_groups) < num_units:
+                keyword_groups.append(keywords[len(keyword_groups):] if len(keyword_groups) < len(keywords) else ['additional topics'])
+        elif keywords:
+            # Distribute keywords evenly across units
+            kw_per_unit = max(1, len(keywords) // num_units)
+            for i in range(num_units):
+                start = i * kw_per_unit
+                end = start + kw_per_unit if i < num_units - 1 else len(keywords)
+                group = keywords[start:end] if start < len(keywords) else [keywords[-1]]
+                keyword_groups.append(group)
+        else:
+            # No keywords at all — use course title words
+            keyword_groups = [[course_title]] * num_units
+        
+        # Get strictness config for single_unit
+        strictness = SectionPrompts.get_strictness('single_unit')
+        system_prompt = SectionPrompts.MASTER_SYSTEM_PROMPT
+        
+        generated_units = []
+        
+        for i in range(num_units):
+            unit_num = i + 1
+            unit_kws = keyword_groups[i] if i < len(keyword_groups) else keyword_groups[-1]
+            
+            self.logger.info(f"  Generating unit {unit_num}/{num_units}: keywords={unit_kws}")
+            
+            # Build per-unit context
+            unit_context = {
+                **context,
+                'unit_number': unit_num,
+                'unit_keywords': unit_kws,
+                'unit_theme': ', '.join(unit_kws),
+                'hours_per_unit': hours_per_unit,
+                'previous_units': generated_units,  # Dedup context
+            }
+            
+            try:
+                # Get focused single-unit prompt
+                _, user_prompt, _ = SectionPrompts.get_prompt_for_section(
+                    'single_unit', unit_context
+                )
+                
+                # Generate one unit with generous token budget
+                result = self.ai.generate_json(
+                    prompt=user_prompt,
+                    system_prompt=system_prompt,
+                    schema=SingleUnitSection,
+                    task_type='generation',
+                    temperature=strictness.get('temperature', 0.4),
+                    max_tokens=strictness.get('max_tokens', 2500),
+                    max_retries=2
+                )
+                
+                # Force correct unit number
+                result['unit_number'] = unit_num
+                generated_units.append(result)
+                
+                self.logger.info(f"  Unit {unit_num} generated: {result.get('title', '?')} ({len(result.get('topics', []))} topics)")
+                
+            except Exception as e:
+                self.logger.error(f"  Unit {unit_num} generation failed: {e}")
+                # Fallback for this single unit
+                fallback_unit = {
+                    'unit_number': unit_num,
+                    'title': f"{', '.join(unit_kws[:2]).title()} and Applications",
+                    'topics': [
+                        {
+                            'topic': kw.strip().title() if len(kw.strip()) > 5 else f"{kw.strip()} in {course_title}",
+                            'description': f"Covers key aspects of {kw.strip()} as applied in {course_title}. Students explore both theoretical foundations and practical implementations.",
+                            'subtopics': [f"{kw.strip()} methodology", f"{kw.strip()} applications", f"{kw.strip()} analysis"],
+                            'key_concepts': [kw.strip()],
+                            'practical_examples': [f"Apply {kw.strip()} to a real-world problem"]
+                        }
+                        for kw in unit_kws[:5]
+                    ],
+                    'hours': hours_per_unit
+                }
+                generated_units.append(fallback_unit)
+        
+        self.logger.info(f"Per-unit generation complete: {len(generated_units)} units")
+        return {'units': generated_units}
     
     def _get_fallback_section(
         self,
@@ -216,60 +336,56 @@ class ChainedSyllabusGenerator:
         if not keywords:
             keywords = [course_title.split()[0] if course_title else 'Topic']
         
-        # Create units dynamically from keywords
+        # Create units dynamically from keywords — clean fallback, no template spam
         def generate_fallback_units():
             units = []
             keywords_per_unit = max(1, len(keywords) // num_units)
-            
+
             for i in range(num_units):
                 start_idx = i * keywords_per_unit
                 end_idx = start_idx + keywords_per_unit if i < num_units - 1 else len(keywords)
                 unit_keywords = keywords[start_idx:end_idx] if start_idx < len(keywords) else [keywords[0]]
-                
-                # Create unit title from keywords
-                if unit_keywords:
-                    primary_keyword = unit_keywords[0]
-                    if i == 0:
-                        unit_title = f"{primary_keyword} Fundamentals and Concepts"
-                    elif i == num_units - 1:
-                        unit_title = f"Advanced {primary_keyword} and Applications"
-                    else:
-                        unit_title = f"{primary_keyword} Techniques and Methods"
-                else:
-                    unit_title = f"Unit {i+1}: Core Concepts"
-                
-                # Create topics from unit keywords
+                primary_keyword = unit_keywords[0] if unit_keywords else course_title
+
+                # Use the keyword as-is for the unit title — don't template-spam it
+                unit_title = primary_keyword.strip().title() if len(primary_keyword) > 3 else f"Unit {i+1}: {primary_keyword}"
+
+                # Generate clean topic names — just use the keywords themselves
                 topics = []
-                for j, kw in enumerate(unit_keywords[:5]):
+                for j, kw in enumerate(unit_keywords[:6]):
                     topics.append({
-                        "topic": f"{kw} - Theory and Principles",
-                        "description": f"This topic covers the theoretical foundations and practical aspects of {kw}. Students will learn key concepts, techniques, and real-world applications. The topic includes hands-on exercises and case studies to reinforce understanding.",
-                        "subtopics": [f"{kw} basics", f"{kw} techniques", f"{kw} best practices"],
-                        "key_concepts": [kw, f"{kw} principles"],
-                        "practical_examples": [f"{kw} implementation", f"{kw} case study"]
+                        "topic": kw.strip().title() if len(kw.strip()) > 5 else f"{kw.strip()} in {course_title}",
+                        "description": f"Covers key aspects of {kw.strip()} as applied in {course_title}.",
+                        "subtopics": [],
+                        "key_concepts": [],
+                        "practical_examples": []
                     })
-                
-                # Ensure at least 3 topics per unit
+
+                # If too few topics, add simple numbered placeholders
                 while len(topics) < 3:
-                    idx = len(topics)
                     topics.append({
-                        "topic": f"Advanced {keywords[idx % len(keywords)]} Concepts",
-                        "description": f"Advanced exploration of {keywords[idx % len(keywords)]} with focus on practical applications and industry best practices.",
-                        "subtopics": ["Advanced theory", "Implementation", "Optimization"],
-                        "key_concepts": ["Advanced concepts", "Best practices"],
-                        "practical_examples": ["Industry application"]
+                        "topic": f"{course_title} — Topic {len(topics) + 1}",
+                        "description": f"Additional topic for Unit {i+1} of {course_title}.",
+                        "subtopics": [],
+                        "key_concepts": [],
+                        "practical_examples": []
                     })
                 
                 units.append({
                     "unit_number": i + 1,
                     "title": unit_title,
-                    "overview": f"This unit covers {', '.join(unit_keywords[:3])}. Students will learn fundamental concepts, techniques, and applications related to {primary_keyword}. The unit builds on previous knowledge and prepares students for advanced topics.",
-                    "topics": topics[:5],
-                    "learning_activities": [f"{primary_keyword} lab exercise", "Case study analysis", "Group project"],
-                    "suggested_readings": [f"Chapter {i+1}: {primary_keyword}"],
+                    "overview": "",
+                    "topics": topics[:6],
+                    "learning_activities": [],
+                    "suggested_readings": [],
                     "hours": 10
                 })
             
+            self.logger.warning(
+                f"Units fallback triggered for '{course_title}'. "
+                f"LLM generation failed — using keyword-based placeholders. "
+                f"Check API key, model availability, and token limits."
+            )
             return units
         
         fallbacks = {

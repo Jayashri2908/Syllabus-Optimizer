@@ -1,0 +1,468 @@
+{
+  "course_title": "Machine Learning",
+  "course_code": "CS401",
+  "credits": "3-1-0",
+  "program": "",
+  "year": "",
+  "overview": "This course provides comprehensive coverage of Machine Learning, focusing on neural networks, linear regression. Students will learn fundamental concepts and practical applications including advanced techniques. The curriculum includes hands-on exercises and real-world case studies. Upon completion, students will be prepared for industry roles in neural networks.",
+  "objectives": [
+    "Understand the fundamental concepts of neural networks",
+    "Apply linear regression techniques to solve practical problems",
+    "Analyze real-world applications and case studies",
+    "Design solutions using industry-standard practices",
+    "Evaluate and optimize implementations for performance"
+  ],
+  "learning_outcomes": [
+    {
+      "code": "CO1",
+      "description": "Explain fundamental concepts of neural networks",
+      "bloom_level": "understand"
+    },
+    {
+      "code": "CO2",
+      "description": "Apply linear regression techniques to solve problems",
+      "bloom_level": "apply"
+    },
+    {
+      "code": "CO3",
+      "description": "Analyze different approaches and evaluate their effectiveness",
+      "bloom_level": "analyze"
+    },
+    {
+      "code": "CO4",
+      "description": "Design and implement solutions using learned techniques",
+      "bloom_level": "create"
+    },
+    {
+      "code": "CO5",
+      "description": "Evaluate solutions against requirements and standards",
+      "bloom_level": "evaluate"
+    }
+  ],
+  "units": [
+    {
+      "unit_number": 1,
+      "title": "Neural Networks and Applications",
+      "overview": "",
+      "topics": [
+        {
+          "topic": "Neural Networks",
+          "description": "Covers key aspects of neural networks as applied in Machine Learning. Students explore both theoretical foundations and practical implementations.",
+          "subtopics": [
+            "neural networks methodology",
+            "neural networks applications",
+            "neural networks analysis"
+          ],
+          "key_concepts": [
+            "neural networks"
+          ],
+          "practical_examples": [
+            "Apply neural networks to a real-world problem"
+          ]
+        }
+      ],
+      "learning_activities": [],
+      "suggested_readings": [],
+      "assessment_ideas": [],
+      "hours": 12
+    },
+    {
+      "unit_number": 2,
+      "title": "Linear Regression and Applications",
+      "overview": "",
+      "topics": [
+        {
+          "topic": "Linear Regression",
+          "description": "Covers key aspects of linear regression as applied in Machine Learning. Students explore both theoretical foundations and practical implementations.",
+          "subtopics": [
+            "linear regression methodology",
+            "linear regression applications",
+            "linear regression analysis"
+          ],
+          "key_concepts": [
+            "linear regression"
+          ],
+          "practical_examples": [
+            "Apply linear regression to a real-world problem"
+          ]
+        }
+      ],
+      "learning_activities": [],
+      "suggested_readings": [],
+      "assessment_ideas": [],
+      "hours": 12
+    },
+    {
+      "unit_number": 3,
+      "title": "Linear Regression and Applications",
+      "overview": "",
+      "topics": [
+        {
+          "topic": "Linear Regression",
+          "description": "Covers key aspects of linear regression as applied in Machine Learning. Students explore both theoretical foundations and practical implementations.",
+          "subtopics": [
+            "linear regression methodology",
+            "linear regression applications",
+            "linear regression analysis"
+          ],
+          "key_concepts": [
+            "linear regression"
+          ],
+          "practical_examples": [
+            "Apply linear regression to a real-world problem"
+          ]
+        }
+      ],
+      "learning_activities": [],
+      "suggested_readings": [],
+      "assessment_ideas": [],
+      "hours": 12
+    },
+    {
+      "unit_number": 4,
+      "title": "Linear Regression and Applications",
+      "overview": "",
+      "topics": [
+        {
+          "topic": "Linear Regression",
+          "description": "Covers key aspects of linear regression as applied in Machine Learning. Students explore both theoretical foundations and practical implementations.",
+          "subtopics": [
+            "linear regression methodology",
+            "linear regression applications",
+            "linear regression analysis"
+          ],
+          "key_concepts": [
+            "linear regression"
+          ],
+          "practical_examples": [
+            "Apply linear regression to a real-world problem"
+          ]
+        }
+      ],
+      "learning_activities": [],
+      "suggested_readings": [],
+      "assessment_ideas": [],
+      "hours": 12
+    },
+    {
+      "unit_number": 5,
+      "title": "Linear Regression and Applications",
+      "overview": "",
+      "topics": [
+        {
+          "topic": "Linear Regression",
+          "description": "Covers key aspects of linear regression as applied in Machine Learning. Students explore both theoretical foundations and practical implementations.",
+          "subtopics": [
+            "linear regression methodology",
+            "linear regression applications",
+            "linear regression analysis"
+          ],
+          "key_concepts": [
+            "linear regression"
+          ],
+          "practical_examples": [
+            "Apply linear regression to a real-world problem"
+          ]
+        }
+      ],
+      "learning_activities": [],
+      "suggested_readings": [],
+      "assessment_ideas": [],
+      "hours": 12
+    }
+  ],
+  "teaching_methodology": {
+    "teaching_methods": [
+      "Lectures with multimedia presentations",
+      "Interactive discussions and Q&A sessions",
+      "Hands-on laboratory exercises",
+      "Case study analysis",
+      "Group projects and collaborative learning"
+    ],
+    "learning_activities": [
+      "Problem-solving exercises",
+      "Self-study and reading assignments",
+      "Practical demonstrations",
+      "Peer learning and presentations",
+      "Online resources and tutorials"
+    ]
+  },
+  "assessment_pattern": {
+    "internal": {
+      "weightage": 40,
+      "components": {
+        "midterm_exam": 15,
+        "assignments": 5,
+        "quizzes": 5,
+        "class_participation": 5,
+        "lab_work": 10
+      }
+    },
+    "external": {
+      "weightage": 60,
+      "components": {
+        "final_exam": 60
+      }
+    }
+  },
+  "references": {
+    "textbooks": [],
+    "references": [],
+    "online_resources": []
+  },
+  "generated": true,
+  "generated_with_chaining": true,
+  "metadata": {
+    "domain": "engineering",
+    "generation_method": "staggered_chaining",
+    "num_units": 5,
+    "num_outcomes": 5,
+    "domain_detected": "machine_learning",
+    "course_level": "Intermediate/Undergraduate",
+    "industry_context": "Hot Skills: Deep Learning (PyTorch/TensorFlow), MLOps and Model Deployment, Feature Engineering, Computer Vision (OpenCV, YOLO), NLP (Transformers, BERT, GPT) | Top Employers: Google, Meta, Amazon, Microsoft | Recommended Certifications: TensorFlow Developer Certificate, AWS Machine Learning Specialty",
+    "refinement_enabled": false,
+    "program": "",
+    "year": ""
+  },
+  "quality_score": 75,
+  "quality_grade": "C (Satisfactory)",
+  "course_level": "Intermediate/Undergraduate",
+  "domain": "engineering",
+  "rubrics": {
+    "midterm_exam": {
+      "type": "exam",
+      "total_marks": 15,
+      "criteria": [
+        {
+          "name": "Conceptual Understanding",
+          "weightage": 40,
+          "levels": {
+            "Excellent (90-100%)": "Demonstrates deep understanding with accurate explanations",
+            "Good (75-89%)": "Shows good grasp of concepts with minor gaps",
+            "Satisfactory (60-74%)": "Basic understanding with some misconceptions",
+            "Needs Improvement (<60%)": "Limited understanding of core concepts"
+          }
+        },
+        {
+          "name": "Problem-Solving Skills",
+          "weightage": 35,
+          "levels": {
+            "Excellent (90-100%)": "Creative solutions with optimal approach",
+            "Good (75-89%)": "Correct solutions with standard methods",
+            "Satisfactory (60-74%)": "Partial solutions or inefficient approaches",
+            "Needs Improvement (<60%)": "Minimal problem-solving ability shown"
+          }
+        },
+        {
+          "name": "Application & Analysis",
+          "weightage": 25,
+          "levels": {
+            "Excellent (90-100%)": "Excellent application of theory to novel scenarios",
+            "Good (75-89%)": "Good application with logical reasoning",
+            "Satisfactory (60-74%)": "Basic application with guidance",
+            "Needs Improvement (<60%)": "Unable to apply concepts effectively"
+          }
+        }
+      ],
+      "instructions": "Each criterion is evaluated independently and weighted accordingly"
+    },
+    "assignments": {
+      "type": "assignment",
+      "total_marks": 5,
+      "criteria": [
+        {
+          "name": "Content Quality",
+          "weightage": 40,
+          "levels": {
+            "Excellent (9-10)": "Comprehensive, accurate, well-researched content",
+            "Good (7-8)": "Good content with minor gaps",
+            "Satisfactory (5-6)": "Acceptable content, some inaccuracies",
+            "Poor (0-4)": "Incomplete or inaccurate content"
+          }
+        },
+        {
+          "name": "Analysis & Critical Thinking",
+          "weightage": 30,
+          "levels": {
+            "Excellent (9-10)": "Insightful analysis with original perspectives",
+            "Good (7-8)": "Good analytical skills demonstrated",
+            "Satisfactory (5-6)": "Basic analysis present",
+            "Poor (0-4)": "Minimal analytical effort"
+          }
+        },
+        {
+          "name": "Organization & Presentation",
+          "weightage": 20,
+          "levels": {
+            "Excellent (9-10)": "Exceptionally well-organized and formatted",
+            "Good (7-8)": "Clear structure and formatting",
+            "Satisfactory (5-6)": "Adequate organization",
+            "Poor (0-4)": "Disorganized presentation"
+          }
+        },
+        {
+          "name": "Timely Submission",
+          "weightage": 10,
+          "levels": {
+            "On Time (10)": "Submitted before or on deadline",
+            "Late 1-2 days (7)": "10% penalty",
+            "Late 3-5 days (5)": "20% penalty",
+            "Very Late (0)": "Not accepted or heavy penalty"
+          }
+        }
+      ]
+    },
+    "quizzes": {
+      "type": "quiz",
+      "total_marks": 5,
+      "criteria": [
+        {
+          "name": "Accuracy",
+          "weightage": 70,
+          "description": "Correctness of answers",
+          "levels": {
+            "90-100%": "All or nearly all answers correct",
+            "75-89%": "Most answers correct",
+            "60-74%": "Majority correct with some errors",
+            "Below 60%": "Significant errors or incomplete"
+          }
+        },
+        {
+          "name": "Completeness",
+          "weightage": 30,
+          "description": "All questions attempted",
+          "levels": {
+            "100%": "All questions answered",
+            "75-99%": "Most questions answered",
+            "50-74%": "Some questions skipped",
+            "Below 50%": "Many questions unanswered"
+          }
+        }
+      ],
+      "duration": "15-30 minutes",
+      "format": "MCQ, Short Answer, or Fill in the Blanks"
+    },
+    "class_participation": {
+      "type": "participation",
+      "total_marks": 5,
+      "criteria": [
+        {
+          "name": "Attendance",
+          "weightage": 40,
+          "levels": {
+            "Excellent (90-100%)": "95%+ attendance",
+            "Good (75-89%)": "85-94% attendance",
+            "Satisfactory (60-74%)": "75-84% attendance",
+            "Poor (<60%)": "Below 75% attendance"
+          }
+        },
+        {
+          "name": "Active Participation",
+          "weightage": 35,
+          "levels": {
+            "Excellent": "Regular contributions, asks thoughtful questions",
+            "Good": "Participates frequently",
+            "Satisfactory": "Occasional participation",
+            "Poor": "Rarely participates"
+          }
+        },
+        {
+          "name": "Preparation & Engagement",
+          "weightage": 25,
+          "levels": {
+            "Excellent": "Always prepared, highly engaged",
+            "Good": "Usually prepared and engaged",
+            "Satisfactory": "Sometimes prepared",
+            "Poor": "Often unprepared or disengaged"
+          }
+        }
+      ],
+      "evaluation_period": "Throughout the semester"
+    },
+    "lab_work": {
+      "type": "lab_work",
+      "total_marks": 10,
+      "criteria": [
+        {
+          "name": "Experimental Setup",
+          "weightage": 20,
+          "levels": {
+            "Excellent": "Proper setup with safety considerations",
+            "Good": "Correct setup with minor issues",
+            "Satisfactory": "Setup functional but needs improvement",
+            "Poor": "Incorrect or unsafe setup"
+          }
+        },
+        {
+          "name": "Procedure Execution",
+          "weightage": 30,
+          "levels": {
+            "Excellent": "Follows procedure accurately and efficiently",
+            "Good": "Generally correct with minor deviations",
+            "Satisfactory": "Requires guidance, some errors",
+            "Poor": "Significant procedural errors"
+          }
+        },
+        {
+          "name": "Data Collection & Analysis",
+          "weightage": 25,
+          "levels": {
+            "Excellent": "Accurate data with insightful analysis",
+            "Good": "Good data collection and reasonable analysis",
+            "Satisfactory": "Basic data with limited analysis",
+            "Poor": "Inaccurate data or no analysis"
+          }
+        },
+        {
+          "name": "Lab Report",
+          "weightage": 25,
+          "levels": {
+            "Excellent": "Comprehensive, well-written report",
+            "Good": "Complete report with minor gaps",
+            "Satisfactory": "Adequate report, some sections weak",
+            "Poor": "Incomplete or poorly written"
+          }
+        }
+      ],
+      "submission": "Lab notebook and typed report required"
+    },
+    "final_exam": {
+      "type": "exam",
+      "total_marks": 60,
+      "criteria": [
+        {
+          "name": "Conceptual Understanding",
+          "weightage": 40,
+          "levels": {
+            "Excellent (90-100%)": "Demonstrates deep understanding with accurate explanations",
+            "Good (75-89%)": "Shows good grasp of concepts with minor gaps",
+            "Satisfactory (60-74%)": "Basic understanding with some misconceptions",
+            "Needs Improvement (<60%)": "Limited understanding of core concepts"
+          }
+        },
+        {
+          "name": "Problem-Solving Skills",
+          "weightage": 35,
+          "levels": {
+            "Excellent (90-100%)": "Creative solutions with optimal approach",
+            "Good (75-89%)": "Correct solutions with standard methods",
+            "Satisfactory (60-74%)": "Partial solutions or inefficient approaches",
+            "Needs Improvement (<60%)": "Minimal problem-solving ability shown"
+          }
+        },
+        {
+          "name": "Application & Analysis",
+          "weightage": 25,
+          "levels": {
+            "Excellent (90-100%)": "Excellent application of theory to novel scenarios",
+            "Good (75-89%)": "Good application with logical reasoning",
+            "Satisfactory (60-74%)": "Basic application with guidance",
+            "Needs Improvement (<60%)": "Unable to apply concepts effectively"
+          }
+        }
+      ],
+      "instructions": "Each criterion is evaluated independently and weighted accordingly"
+    }
+  },
+  "copo_summary": "Course outcomes (CO1, CO2, CO3, CO4, CO5) map to program outcomes (PO1) with strong alignment in technical competency and problem-solving skills."
+}

@@ -69,8 +69,13 @@ You will generate each section one at a time. The user will provide accumulated 
         },
         "units": {
             "temperature": 0.4,  # Allow variety in detailed content
-            "max_tokens": 6000,  # Significantly increased for comprehensive unit content
+            "max_tokens": 8000,  # Must accommodate rich topic content (descriptions, subtopics, examples)
             "description": "Units need extensive detailed topics with descriptions, subtopics, examples"
+        },
+        "single_unit": {
+            "temperature": 0.4,
+            "max_tokens": 2500,  # Per-unit generation: focused output with rich detail
+            "description": "Single unit with 5-6 richly detailed topics"
         },
         "references": {
             "temperature": 0.1,  # Very low - must cite real resources
@@ -216,10 +221,13 @@ Requirements:
     def get_units_prompt(context: Dict[str, Any]) -> str:
         """
         Generate user prompt for unit-wise syllabus section - University format.
+        Generates RICH topic content with descriptions, subtopics, key concepts, and examples.
+        Keywords are treated as thematic anchors that must be expanded into real subtopics.
         """
         keywords = context.get('keywords', [])
         num_units = context.get('num_units', 5)
         course_title = context.get('course_title', 'Untitled Course')
+        domain = context.get('domain', 'engineering')
         
         # Get hours per unit from credits
         credits = context.get('credits', '3-1-0')
@@ -242,94 +250,169 @@ Requirements:
                 if unit_num and topics:
                     hints.append(f"Unit {unit_num}: {', '.join(topics[:6])}")
             if hints:
-                unit_structure = "\n\n**USER-PROVIDED UNIT STRUCTURE (USE THESE):**\n" + "\n".join(hints)
+                unit_structure = "\n\n**USER-PROVIDED UNIT STRUCTURE (USE THESE AS UNIT THEMES):**\n" + "\n".join(hints)
         
-        # Distribute keywords across units
-        keyword_hints = ""
-        if keywords and not unit_topics:
-            kw_per_unit = max(1, len(keywords) // num_units)
-            keyword_hints = "\n\n**KEYWORD DISTRIBUTION (use for unit themes):**"
-            for i in range(num_units):
-                start = i * kw_per_unit
-                end = start + kw_per_unit if i < num_units - 1 else len(keywords)
-                unit_kw = keywords[start:end] if start < len(keywords) else []
-                if unit_kw:
-                    keyword_hints += f"\n- Unit {i+1}: {', '.join(unit_kw)}"
-        
-        return f"""Generate a CONCISE university-style syllabus for:
+        return f"""Generate a comprehensive university-style syllabus for:
 
 Course: {course_title}
+Domain: {domain}
 Units: {num_units}
 Hours/Unit: {hours_per_unit}
 
-**KEYWORDS (use these as topic names):**
-{', '.join(keywords) if keywords else 'Not provided'}{unit_structure}{keyword_hints}
+**USER KEYWORDS:** {', '.join(keywords) if keywords else 'Not provided'}{unit_structure}
 
-**CRITICAL RULES:**
-1. Unit titles: 5-10 words, using keywords
-2. Topics: 8-10 SHORT names per unit (3-8 words each)
-3. Use the keywords provided - DO NOT use generic names
-4. NO descriptions, subtopics, or examples - just topic names
-5. Cover ALL major aspects of each unit's theme
+**STEP 1 — KEYWORD EXPANSION (MANDATORY):**
+Each keyword is a THEMATIC ANCHOR, not a literal topic name. Before generating units, mentally expand each keyword into the real subtopics that any {domain} professor would cover under that theme.
+
+For example, in a Machine Learning course:
+- Keyword "introduction" → EXPAND to: hypothesis space, bias-variance tradeoff, overfitting vs underfitting, train-test-validation split, no-free-lunch theorem, types of learning (supervised/unsupervised/reinforcement)
+- Keyword "regression" → EXPAND to: ordinary least squares, gradient descent, polynomial regression, regularization (L1/L2), residual analysis, multicollinearity
+- Keyword "neural networks" → EXPAND to: perceptron model, backpropagation algorithm, activation functions (ReLU/sigmoid/tanh), vanishing gradients, weight initialization, batch normalization
+- Keyword "deep learning" → EXPAND to: CNN architectures (LeNet/VGG/ResNet), transfer learning, data augmentation, GPU training, model compression
+
+You MUST apply this expansion logic to the user's actual keywords for "{course_title}". Each keyword should produce 5-6 distinct, specific subtopics that are NOT just rewordings of the keyword itself.
+
+**STEP 2 — UNIT CONSTRUCTION RULES:**
+1. Each keyword (or group of related keywords) becomes ONE unit. The unit title should capture the theme, not repeat the keyword literally.
+2. The topics within that unit are the EXPANDED subtopics from Step 1 — the real, specific things a student would learn.
+3. Topics: 5-6 SPECIFIC sub-topics per unit, each with FULL details.
+4. Each topic must be a specific sub-topic that stands alone — something you could write a 2-hour lecture about.
+5. FORBIDDEN WORDS in topic names: "concepts", "fundamentals", "theory", "basics", "introduction to", "principles", "techniques and methods", "overview", "essentials", "foundations"
+6. DIVERSITY RULE: No two topics in the same unit may start with the same word or phrase.
+7. NO REPETITION across units: If "overfitting" is covered in Unit 1, it must NOT appear again in Unit 3. Each topic in the entire syllabus must be unique.
+8. Every topic MUST include: description (2-3 sentences), subtopics (3-4 items), key_concepts (2-3 items), practical_examples (1-2 items).
 
 Respond with JSON:
 {{
   "units": [
     {{
       "unit_number": 1,
-      "title": "[Title from keywords - 5-10 words]",
+      "title": "[Specific descriptive title - 5-10 words]",
       "topics": [
-        {{"topic": "[Topic from keywords - 3-8 words]"}},
-        {{"topic": "[Topic from keywords - 3-8 words]"}},
-        {{"topic": "[Topic from keywords - 3-8 words]"}},
-        {{"topic": "[Topic from keywords - 3-8 words]"}},
-        {{"topic": "[Topic from keywords - 3-8 words]"}},
-        {{"topic": "[Topic from keywords - 3-8 words]"}},
-        {{"topic": "[Topic from keywords - 3-8 words]"}},
-        {{"topic": "[Topic from keywords - 3-8 words]"}}
+        {{
+          "topic": "[Specific topic name - 5-12 words]",
+          "description": "[2-3 sentence explanation of what this topic covers and why it matters]",
+          "subtopics": ["[specific subtopic 1]", "[specific subtopic 2]", "[specific subtopic 3]"],
+          "key_concepts": ["[concept 1]", "[concept 2]"],
+          "practical_examples": ["[real-world application or exercise]"]
+        }}
       ],
       "hours": {hours_per_unit}
     }}
   ]
 }}
 
-EXAMPLE for "Machine Learning, Neural Networks, Deep Learning, CNN, RNN":
+**EXAMPLE — User keywords: "Introduction, Regression, Neural Networks"**
+Notice how "Introduction" is NOT used as a topic name. Instead it is EXPANDED into the real foundational ML topics:
+
 {{
   "units": [
     {{
       "unit_number": 1,
-      "title": "Introduction to Machine Learning Fundamentals",
+      "title": "Machine Learning Landscape and Learning Frameworks",
       "topics": [
-        {{"topic": "Machine learning concepts and types"}},
-        {{"topic": "Supervised and unsupervised learning"}},
-        {{"topic": "Training and validation techniques"}},
-        {{"topic": "Feature engineering methods"}},
-        {{"topic": "Model evaluation metrics"}},
-        {{"topic": "Bias-variance tradeoff"}},
-        {{"topic": "Overfitting and underfitting"}},
-        {{"topic": "Cross-validation techniques"}}
+        {{
+          "topic": "Supervised, unsupervised, and reinforcement learning paradigms",
+          "description": "Classifies machine learning approaches by the nature of training signal. Students learn when to apply each paradigm and how to identify the learning type for a given problem.",
+          "subtopics": ["Labeled vs unlabeled data pipelines", "Reward-based learning in sequential decisions", "Semi-supervised and self-supervised approaches"],
+          "key_concepts": ["Hypothesis space", "Inductive bias"],
+          "practical_examples": ["Classifying real-world problems into supervised/unsupervised categories"]
+        }},
+        {{
+          "topic": "Bias-variance tradeoff and model complexity analysis",
+          "description": "Explains how model complexity affects prediction error through the decomposition into bias and variance components. Students learn to diagnose whether a model suffers from underfitting or overfitting.",
+          "subtopics": ["Error decomposition into bias, variance, and noise", "Learning curves for diagnosing fit quality", "Model complexity vs generalization gap"],
+          "key_concepts": ["Underfitting vs overfitting", "Irreducible error"],
+          "practical_examples": ["Plotting learning curves on polynomial regression with varying degrees"]
+        }},
+        {{
+          "topic": "Train-test-validation split and data leakage prevention",
+          "description": "Covers proper data partitioning strategies for model development and evaluation. Focuses on common pitfalls like data leakage, look-ahead bias, and information bleeding across splits.",
+          "subtopics": ["Holdout method and stratified splitting", "K-fold cross-validation design", "Time-series aware splitting"],
+          "key_concepts": ["Data leakage", "Generalization error estimation"],
+          "practical_examples": ["Detecting and preventing data leakage in a credit scoring pipeline"]
+        }},
+        {{
+          "topic": "Performance metrics for classification and regression tasks",
+          "description": "Surveys evaluation metrics beyond accuracy, including precision-recall for imbalanced classes and RMSE/MAE for regression. Students learn metric selection based on business objectives.",
+          "subtopics": ["Confusion matrix and ROC-AUC analysis", "Precision-recall tradeoff for rare events", "RMSE, MAE, and R-squared interpretation"],
+          "key_concepts": ["Type I vs Type II errors", "Threshold optimization"],
+          "practical_examples": ["Choosing the right metric for fraud detection vs spam filtering"]
+        }},
+        {{
+          "topic": "Feature engineering and data preprocessing pipelines",
+          "description": "Covers practical data preparation including missing value imputation, encoding categorical variables, and feature scaling. Students build reproducible preprocessing pipelines.",
+          "subtopics": ["One-hot and ordinal encoding strategies", "Normalization vs standardization", "Handling missing data with imputation"],
+          "key_concepts": ["Feature-target relationship", "Data distribution assumptions"],
+          "practical_examples": ["Building a scikit-learn pipeline for Titanic survival prediction"]
+        }}
       ],
-      "hours": 10
-    }},
-    {{
-      "unit_number": 2,
-      "title": "Neural Networks Architecture and Training",
-      "topics": [
-        {{"topic": "Artificial neural network basics"}},
-        {{"topic": "Perceptrons and multilayer networks"}},
-        {{"topic": "Activation functions and layers"}},
-        {{"topic": "Backpropagation algorithm"}},
-        {{"topic": "Gradient descent optimization"}},
-        {{"topic": "Weight initialization techniques"}},
-        {{"topic": "Batch normalization methods"}},
-        {{"topic": "Regularization and dropout"}}
-      ],
-      "hours": 10
+      "hours": {hours_per_unit}
     }}
   ]
 }}
 
-Generate exactly {num_units} units with 8-10 concise topic names each from the keywords."""
+Generate exactly {num_units} units with 5-6 richly detailed topics each. Remember: EXPAND each keyword into real subtopics — never just revolve around the keyword itself."""
+
+    @staticmethod
+    def get_single_unit_prompt(context: Dict[str, Any]) -> str:
+        """
+        Generate a focused prompt for ONE unit at a time.
+        This produces much richer content since the LLM budget is focused on ~5 topics.
+        """
+        unit_number = context.get('unit_number', 1)
+        unit_theme = context.get('unit_theme', '')
+        unit_keywords = context.get('unit_keywords', [])
+        course_title = context.get('course_title', 'Untitled Course')
+        domain = context.get('domain', 'engineering')
+        hours_per_unit = context.get('hours_per_unit', 10)
+        previous_units = context.get('previous_units', [])
+
+        # Build dedup context from previously generated units
+        dedup_section = ""
+        if previous_units:
+            covered = []
+            for pu in previous_units:
+                title = pu.get('title', '')
+                topics = [t.get('topic', '') if isinstance(t, dict) else str(t) for t in pu.get('topics', [])]
+                covered.append(f"Unit {pu.get('unit_number')}: {title} -- {', '.join(topics)}")
+            dedup_section = "\n\n**ALREADY COVERED (DO NOT REPEAT):**\n" + "\n".join(covered)
+
+        kw_str = ', '.join(unit_keywords) if unit_keywords else unit_theme
+
+        return f"""Generate Unit {unit_number} for a university course.
+
+Course: {course_title}
+Domain: {domain}
+Unit Number: {unit_number}
+Unit Theme/Keywords: {kw_str}
+Hours: {hours_per_unit}{dedup_section}
+
+**INSTRUCTIONS:**
+1. The keywords above are THEMATIC ANCHORS -- expand each into the real subtopics a {domain} professor would teach.
+2. Generate exactly 5-6 SPECIFIC topics. Each topic is something you could deliver a full 2-hour lecture on.
+3. Every topic MUST have: a 2-3 sentence description, 3-4 subtopics, 2-3 key concepts, and 1-2 practical examples.
+4. Topic names must be SPECIFIC (e.g., "Gradient descent optimization and convergence analysis"), never generic (e.g., "Introduction to optimization").
+5. FORBIDDEN in topic names: "concepts", "fundamentals", "basics", "introduction to", "overview", "essentials".
+6. No two topics may start with the same word.
+
+Respond with JSON:
+{{
+  "unit_number": {unit_number},
+  "title": "[Descriptive unit title -- 5-10 words]",
+  "topics": [
+    {{
+      "topic": "[Specific topic name -- 5-12 words]",
+      "description": "[2-3 sentences explaining what this covers and why it matters]",
+      "subtopics": ["[specific subtopic 1]", "[specific subtopic 2]", "[specific subtopic 3]"],
+      "key_concepts": ["[concept 1]", "[concept 2]"],
+      "practical_examples": ["[real-world application or exercise]"]
+    }}
+  ],
+  "hours": {hours_per_unit}
+}}
+
+Generate 5-6 richly detailed topics. Every field is REQUIRED -- do not skip descriptions or subtopics."""
 
     @classmethod
     def get_references_prompt(cls, context: Dict[str, Any]) -> str:
@@ -421,6 +504,7 @@ Requirements:
             "outcomes": cls.get_outcomes_prompt,
             "learning_outcomes": cls.get_outcomes_prompt,
             "units": cls.get_units_prompt,
+            "single_unit": cls.get_single_unit_prompt,
             "references": cls.get_references_prompt,
         }
         

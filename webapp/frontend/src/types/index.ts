@@ -13,10 +13,18 @@ export interface LearningOutcome {
   bloom_level: string;
 }
 
+export interface UnitTopic {
+  topic: string;
+  description?: string;
+  subtopics?: string[];
+  key_concepts?: string[];
+  practical_examples?: string[];
+}
+
 export interface Unit {
   unit_number: number | string;
   title: string;
-  topics: string[];
+  topics: (string | UnitTopic)[];
   hours?: number;
 }
 

@@ -3,7 +3,7 @@ import { useSyllabus } from '../context/SyllabusContext';
 import { generateSyllabus, exportPDF } from '../services/api';
 import { SyllabusData, LearningOutcome, GenerateRequest } from '../types';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { ChevronRight, Activity, Download, Edit2, Save, Cpu, FlaskConical, Palette, Briefcase, Sparkles } from 'lucide-react';
+import { ChevronRight, ChevronDown, Activity, Download, Edit2, Save, Cpu, FlaskConical, Palette, Briefcase, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import './GeneratePage.css';
@@ -70,6 +70,7 @@ const GeneratePage: React.FC = () => {
   const [generatedData, setGeneratedData] = useState<SyllabusData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [activePreset, setActivePreset] = useState<string>('engineering');
+  const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     course_title: '',
@@ -369,7 +370,7 @@ const GeneratePage: React.FC = () => {
                               </div>
                               <textarea
                                 className="inline-input w-full"
-                                value={unit.topics ? unit.topics.join(', ') : ''}
+                                value={unit.topics ? unit.topics.map((t: any) => typeof t === 'object' ? t.topic : t).join(', ') : ''}
                                 onChange={(e) => handleUnitChange(idx, 'topics', e.target.value)}
                                 rows={2}
                               />
@@ -380,10 +381,93 @@ const GeneratePage: React.FC = () => {
                                 <span className="unit-num">Unit {unit.unit_number}</span>
                                 <strong>{unit.title}</strong>
                               </div>
-                              <div className="topic-tags">
-                                {unit.topics?.map((topic, ti) => (
-                                  <span key={ti} className="topic-tag">{topic}</span>
-                                ))}
+                              <div className="topic-cards">
+                                {unit.topics?.map((topic, ti) => {
+                                  const topicName = typeof topic === 'object' ? topic.topic : topic;
+                                  const topicObj = typeof topic === 'object' ? topic : null;
+                                  const hasDetails = topicObj && (
+                                    (topicObj.description && topicObj.description.length > 0) ||
+                                    (topicObj.subtopics && topicObj.subtopics.length > 0) ||
+                                    (topicObj.key_concepts && topicObj.key_concepts.length > 0) ||
+                                    (topicObj.practical_examples && topicObj.practical_examples.length > 0)
+                                  );
+                                  const topicKey = `${idx}-${ti}`;
+                                  const isExpanded = expandedTopic === topicKey;
+                                  return (
+                                    <motion.div
+                                      key={ti}
+                                      className={`topic-card${hasDetails ? ' expandable' : ''}`}
+                                      initial={{ opacity: 0, y: 8 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{ delay: ti * 0.04, duration: 0.3 }}
+                                    >
+                                      <button
+                                        className="topic-card-header"
+                                        onClick={() => hasDetails && setExpandedTopic(isExpanded ? null : topicKey)}
+                                        disabled={!hasDetails}
+                                      >
+                                        <span className="topic-card-title">{topicName}</span>
+                                        {hasDetails && (
+                                          <motion.span
+                                            animate={{ rotate: isExpanded ? 180 : 0 }}
+                                            transition={{ duration: 0.25 }}
+                                            className="topic-chevron"
+                                          >
+                                            <ChevronDown size={16} />
+                                          </motion.span>
+                                        )}
+                                      </button>
+                                      <AnimatePresence initial={false}>
+                                        {hasDetails && isExpanded && (
+                                          <motion.div
+                                            className="topic-card-body"
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                          >
+                                            {topicObj!.description && (
+                                              <div className="topic-section">
+                                                <span className="topic-section-label">Description</span>
+                                                <p className="topic-description">{topicObj!.description}</p>
+                                              </div>
+                                            )}
+                                            {topicObj!.subtopics && topicObj!.subtopics.length > 0 && (
+                                              <div className="topic-section">
+                                                <span className="topic-section-label">Subtopics</span>
+                                                <ul className="topic-list">
+                                                  {topicObj!.subtopics.map((st, si) => (
+                                                    <li key={si}>{st}</li>
+                                                  ))}
+                                                </ul>
+                                              </div>
+                                            )}
+                                            {topicObj!.key_concepts && topicObj!.key_concepts.length > 0 && (
+                                              <div className="topic-section">
+                                                <span className="topic-section-label">Key Concepts</span>
+                                                <div className="topic-chips">
+                                                  {topicObj!.key_concepts.map((kc, ki) => (
+                                                    <span key={ki} className="topic-chip">{kc}</span>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            )}
+                                            {topicObj!.practical_examples && topicObj!.practical_examples.length > 0 && (
+                                              <div className="topic-section">
+                                                <span className="topic-section-label">Examples</span>
+                                                <ul className="topic-list">
+                                                  {topicObj!.practical_examples.map((ex, ei) => (
+                                                    <li key={ei}>{ex}</li>
+                                                  ))}
+                                                </ul>
+                                              </div>
+                                            )}
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+                                    </motion.div>
+                                  );
+                                })}
                               </div>
                             </>
                           )}

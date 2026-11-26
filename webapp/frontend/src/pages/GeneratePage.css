@@ -331,6 +331,135 @@
   border: 1px solid rgba(67, 56, 202, 0.1);
 }
 
+.topic-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.topic-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.topic-card.expandable:hover {
+  border-color: rgba(67, 56, 202, 0.3);
+  box-shadow: 0 2px 8px rgba(67, 56, 202, 0.08);
+}
+
+.topic-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-align: left;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.topic-card-header:disabled {
+  cursor: default;
+}
+
+.topic-card-header:not(:disabled):hover {
+  background: rgba(67, 56, 202, 0.04);
+}
+
+.topic-card-title {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.topic-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.topic-card-body {
+  overflow: hidden;
+  padding: 0 0.9rem 0.75rem;
+}
+
+.topic-section {
+  margin-top: 0.5rem;
+}
+
+.topic-section-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-indigo);
+  margin-bottom: 0.3rem;
+}
+
+.topic-description {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.topic-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.topic-list li {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  padding-left: 0.9rem;
+  position: relative;
+}
+
+.topic-list li::before {
+  content: '';
+  position: absolute;
+  left: 0.2rem;
+  top: 0.5em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-indigo);
+  opacity: 0.6;
+}
+
+.topic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.topic-chip {
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(67, 56, 202, 0.08);
+  color: var(--accent-indigo);
+  border: 1px solid rgba(67, 56, 202, 0.15);
+}
+
 .unit-edit {
   display: flex;
   flex-direction: column;
