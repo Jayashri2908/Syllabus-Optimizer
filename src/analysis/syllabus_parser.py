@@ -56,7 +56,7 @@ except ImportError:
     OCR_AVAILABLE = False
     logging.info("OCR libraries not installed. Scanned PDFs won't be supported. Install with: pip install pytesseract pdf2image Pillow")
 
-from ..utils.text_processing import TextProcessor
+from ..utils.text_processing import TextProcessor, normalize_ocr_text, roman_to_int
 
 # Import AI model for LLM-based parsing fallback
 try:
@@ -67,15 +67,43 @@ except ImportError:
     logging.info("AI model not available for LLM-based parsing fallback")
 
 
+# Custom exception classes raised by the parser so the API layer can
+# surface actionable messages to the user instead of bare 500s.
+class PDFParsingError(Exception):
+    """Raised when a PDF cannot be opened or is structurally invalid."""
+    pass
+
+
+class NoTextExtractedError(Exception):
+    """Raised when every extraction method (incl. OCR) returned zero useful text."""
+    pass
+
+
 class SyllabusParser:
     """Parse syllabus documents and extract structured information"""
-    
-    def __init__(self, use_llm_fallback: bool = True):
+
+    def __init__(self, use_llm_fallback: bool = True, ocr_engine: str = "auto",
+                 ocr_dpi: int = 300, ocr_min_chars_per_page: int = 50):
+        """
+        Args:
+            use_llm_fallback: If True, fall back to LLM-based extraction when
+                the regex pass yields too few units/outcomes.
+            ocr_engine: 'auto' (default), 'tesseract', 'easyocr', 'online', or 'none'.
+                'auto' picks the fastest available engine for the platform.
+            ocr_dpi: Rendering DPI used by PyMuPDF before running OCR.
+                Higher = better quality, slower. 300 is the sweet spot.
+            ocr_min_chars_per_page: Average chars/page below which OCR is triggered.
+        """
         self.logger = logging.getLogger(__name__)
         self.text_processor = TextProcessor()
         self.use_llm_fallback = use_llm_fallback and LLM_AVAILABLE
         self.ai_model = None
-        
+        self.ocr_dpi = ocr_dpi
+        self.ocr_min_chars_per_page = ocr_min_chars_per_page
+        self.ocr_engine = self._resolve_ocr_engine(ocr_engine)
+        # Last-call diagnostics populated by _parse_pdf.
+        self.last_diagnostics: Dict[str, Any] = {}
+
         if self.use_llm_fallback:
             try:
                 self.ai_model = OpenRouterModel()
@@ -85,6 +113,17 @@ class SyllabusParser:
             except Exception as e:
                 self.logger.warning(f"Failed to initialize AI model for parsing: {e}")
                 self.use_llm_fallback = False
+
+    @staticmethod
+    def _resolve_ocr_engine(requested: str) -> str:
+        """Pick an OCR engine that's actually available on this machine."""
+        if requested == "auto":
+            if OCR_AVAILABLE:
+                return "tesseract"  # fastest, best for clean printed text
+            if EASYOCR_AVAILABLE:
+                return "easyocr"
+            return "online"
+        return requested
         
     def parse_file(self, file_path: str) -> Dict[str, Any]:
         """
@@ -115,84 +154,229 @@ class SyllabusParser:
         return self._extract_structure(text)
         
     def _parse_pdf(self, file_path: Path) -> str:
-        """Extract text from PDF, using table-aware extraction when available"""
-        text = ""
+        """
+        Extract text from a PDF using a layered strategy:
 
+        1. Validate PDF integrity (PyMuPDF can read PDFs other libs choke on).
+        2. PyMuPDF native text extraction (fast, robust to malformed files).
+        3. pdfplumber with table-aware reconstruction (best for native PDFs
+           whose syllabus is inside a table).
+        4. pypdf (last resort for ancient PDFs).
+        5. OCR (Tesseract -> EasyOCR -> OCR.space) if every text pass below
+           the configured chars-per-page threshold.
+
+        Populates ``self.last_diagnostics`` so the API layer can tell the
+        user which engine actually produced the text and what to do next.
+        """
         if pdfplumber is None and pypdf is None:
             raise ImportError("PDF libraries not installed. Please install pypdf and pdfplumber.")
 
+        diagnostics: Dict[str, Any] = {
+            "file": str(file_path),
+            "file_size_bytes": file_path.stat().st_size if file_path.exists() else 0,
+            "engines_tried": [],
+            "engine_used": None,
+            "page_count": None,
+            "chars_per_page": {},
+            "ocr_used": False,
+            "ocr_engine": None,
+            "warnings": [],
+        }
+        self.last_diagnostics = diagnostics
+
         self.logger.info(f"Parsing PDF: {file_path}")
+        text = ""
+        engines = []
 
-        try:
-            # Try pdfplumber first (better for tables)
-            if pdfplumber:
-                with pdfplumber.open(file_path) as pdf:
-                    self.logger.info(f"PDF has {len(pdf.pages)} pages")
-                    for i, page in enumerate(pdf.pages):
-                        page_text = self._extract_page_text(page)
-                        if page_text:
-                            text += page_text + "\n"
-                            self.logger.debug(f"Page {i+1}: extracted {len(page_text)} chars")
-                        else:
-                            self.logger.warning(f"Page {i+1}: no text extracted")
-                self.logger.info(f"pdfplumber extracted total {len(text)} chars")
-            else:
-                raise ImportError("pdfplumber not installed")
+        # -- 1. Integrity check -------------------------------------------------
+        page_count = self._pdf_page_count(file_path)
+        if page_count == 0:
+            diagnostics["warnings"].append(
+                "PDF has 0 readable pages — file may be corrupt or empty"
+            )
+            raise PDFParsingError(
+                "This file appears to be corrupt: no readable pages were found. "
+                "Please re-export the PDF or supply the original document."
+            )
 
-        except Exception as e:
-            self.logger.warning(f"pdfplumber failed or missing, trying pypdf: {e}")
+        diagnostics["page_count"] = page_count
 
-            # Fallback to pypdf
-            if pypdf:
-                try:
-                    with open(file_path, 'rb') as f:
-                        pdf_reader = pypdf.PdfReader(f)
-                        self.logger.info(f"pypdf: PDF has {len(pdf_reader.pages)} pages")
-                        for i, page in enumerate(pdf_reader.pages):
-                            page_text = page.extract_text()
-                            if page_text:
-                                text += page_text + "\n"
-                                self.logger.debug(f"Page {i+1}: extracted {len(page_text)} chars")
-                    self.logger.info(f"pypdf extracted total {len(text)} chars")
-                except Exception as e2:
-                    self.logger.error(f"PDF parsing failed: {e2}")
-                    raise
-            else:
-                if not text: # Only raise if we haven't extracted anything yet and both failed/missing
-                     raise ImportError("pypdf not installed and pdfplumber failed") from e
-
-        # If no text extracted or very minimal text (likely garbage from scanned PDF), try OCR
-        # Using 50 chars as threshold since scanned PDFs often extract some whitespace/garbage
-        extracted_text_length = len(text.strip())
-        if extracted_text_length < 50:
-            self.logger.info(f"Minimal text extracted ({extracted_text_length} chars), attempting OCR for scanned PDF...")
-            if EASYOCR_AVAILABLE:
-                self.logger.info("Using local EasyOCR (pip-only, no Poppler needed)...")
-                ocr_text = self._ocr_easyocr(file_path)
-            elif OCR_AVAILABLE:
-                self.logger.info("Using local Tesseract OCR...")
-                ocr_text = self._ocr_pdf(file_path)
-            else:
-                # Try online OCR if local OCR is not available
-                self.logger.info("Local OCR not available, attempting online OCR (OCR.space API)...")
-                ocr_text = self._ocr_online(file_path)
-            
-            # Use OCR text if it has more content than original extraction
-            if len(ocr_text.strip()) > extracted_text_length:
-                self.logger.info(f"OCR extracted {len(ocr_text)} chars (more than original {extracted_text_length})")
-                text = ocr_text
-            else:
-                self.logger.warning(f"OCR did not improve extraction (got {len(ocr_text.strip())} chars)")
-            
-        if len(text.strip()) > 0:
-            self.logger.info(f"PDF extraction successful: {len(text.strip())} total characters")
+        # -- 2. PyMuPDF native text ---------------------------------------------
+        pymupdf_text, pymupdf_chars = self._extract_with_pymupdf(file_path)
+        engines.append("pymupdf")
+        if pymupdf_chars > 0:
+            diagnostics["chars_per_page"]["pymupdf"] = pymupdf_chars
+            if pymupdf_chars >= self.ocr_min_chars_per_page * max(page_count, 1):
+                text = pymupdf_text
+                diagnostics["engine_used"] = "pymupdf"
+                self.logger.info(f"PyMuPDF extracted {pymupdf_chars} chars — using it as primary source")
+                diagnostics["engines_tried"].append("pymupdf:ok")
+                return normalize_ocr_text(text)
+            self.logger.info(
+                f"PyMuPDF returned only {pymupdf_chars} chars from {page_count} page(s); "
+                "pdfplumber table-aware pass next"
+            )
+            diagnostics["engines_tried"].append("pymupdf:low")
         else:
-            self.logger.error("Failed to extract text from PDF (likely a scanned document)")
-            if not OCR_AVAILABLE and not EASYOCR_AVAILABLE:
-                self.logger.error("Install OCR to handle scanned PDFs: pip install easyocr pymupdf")
-                self.logger.error("Alternatively, install Tesseract: pip install pytesseract pdf2image Pillow")
-                
-        return text
+            diagnostics["engines_tried"].append("pymupdf:empty")
+
+        # -- 3. pdfplumber with table-reconstruction ----------------------------
+        if pdfplumber:
+            plumber_text, plumber_chars = self._extract_with_pdfplumber(file_path)
+            engines.append("pdfplumber")
+            diagnostics["chars_per_page"]["pdfplumber"] = plumber_chars
+            if plumber_chars > pymupdf_chars:
+                text = plumber_text
+                diagnostics["engine_used"] = "pdfplumber"
+                self.logger.info(
+                    f"pdfplumber recovered {plumber_chars} chars (more than PyMuPDF's {pymupdf_chars})"
+                )
+                diagnostics["engines_tried"].append("pdfplumber:ok")
+                return normalize_ocr_text(text)
+            diagnostics["engines_tried"].append("pdfplumber:no-improvement")
+
+        # -- 4. pypdf last-resort -----------------------------------------------
+        if pypdf:
+            pypdf_text, pypdf_chars = self._extract_with_pypdf(file_path)
+            engines.append("pypdf")
+            diagnostics["chars_per_page"]["pypdf"] = pypdf_chars
+            if pypdf_chars > max(pymupdf_chars, len(text)):
+                text = pypdf_text
+                diagnostics["engine_used"] = "pypdf"
+                self.logger.info(f"pypdf recovered {pypdf_chars} chars")
+                diagnostics["engines_tried"].append("pypdf:ok")
+                return normalize_ocr_text(text)
+            diagnostics["engines_tried"].append("pypdf:no-improvement")
+
+        # -- 5. OCR --------------------------------------------------------------
+        self.logger.info(
+            f"Native text extraction low ({len(text.strip())} chars from {page_count} pages). "
+            f"Falling back to OCR (engine={self.ocr_engine}, dpi={self.ocr_dpi})."
+        )
+        diagnostics["ocr_used"] = True
+        # Aggressive normalization on OCR output (it has wrapped/duplicated lines)
+        ocr_text, ocr_engine_used = self._ocr_with_engine(file_path)
+        diagnostics["ocr_engine"] = ocr_engine_used
+        diagnostics["chars_per_page"]["ocr"] = len(ocr_text.strip())
+
+        if len(ocr_text.strip()) > len(text.strip()):
+            diagnostics["engine_used"] = f"ocr:{ocr_engine_used}"
+            text = ocr_text
+            self.logger.info(f"OCR ({ocr_engine_used}) extracted {len(text.strip())} chars")
+        else:
+            diagnostics["warnings"].append(
+                f"OCR ({ocr_engine_used}) returned no improvement over native extraction"
+            )
+            self.logger.warning("OCR did not yield more text than native extraction")
+
+        if len(text.strip()) == 0:
+            diagnostics["warnings"].append("No text recovered from PDF by any method")
+            raise NoTextExtractedError(
+                "Could not extract text from this PDF. It may be an image-only scan; "
+                "ensure Tesseract OCR or EasyOCR is installed and the file is not "
+                "password-protected."
+            )
+
+        return normalize_ocr_text(text)
+
+    # ------------------------------------------------------------------ #
+    # Layered extractor helpers                                          #
+    # ------------------------------------------------------------------ #
+    def _pdf_page_count(self, file_path: Path) -> int:
+        """Return the number of pages a PDF has, or 0 if it cannot be opened."""
+        # PyMuPDF is the most tolerant PDF engine we have available.
+        try:
+            if EASYOCR_AVAILABLE:
+                with pymupdf.open(file_path) as doc:
+                    return len(doc)
+        except Exception as e:
+            self.logger.warning(f"PyMuPDF could not open PDF for page count: {e}")
+
+        # Fallback: pdfplumber
+        if pdfplumber:
+            try:
+                with pdfplumber.open(file_path) as pdf:
+                    return len(pdf.pages)
+            except Exception as e:
+                self.logger.warning(f"pdfplumber could not open PDF for page count: {e}")
+
+        # Last resort: pypdf
+        if pypdf:
+            try:
+                with open(file_path, "rb") as f:
+                    return len(pypdf.PdfReader(f).pages)
+            except Exception as e:
+                self.logger.warning(f"pypdf could not open PDF for page count: {e}")
+
+        return 0
+
+    def _extract_with_pymupdf(self, file_path: Path):
+        """Use PyMuPDF's plain extract_text() — fast, robust to malformed PDFs."""
+        if not EASYOCR_AVAILABLE:  # pymupdf imported in that branch
+            return "", 0
+        try:
+            with pymupdf.open(file_path) as doc:
+                chunks = []
+                for page in doc:
+                    chunks.append(page.get_text() or "")
+                text = "\n".join(chunks)
+                return text, len(text.strip())
+        except Exception as e:
+            self.logger.warning(f"PyMuPDF extraction failed: {e}")
+            return "", 0
+
+    def _extract_with_pdfplumber(self, file_path: Path):
+        """pdfplumber with the existing table-aware reconstruction."""
+        if not pdfplumber:
+            return "", 0
+        try:
+            text_parts = []
+            with pdfplumber.open(file_path) as pdf:
+                self.logger.info(f"pdfplumber: PDF has {len(pdf.pages)} pages")
+                for i, page in enumerate(pdf.pages):
+                    page_text = self._extract_page_text(page)
+                    if page_text:
+                        text_parts.append(page_text)
+                        self.logger.debug(f"Page {i+1}: extracted {len(page_text)} chars")
+                    else:
+                        self.logger.warning(f"Page {i+1}: no text extracted")
+            text = "\n".join(text_parts) + "\n"
+            return text, len(text.strip())
+        except Exception as e:
+            self.logger.warning(f"pdfplumber extraction failed: {e}")
+            return "", 0
+
+    def _extract_with_pypdf(self, file_path: Path):
+        """Plain per-page extraction via pypdf. Sometimes the only thing that works."""
+        if not pypdf:
+            return "", 0
+        try:
+            with open(file_path, "rb") as f:
+                reader = pypdf.PdfReader(f)
+                parts = []
+                for page in reader.pages:
+                    parts.append(page.extract_text() or "")
+                text = "\n".join(parts) + "\n"
+                return text, len(text.strip())
+        except Exception as e:
+            self.logger.warning(f"pypdf extraction failed: {e}")
+            return "", 0
+
+    def _ocr_with_engine(self, file_path: Path):
+        """Run OCR using whatever engine is configured/available."""
+        engine = self.ocr_engine
+        if engine == "tesseract" and OCR_AVAILABLE:
+            return self._ocr_pdf(file_path), "tesseract"
+        if engine == "easyocr" and EASYOCR_AVAILABLE:
+            return self._ocr_easyocr(file_path), "easyocr"
+        if engine == "online":
+            return self._ocr_online(file_path), "online"
+        # Auto-degrade if the requested engine isn't available
+        if OCR_AVAILABLE:
+            return self._ocr_pdf(file_path), "tesseract"
+        if EASYOCR_AVAILABLE:
+            return self._ocr_easyocr(file_path), "easyocr"
+        return self._ocr_online(file_path), "online"
 
     def _extract_page_text(self, page) -> str:
         """
@@ -486,19 +670,19 @@ class SyllabusParser:
 
     def _extract_structure(self, text: str) -> Dict[str, Any]:
         """
-        Extract structured information from syllabus text
-        
+        Extract structured information from syllabus text.
+
         Args:
             text: Raw syllabus text
-            
+
         Returns:
-            Structured syllabus data
+            Structured syllabus data, including parser_diagnostics
         """
         self.logger.info(f"Extracting structure from text of {len(text)} chars")
-        
+
         # Extract only the first course's text if this is a multi-course document
         course_text = self._extract_first_course_text(text)
-        
+
         # First, try regex-based extraction
         structure = {
             'course_title': self._extract_course_title(course_text),
@@ -511,39 +695,54 @@ class SyllabusParser:
             'assessment_pattern': self._extract_assessment(course_text),
             'references': self._extract_references(course_text),
             'co_po_mapping': self._extract_co_po_mapping(course_text),
-            'raw_text': text  # Keep original full text for reference
+            'raw_text': text,  # Keep original full text for reference
+            # Surface parser diagnostics so the UI can show what happened.
+            'parser_diagnostics': dict(self.last_diagnostics),
         }
-        
+
         # Check if regex extraction yielded poor results - use LLM fallback
         regex_units = len(structure['units'])
         regex_outcomes = len(structure['learning_outcomes'])
-        
+
         if self.use_llm_fallback and self.ai_model and len(text.strip()) > 50 and (regex_units < 2 or regex_outcomes < 2):
             self.logger.info(f"Regex extraction yielded poor results (units={regex_units}, outcomes={regex_outcomes}). Trying LLM fallback...")
-            
+
             try:
                 llm_structure = self._extract_structure_with_llm(course_text)
-                
+
                 # Merge LLM results - prefer LLM if it found more content
                 if len(llm_structure.get('units', [])) > regex_units:
                     self.logger.info(f"LLM found {len(llm_structure['units'])} units vs regex's {regex_units}")
                     structure['units'] = llm_structure['units']
-                    
+
                 if len(llm_structure.get('learning_outcomes', [])) > regex_outcomes:
                     self.logger.info(f"LLM found {len(llm_structure['learning_outcomes'])} outcomes vs regex's {regex_outcomes}")
                     structure['learning_outcomes'] = llm_structure['learning_outcomes']
-                
+
                 # Update other fields if regex got defaults
                 if structure['course_title'] == 'Unknown Course' and llm_structure.get('course_title'):
                     structure['course_title'] = llm_structure['course_title']
                 if structure['course_code'] == 'UNKNOWN' and llm_structure.get('course_code'):
                     structure['course_code'] = llm_structure['course_code']
-                    
+
             except Exception as e:
                 self.logger.warning(f"LLM fallback parsing failed: {e}")
-        
-        self.logger.info(f"Extraction complete: title='{structure['course_title']}', outcomes={len(structure['learning_outcomes'])}, units={len(structure['units'])}, raw_text={len(structure['raw_text'])} chars")
-        
+
+        structure['parser_diagnostics']['regex_results'] = {
+            'units_found': len(structure['units']),
+            'outcomes_found': len(structure['learning_outcomes']),
+            'references_found': len(structure['references']),
+            'title_found': structure['course_title'] != 'Unknown Course',
+            'code_found': structure['course_code'] != 'UNKNOWN',
+        }
+        self.last_diagnostics = structure['parser_diagnostics']
+
+        self.logger.info(
+            f"Extraction complete: title='{structure['course_title']}', "
+            f"outcomes={len(structure['learning_outcomes'])}, "
+            f"units={len(structure['units'])}, raw_text={len(structure['raw_text'])} chars"
+        )
+
         return structure
     
     def _extract_structure_with_llm(self, text: str) -> Dict[str, Any]:
@@ -605,28 +804,36 @@ Focus on finding units and learning outcomes even if the text is messy."""
             return {}
         
     def _extract_course_title(self, text: str) -> str:
-        """Extract course title"""
+        """Extract course title.
+
+        Tries structural patterns first (course code prefix, Course Title:,
+        Subject: etc.), then falls back to "first plausible line" detection.
+        Skips generic section headers like "Course Outcomes:" that would
+        otherwise be mis-extracted as title.
+        """
+        # Negative lookbehind inside patterns to avoid matching section headers.
         patterns = [
             # Pattern for "COURSECODE: Course Title" format
             r'([A-Z]{2,}[\d]+):\s*(.+?)(?=\n)',
-            # Pattern for "Course Title:" format
-            r'(?:Course Title|Course Name)[:\s]+(.+?)(?=\n|Course Code)',
+            # Pattern for "Course Title:" / "Course Name:" — guarded so it
+            # does NOT match "Course Outcomes:", "Course Code:", etc.
+            r'(?:Course\s*Title|Course\s*Name)\s*[:\-]\s*(.+?)(?=\n|Course\s*Code)',
             # Pattern for title followed by Course Type
             r'([A-Za-z][A-Za-z\s&]+?)\nCourse\s*Type',
-            # Subject pattern
-            r'(?:Subject|Course)[:\s]+(.+?)(?=\n)',
+            # Subject pattern — guarded so we don't capture section headers.
+            r'(?:Subject\s*[:\-]|Course\s*[:\-])\s*(?!Outcomes?|Code|Type|Content|Objective|Prerequisite|Reference|Assessment|Mapping)\s*(.+?)(?=\n)',
             # Pattern for "Title: Something" at start
             r'^(.+?)\n(?:Course\s*Type|Credits?|L-T-P)',
             # Pattern for syllabus headers
             r'Syllabus\s*(?:for|of)?\s*:?\s*(.+?)(?=\n)',
-            # Pattern for "Name of the Course:" 
+            # Pattern for "Name of the Course:"
             r'(?:Name of the course|Course name)[:\s]+(.+?)(?=\n)',
             # Pattern for lines after department headers
             r'(?:Department\s*of\s*.+?\n+)(.+?)(?=\n)',
             # Pattern matching any bolded or emphasized title
             r'\*\*(.+?)\*\*',
         ]
-        
+
         for pattern in patterns:
             match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
             if match:
@@ -638,19 +845,30 @@ Focus on finding units and learning outcomes even if the text is messy."""
                 # Clean up title - remove extra whitespace and common prefixes
                 title = re.sub(r'\s+', ' ', title)
                 title = re.sub(r'^(Course|Subject|Title)[:\s]*', '', title, flags=re.IGNORECASE)
-                if title and len(title) > 3:
+                # Final guard: reject section-header-like "titles"
+                if title and len(title) > 3 and not re.match(
+                    r'^(Outcome|Code|Type|Content|Objective|Prerequisite|Reference|Assessment|Mapping)s?$',
+                    title,
+                    re.IGNORECASE,
+                ):
                     return title
-        
+
         # Fallback: Try to find first meaningful line (often the title)
         lines = text.split('\n')
-        for line in lines[:15]:  # Check first 15 lines
+        exclude_re = re.compile(
+            r'^(Course\s*Type|Course\s*Outcomes?|Course\s*Code|Course\s*Content|Course\s*Objective|'
+            r'Credits?|L-T-P|Semester|University|Department|Programme|Text\s*Books?|References?|'
+            r'Unit\s*No|Objectives?|Statement|Mapping|Assessment)',
+            re.IGNORECASE,
+        )
+        for line in lines[:25]:  # Check first 25 lines
             line = line.strip()
-            # Look for lines that look like titles (mixed case, reasonable length)
-            if line and len(line) > 10 and len(line) < 100:
-                if not re.match(r'^(Course\s*Type|Credits?|L-T-P|Semester|University|Department|Programme)', line, re.IGNORECASE):
-                    if re.match(r'[A-Z]', line):  # Starts with capital letter
-                        return line
-                
+            if line and len(line) > 10 and len(line) < 120:
+                if exclude_re.match(line):
+                    continue
+                if re.match(r'[A-Z]', line):  # Starts with capital letter
+                    return line
+
         return "Unknown Course"
         
     def _extract_course_code(self, text: str) -> str:
@@ -751,233 +969,281 @@ Focus on finding units and learning outcomes even if the text is messy."""
         return []
         
     def _extract_learning_outcomes(self, text: str) -> List[Dict[str, str]]:
-        """Extract course outcomes with Bloom's classification"""
-        outcomes = []
-        
-        # First, try to find the Course Outcomes section
-        co_section_pattern = r'Course\s*Outcomes?(.+?)(?:Mapping|CO\s*PO|Unit|Course\s*Content|$)'
-        co_section_match = re.search(co_section_pattern, text, re.IGNORECASE | re.DOTALL)
-        
-        if co_section_match:
-            co_text = co_section_match.group(1)
-            
-            # Pattern for numbered outcomes: "1 Analyze worst-case..."
-            numbered_pattern = r'^\s*(\d+)\s+([A-Z][^\n]+?)(?=\n\s*\d+\s+[A-Z]|\nMapping|$)'
-            matches = list(re.finditer(numbered_pattern, co_text, re.MULTILINE | re.DOTALL))
-            
-            for match in matches:
-                num = match.group(1)
-                description = match.group(2).strip()
-                
-                # Skip if it looks like a CO-PO mapping row (contains mostly numbers)
-                if re.match(r'^[\d\s,.-]+$', description):
-                    continue
-                    
-                # Skip very short descriptions
-                if len(description) < 20:
-                    continue
-                
-                bloom_level = self.text_processor.classify_bloom_level(description)
-                
-                outcomes.append({
-                    'code': f'CO{num}',
-                    'description': description,
-                    'bloom_level': bloom_level
-                })
-            
-            # NEW: Handle flattened PDF table format where CO numbers and statements are on separate lines
-            # Format: "CO No.\n1\n2\n3...\nStatement\nFirst outcome...\nSecond outcome..."
-            if not outcomes:
-                # Look for "Statement" header followed by outcomes
-                statement_match = re.search(r'Statement\n(.+?)(?:Mapping|CO\s*PO|$)', co_text, re.DOTALL | re.IGNORECASE)
-                if statement_match:
-                    statement_text = statement_match.group(1)
-                    # Extract lines that look like outcomes (start with capital, long enough)
-                    co_num = 1
-                    current_outcome = ""
-                    
-                    for line in statement_text.split('\n'):
-                        line = line.strip()
-                        # Skip empty lines and noise
-                        if not line or len(line) < 10:
-                            continue
-                        # Skip lines that look like table headers or mapping data
-                        if re.match(r'^(CO\s*No|PO|PSO|BTL|\d+\s*$)', line, re.IGNORECASE):
-                            continue
-                        # Skip lines that are mostly numbers (mapping rows)
-                        if re.match(r'^[\d\s,.-]+$', line):
-                            continue
-                        
-                        # Check if this starts with a capital letter (new outcome)
-                        if re.match(r'^[A-Z]', line):
-                            # Save previous outcome if exists
-                            if current_outcome:
-                                bloom_level = self.text_processor.classify_bloom_level(current_outcome)
-                                outcomes.append({
-                                    'code': f'CO{co_num}',
-                                    'description': current_outcome.strip(),
-                                    'bloom_level': bloom_level
-                                })
-                                co_num += 1
-                            current_outcome = line
-                        else:
-                            # Continuation of previous outcome
-                            current_outcome += " " + line
-                    
-                    # Don't forget the last outcome
-                    if current_outcome and len(current_outcome) >= 20:
-                        bloom_level = self.text_processor.classify_bloom_level(current_outcome)
-                        outcomes.append({
-                            'code': f'CO{co_num}',
-                            'description': current_outcome.strip(),
-                            'bloom_level': bloom_level
-                        })
-        
-        # Fallback: Pattern for CO1:, CO2:, etc.
+        """Extract course outcomes with Bloom's classification.
+
+        Tolerant to OCR output where the table has been flattened: numbers
+        on one line, statements on the next, with extra whitespace.
+        """
+        outcomes: List[Dict[str, str]] = []
+
+        # First, locate the Course Outcomes section (OCR may have split the
+        # header phrase across lines or capitalised it oddly).
+        co_section_patterns = [
+            r'(?:Course\s*Outcomes?|Course\s*Outcome|COs?)\s*[:\-\n]\s*(.+?)(?=\n\s*(?:Mapping|CO[\-\s]?PO|Unit|Course\s*Content|Reference|Text\s*Books?|$))',
+            r'\bCO\s+Statement[s]?\s*[:\-\n]\s*(.+?)(?=\n\s*Mapping|$)',
+        ]
+        co_text = ""
+        for pat in co_section_patterns:
+            m = re.search(pat, text, re.IGNORECASE | re.DOTALL)
+            if m:
+                co_text = m.group(1)
+                break
+        if not co_text:
+            # Fall back to scanning the whole syllabus text
+            co_text = text
+
+        # ---- 1. Single-line numbered outcomes: "1 Analyze worst-case..." -----
+        numbered_pattern = (
+            r'^\s*(\d{1,2})[.\)]\s*([A-Z][^\n]+?)(?=\n\s*\d{1,2}[.\)]\s*[A-Z]|\n\s*Mapping|$)'
+        )
+        matches = list(re.finditer(numbered_pattern, co_text, re.MULTILINE | re.DOTALL))
+        for match in matches:
+            num = match.group(1)
+            description = match.group(2).strip()
+            if not self._is_valid_outcome_text(description):
+                continue
+            outcomes.append(self._make_outcome(f'CO{num}', description))
+
+        # ---- 2. Flattened-table: "CO No. | 1 | 2 | 3 | Statement | first | second" ----
         if not outcomes:
-            pattern = r'(CO\d+)[:\s]+([A-Za-z][^\n]+?)(?=CO\d+|Mapping|$)'
+            statement_match = re.search(
+                r'(?:Statement[s]?|Statements)\s*[:\-\n]\s*(.+?)(?=\n\s*Mapping|$)',
+                co_text,
+                re.DOTALL | re.IGNORECASE,
+            )
+            if statement_match:
+                statement_text = statement_match.group(1)
+                co_num = 1
+                current_outcome = ""
+                for line in statement_text.split('\n'):
+                    line = line.strip()
+                    if not line or len(line) < 10:
+                        continue
+                    # skip table headers / pure numbers
+                    if re.match(r'^(CO\s*No|PO|PSO|BTL|\d+\s*$)', line, re.IGNORECASE):
+                        continue
+                    if re.match(r'^[\d\s,.\-]+$', line):
+                        continue
+                    # OCR often drops the period: "1 Describe ..." or "1) Describe..."
+                    m_num = re.match(r'^(\d{1,2})[.\)]?\s+(.+)$', line)
+                    if m_num and self._is_valid_outcome_text(m_num.group(2)):
+                        # Save previous outcome first
+                        if current_outcome:
+                            outcomes.append(self._make_outcome(f'CO{co_num}', current_outcome))
+                            co_num += 1
+                        current_outcome = m_num.group(2)
+                        continue
+                    if re.match(r'^[A-Z]', line) or current_outcome == "":
+                        if current_outcome:
+                            outcomes.append(self._make_outcome(f'CO{co_num}', current_outcome))
+                            co_num += 1
+                        current_outcome = line
+                    else:
+                        current_outcome += " " + line
+                if current_outcome and self._is_valid_outcome_text(current_outcome):
+                    outcomes.append(self._make_outcome(f'CO{co_num}', current_outcome))
+
+        # ---- 3. Generic "CO1:" / "CO 1:" / "CO1 " labelled outcomes ----
+        # The colon, dash or period is OPTIONAL because OCR often drops it
+        # after a label like "CO1" followed directly by the statement.
+        if not outcomes:
+            pattern = (
+                r'\b(CO\s*\d{1,2})\s*[:\-\.]?\s+([A-Z][^\n]+?)'
+                r'(?=\s*\bCO\s*\d{1,2}\b|\n\s*Mapping|$)'
+            )
             matches = re.finditer(pattern, text, re.IGNORECASE)
-            
             for match in matches:
-                co_code = match.group(1).upper()
-                co_text = match.group(2).strip()
-                
-                # Skip if it looks like mapping numbers
-                if re.match(r'^[\d\s,.-]+$', co_text):
+                co_code_raw = re.sub(r'\s+', '', match.group(1)).upper()
+                co_code = "CO" + re.sub(r'^CO', '', co_code_raw)
+                co_desc = match.group(2).strip()
+                if not self._is_valid_outcome_text(co_desc):
                     continue
-                
-                bloom_level = self.text_processor.classify_bloom_level(co_text)
-                
-                outcomes.append({
-                    'code': co_code,
-                    'description': co_text,
-                    'bloom_level': bloom_level
-                })
-            
+                outcomes.append(self._make_outcome(co_code, co_desc))
+
         return outcomes
+
+    def _is_valid_outcome_text(self, text: str) -> bool:
+        """Skip artifacts: pure-number mapping rows, short headers, table noise."""
+        if not text or len(text.strip()) < 20:
+            return False
+        if re.match(r'^[\d\s,.\-]+$', text):
+            return False
+        if re.match(r'^(PO|PSO|BTL|CO\s*No|Mapping|Statement)', text.strip(), re.IGNORECASE):
+            return False
+        return True
+
+    def _make_outcome(self, code: str, description: str) -> Dict[str, str]:
+        """Return a normalised outcome dict, deduplicating trivially short ones."""
+        description = re.sub(r'\s+', ' ', description).strip().rstrip(',;:')
+        return {
+            'code': code,
+            'description': description,
+            'bloom_level': self.text_processor.classify_bloom_level(description),
+        }
         
     def _extract_units(self, text: str) -> List[Dict[str, Any]]:
-        """Extract unit-wise syllabus"""
-        units = []
-        
-        # Multiple patterns for different unit formats, including OCR-tolerant versions
+        """Extract unit-wise syllabus.
+
+        Tries several OCR-tolerant patterns in order of strictness:
+          1. Single-line: ``Unit No 1 Title 8 Hours``
+          2. Roman-numeral: ``Unit No I Title 8 Hours``
+          3. Flattened-table: ``Unit No\n4\nTitle\nHours\n8`` (typical OCR output)
+          4. Single-line with roman or arabic numeral & optional colon: ``Unit 1: Title``
+        Returns dicts with ``unit_number``, ``title``, ``topics``, ``hours``.
+        """
+        units: List[Dict[str, Any]] = []
+
+        # --- Patterns ordered from most-specific to least-specific ---
+        # Capture groups: 1=unit_number, 2=title, 3=hours (when present)
         patterns = [
-            # Format: "Unit No I Title Hours" or "Unit No 1 Title Hours" (same line)
-            r'Unit\s*No\.?\s*([IVX]+|\d+)\s+(.+?)\s+(\d+)\s*H[o0]u?rs?',
-            # OCR-tolerant: "UNIT NO.04" or "UNIT NOS" (S misread from 5) followed by title and hours
-            r'UNIT\s*NO\.?\s*([0-9]+|[O0][1-9]|[1-9][0-9]?)\s+(.+?)\s+(\d+)\s*H[o0]w?u?rs?',
-            # Format: "Unit No 1 Title" followed by "Hours X" on next line (flattened table)
-            r'Unit\s*No\.?\s*(\d+)\s+([A-Za-z][A-Za-z\s&,-]+?)(?=\nHours)',
-            # Format: "Unit 1: Title" or "Unit I: Title"
-            r'Unit\s+(\d+|[IVX]+)[:\s]+(.+?)(?=\n)',
+            # All-on-one line with arabic numeral and "Hours" suffix
+            r'\bUnit\s*No\.?\s*(\d{1,2})\s*[:\-]?\s*(.+?)\s+(\d{1,2})\s*(?:H(?:ou)?rs?|Hrs?)\b',
+            # Same with roman numeral (I-X)
+            r'\bUnit\s*No\.?\s*([IVX]{1,4})\s*[:\-]?\s*(.+?)\s+(\d{1,2})\s*(?:H(?:ou)?rs?|Hrs?)\b',
+            # OCR-flattened table: Unit No header, then number on its own
+            # line, then title, then "Hours N". The header can have any case
+            # because OCR flips case arbitrarily; we accept UNIT/Unit/UnIt,
+            # the trailing "No." with or without the period, and either
+            # arabic or roman numerals.
+            (
+                r'\b(?:U\s*N\s*I\s*T|UN?IT)\s*No?\.?\s*\n\s*'
+                r'(\d{1,2}|[IVX]{1,4})\s*\n\s*'
+                r'([A-Z][^\n]*?)\s*\n\s*'
+                r'H(?:ou)?rs?\.?\s*(\d{1,2})'
+            ),
+            # All-on-one-line variant: "Unit No 4" then title and Hours come within ~120 chars
+            r'\bUnit\s*No\.?\s*(\d{1,2})\s+([A-Za-z][A-Za-z0-9 &,/\-\(\)]+?)\s+H(?:ou)?rs?\.?\s*(\d{1,2})',
+            # Pattern for the heading-only case: helps locate unit boundaries
+            # even when title and hours don't appear nearby (handled in scanner below)
+            r'\bUnit\s*No\.?\s*(\d{1,2})\s*[:\.\n]',
         ]
-        
-        # Try first pattern (Unit No format with hours on same line)
-        pattern = patterns[0]
-        matches = list(re.finditer(pattern, text, re.IGNORECASE))
-        
-        if matches:
-            for i, match in enumerate(matches):
-                unit_num = match.group(1)
-                title = match.group(2).strip()
-                hours = int(match.group(3)) if match.group(3) else 0
-                
-                # Find content between this unit and next unit (or end)
-                start = match.end()
+
+        section_end_re = re.compile(
+            r'\n(?:Text\s*Books?|References?|Bibliograph|Assessment|Textbook| Suggested Reading)',
+            re.IGNORECASE,
+        )
+
+        # ---------- Strict matched loop -----------------------------------------
+        found_any = False
+        # Only the first 4 patterns have full title+hours capture groups; the
+        # 5th is just a heading boundary used by the fallback scanner.
+        for pat in patterns[:4]:
+            matches = list(re.finditer(pat, text, re.IGNORECASE | re.DOTALL))
+            if not matches:
+                continue
+            found_any = True
+            for i, m in enumerate(matches):
+                unit_num_raw = m.group(1).strip()
+                # Convert roman numerals to arabic for consistency
+                unit_num_int = roman_to_int(unit_num_raw) or unit_num_raw
+                title = m.group(2).strip().rstrip(',;.')
+                hours_str = m.group(3) if m.lastindex and m.lastindex >= 3 else ""
+                try:
+                    hours = int(hours_str) if hours_str else 0
+                except (TypeError, ValueError):
+                    hours = 0
+
+                # Determine content slice until next unit heading or next section
+                start = m.end()
                 if i + 1 < len(matches):
                     end = matches[i + 1].start()
                 else:
-                    # Find next section marker
-                    next_section = re.search(r'\n(Textbooks?|References?|Assessment)', text[start:], re.IGNORECASE)
-                    end = start + next_section.start() if next_section else len(text)
-                
-                unit_content = text[start:end].strip()
-                
-                # Extract topics - lines that contain actual content
-                topics = []
-                for line in unit_content.split('\n'):
-                    line = line.strip()
-                    # Skip empty lines, page headers, and CO/BTL references
-                    if line and len(line) > 10 and not re.match(r'^[\d\s,]+$', line):
-                        if not re.match(r'^(Unit|CO|BTL|M\.Sc|Vishwakarma)', line, re.IGNORECASE):
-                            topics.append(line)
-                
+                    nxt = section_end_re.search(text, start)
+                    end = nxt.start() if nxt else len(text)
+
+                topics = self._collect_unit_topics(text[start:end])
                 units.append({
-                    'unit_number': unit_num,
-                    'title': title,
-                    'topics': topics[:10],  # Limit topics per unit
-                    'hours': hours
+                    "unit_number": unit_num_int,
+                    "title": title,
+                    "topics": topics,
+                    "hours": hours,
                 })
-        else:
-            # Try second pattern (flattened table: "Unit No X Title" then "Hours Y" on next line)
-            pattern = patterns[1]
-            header_matches = list(re.finditer(pattern, text, re.IGNORECASE))
-            
-            if header_matches:
-                for i, match in enumerate(header_matches):
-                    unit_num = match.group(1)
-                    title = match.group(2).strip()
-                    
-                    # Look for Hours on next line
-                    hours_search_start = match.end()
-                    hours_match = re.search(r'Hours\s*(\d+)', text[hours_search_start:hours_search_start+50], re.IGNORECASE)
-                    hours = int(hours_match.group(1)) if hours_match else 0
-                    
-                    # Find content between this unit's Hours and next unit (or end)
+            break  # use the first pattern that yielded matches
+
+        # ---------- Fallback: scan for heading boundaries and pair nearby fields --
+        if not found_any:
+            # Find any "Unit No" or "Unit" header line and pair later content
+            heading_re = re.compile(
+                r'^\s*Unit\s*No\.?\s*(\d{1,2}|[IVX]{1,4})\s*[:\.\n]?',
+                re.IGNORECASE | re.MULTILINE,
+            )
+            headings = list(heading_re.finditer(text))
+            if headings:
+                for i, m in enumerate(headings):
+                    unit_num_raw = m.group(1).strip()
+                    unit_num_int = roman_to_int(unit_num_raw) or unit_num_raw
+
+                    # Look ahead ~600 chars for the title and hours
+                    window_start = m.end()
+                    window_end = headings[i + 1].start() if i + 1 < len(headings) else min(len(text), window_start + 1200)
+                    window = text[window_start:window_end]
+
+                    title = ""
+                    title_match = re.search(
+                        r'\n?\s*([A-Z][A-Za-z0-9 &,/\-\(\)]{4,80})\s*(?:\n|Hours|Hrs|H0urs|Howrs)',
+                        window,
+                    )
+                    if title_match:
+                        title = title_match.group(1).strip().rstrip(',;.')
+
+                    hours = 0
+                    hours_match = re.search(r'(?:Hours|Hrs|H0urs|Howrs|HOurs)\s*\.?\s*(\d{1,2})', window, re.IGNORECASE)
                     if hours_match:
-                        start = hours_search_start + hours_match.end()
-                    else:
-                        start = match.end()
-                    
-                    if i + 1 < len(header_matches):
-                        end = header_matches[i + 1].start()
-                    else:
-                        # Find next section marker
-                        next_section = re.search(r'\n(Textbooks?|References?|Assessment|CO\n)', text[start:], re.IGNORECASE)
-                        end = start + next_section.start() if next_section else len(text)
-                    
-                    unit_content = text[start:end].strip()
-                    
-                    # Extract topics - lines that contain actual content
-                    topics = []
-                    for line in unit_content.split('\n'):
-                        line = line.strip()
-                        # Skip empty lines, page headers, CO/BTL references, and noise
-                        if line and len(line) > 10 and not re.match(r'^[\d\s,]+$', line):
-                            if not re.match(r'^(Unit|CO|BTL|M\.Sc|Vishwakarma|Hours|BTECH|Pattern)', line, re.IGNORECASE):
-                                topics.append(line)
-                    
+                        try:
+                            hours = int(hours_match.group(1))
+                        except ValueError:
+                            hours = 0
+
+                    if not title:
+                        continue
+                    topics = self._collect_unit_topics(window)
                     units.append({
-                        'unit_number': unit_num,
-                        'title': title,
-                        'topics': topics[:10],
-                        'hours': hours
+                        "unit_number": unit_num_int,
+                        "title": title,
+                        "topics": topics,
+                        "hours": hours,
                     })
-            else:
-                # Try third pattern (Unit 1: format)
-                pattern = patterns[2]
-                matches = re.finditer(pattern, text, re.IGNORECASE | re.DOTALL)
-                
-                for match in matches:
-                    unit_num = match.group(1)
-                    unit_content = match.group(2).strip()
-                    
-                    lines = unit_content.split('\n')
-                    title = lines[0].strip() if lines else ""
-                    
-                    hours_match = re.search(r'(\d+)\s*(?:hours?|hrs?)', unit_content, re.IGNORECASE)
-                    hours = int(hours_match.group(1)) if hours_match else 0
-                    
-                    topics = [line.strip() for line in lines[1:] if line.strip() and len(line.strip()) > 10]
-                    
-                    units.append({
-                        'unit_number': unit_num,
-                        'title': title,
-                        'topics': topics[:10],
-                        'hours': hours
-                    })
-            
+
         return units
+
+    @staticmethod
+    def _collect_unit_topics(blob: str) -> List[str]:
+        """Pull individual topic lines from a unit content block.
+
+        Skips noise: page headers, BTL/CO references, mapping tables, all-digit lines.
+        OCR output often pushes a single sentence onto multiple lines, so we
+        also re-merge broken short lines that look like sentence fragments.
+        """
+        if not blob:
+            return []
+        lines = [ln.strip() for ln in blob.splitlines() if ln.strip()]
+        topics: List[str] = []
+        skip_prefixes = re.compile(
+            r'^(Unit|UN[I1]T|CO\d+|BTL|M\.Sc|BTECH|B\.Tech|Vishwakarma|'
+            r'Hours|Hrs?|H0urs|Howrs|Pattern|Department|University|'
+            r'Semester|Course\s*Type|Credit|L-T-P|L\s+T\s+P|Programme)',
+            re.IGNORECASE,
+        )
+        for line in lines:
+            if len(line) <= 3:
+                continue
+            if re.match(r'^[\d\s,.\-]+$', line):  # only digits/punct
+                continue
+            if skip_prefixes.match(line):
+                continue
+            # Merge short fragment into previous topic (handles OCR line-breaks)
+            if (
+                topics
+                and len(line) < 50
+                and not line.endswith(('.', '!', '?', ':'))
+                and not re.match(r'^[A-Z\d]', line)
+            ):
+                topics[-1] = topics[-1] + " " + line
+                continue
+            topics.append(line)
+            if len(topics) >= 12:
+                break
+        return topics
         
     def _extract_assessment(self, text: str) -> Dict[str, Any]:
         """Extract assessment pattern"""

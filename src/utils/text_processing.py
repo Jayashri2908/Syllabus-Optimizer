@@ -1,9 +1,125 @@
 """Text processing utilities for SCDO"""
 
 import re
-from typing import List, Dict, Set
+import unicodedata
+from typing import List, Dict, Set, Optional
 import yaml
 from pathlib import Path
+
+
+# Common OCR misreads observed in syllabus PDFs (scanned)
+# Map each misread token to the canonical replacement.
+OCR_CHAR_FIXES = {
+    # Common character-level confusions
+    "\u2018": "'",  # left single quote
+    "\u2019": "'",  # right single quote
+    "\u201c": '"',  # left double quote
+    "\u201d": '"',  # right double quote
+    "\u2013": "-",  # en dash
+    "\u2014": "-",  # em dash
+    "\u00a0": " ",  # non-breaking space
+    "\ufeff": "",   # BOM
+}
+
+# OCR word-level fixes specific to Indian university syllabi.
+# Each rule ONLY fires when the pattern actually indicates OCR noise. We do
+# NOT add punctuation that wasn't there in the original document, because
+# adding fictitious punctuation silently breaks native PDFs that already use
+# the same headings.
+OCR_WORD_FIXES = [
+    # Hours / Hrs variants commonly OCR'd from scans. We require the misread
+    # substring to be present; legitimate "Hours" text is never touched.
+    (r"\bHowrs?\b", "Hours"),
+    (r"\bH0u?rs\b", "Hours"),
+    (r"\bHou?rs\b(?=\s+\d)", "Hours"),
+    (r"\bHRS\.?\b(?=\s+\d)", "Hours"),
+    # UNIT heading with digit-letter confusion: "UN1T" etc., and "UNITS"
+    # misread from scans. We do NOT alter plain "Unit No" because native
+    # PDFs already spell it correctly.
+    (r"\bUN[I1]T\s+NO[S5]?\b",
+     lambda m: "UNIT NO" + ("S" if m.group(0).rstrip().endswith(("NOS", "NO5")) else "")),
+    # "BTL" -> "Level" only when a Bloom's-tagging context follows (a CO
+    # number or "Mapping" within ~40 chars), so it doesn't fire on legitimate
+    # non-OCR documents that just happen to mention BTL.
+    (r"\bBTL\b(?=[^\n]{0,40}(?:Mapping|CO\s*\d))", "Level"),
+]
+
+# Roman numerals commonly used for unit numbers
+ROMAN_NUMERALS = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10}
+
+
+def normalize_ocr_text(text: str, aggressive: bool = False) -> str:
+    """
+    Clean up text extracted from OCR or noisy PDF sources.
+
+    Fixes typical Tesseract/EasyOCR misreads of common syllabus terms.
+    Conservative by default; pass aggressive=True to also collapse OCR
+    noise like stray punctuation or repeated letters in a row.
+
+    Args:
+        text: Raw text from pdfplumber/pymupdf/Tesseract/EasyOCR
+        aggressive: If True, apply extra noise reduction steps
+
+    Returns:
+        Cleaned text with common OCR errors corrected
+    """
+    if not text:
+        return ""
+
+    # 1. Unicode normalization
+    text = unicodedata.normalize("NFKC", text)
+
+    # 2. Replace special whitespace/quotes
+    for bad, good in OCR_CHAR_FIXES.items():
+        text = text.replace(bad, good)
+
+    # 3. Word-level common misreads. We pass replacement through re.sub as a
+    # function when needed so that lambdas are invoked with the Match object.
+    for pattern, replacement in OCR_WORD_FIXES:
+        if callable(replacement):
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        else:
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+
+    # 4. Trim whitespace on each line and collapse blank lines
+    lines = [ln.rstrip() for ln in text.splitlines()]
+    cleaned_lines = []
+    blank_streak = 0
+    for line in lines:
+        # collapse runs of internal whitespace
+        line = re.sub(r"[ \t]+", " ", line).strip()
+        if not line:
+            blank_streak += 1
+            if blank_streak <= 1:
+                cleaned_lines.append("")
+            continue
+        blank_streak = 0
+        cleaned_lines.append(line)
+
+    text = "\n".join(cleaned_lines)
+
+    if aggressive:
+        # Aggressive: condense multi-line sentences produced by column wrapping in OCR.
+        # Join a wrapped line to its predecessor if the line doesn't look like a sentence
+        # start (no capital, no digit, no bullet) and the previous line didn't end with .!?:;
+        merged = []
+        for line in text.split("\n"):
+            if merged and line and re.match(r"^[a-z][a-z\-]+", line):
+                prev = merged[-1]
+                if prev and not re.search(r"[.!?:;]\s*$", prev) and len(prev) > 0:
+                    merged[-1] = prev + " " + line
+                    continue
+            merged.append(line)
+        text = "\n".join(merged)
+
+    return text
+
+
+def roman_to_int(token: str) -> Optional[int]:
+    """Convert a roman-numeral token (I, II, III, ...) to int, or None if not roman."""
+    if not token:
+        return None
+    return ROMAN_NUMERALS.get(token.upper().strip())
 
 
 class TextProcessor:
@@ -77,7 +193,7 @@ class TextProcessor:
         
         Args:
             text: Input text
-            top_n: Number of keywords to extract
+            top_n: Number of keywords to return
             
         Returns:
             List of keywords
